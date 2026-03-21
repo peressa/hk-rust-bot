@@ -46,8 +46,9 @@ export function createLogger(logFilePath: string): winston.Logger {
             const cMessage = `${message} `.yellow;
             const cGuildId = meta.guildId ? `${meta.guildId} `.cyan : '';
             const cServerId = meta.serverId ? `${meta.serverId} `.white : '';
+            const cSteamId = meta.steamId ? `${meta.steamId} `.magenta : '';
 
-            return `${cTimestamp}${cLevel}${cGuildId}${cServerId}${cMessage}`;
+            return `${cTimestamp}${cLevel}${cGuildId}${cServerId}${cSteamId}${cMessage}`;
         })
     );
 

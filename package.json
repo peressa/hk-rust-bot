@@ -30,7 +30,7 @@
         "@discordjs/rest": "^2.6.0",
         "@discordjs/voice": "^0.19.0",
         "@formatjs/intl": "^4.1.2",
-        "@liamcottle/push-receiver": "^0.0.4",
+        "@liamcottle/push-receiver": "github:Trophy198/push-receiver#ref-tls-connect",
         "@napi-rs/canvas": "^0.1.92",
         "@types/lodash": "^4.17.23",
         "axios": "^1.13.5",
