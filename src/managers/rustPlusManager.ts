@@ -304,6 +304,7 @@ export class RustPlusInstance {
         const rpMapMarkers = await this.rustPlus.getMapMarkersAsync(pairingData.steamId, pairingData.playerToken);
         if (!this.validateServerPollResponse(rpMapMarkers, 'mapMarkers', rp.isValidAppMapMarkers)) return;
 
+        // if last false and not true, update embed
         this.lastServerPollSuccessful = true;
         this.lastServerPollSuccessfulTimestampSeconds = Math.floor(Date.now() / 1000);
 

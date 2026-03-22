@@ -138,6 +138,7 @@ export class RustPlusMap {
         if (monuments) await this.drawMonuments(ctx);
         if (markers) await this.drawMarkers(ctx);
         if (tracers) await this.drawTracers(ctx);
+        // TODO! Draw team map notes
 
         const outBuffer = canvas.toBuffer('image/png');
         fs.writeFileSync(`maps/${imageName}`, outBuffer);
