@@ -26,7 +26,7 @@ import { DiscordManager } from '../managers/discordManager';
 import * as types from '../utils/types';
 import { Languages } from '../managers/LocaleManager';
 import { GuildInstance } from '../managers/guildInstanceManager';
-import { fetchSteamProfileName } from '../utils/steam';
+import { fetchSteamProfile } from '../utils/steam';
 
 export default {
 	name: 'blacklist',
@@ -145,7 +145,8 @@ async function executeAdd(dm: DiscordManager, interaction: discordjs.ChatInputCo
 
 	let steamName: string | null = lm.getIntl(language, 'unknown');
 	if (steamidOption !== null) {
-		steamName = await fetchSteamProfileName(steamidOption);
+		const steamProfile = await fetchSteamProfile(steamidOption);
+		steamName = steamProfile !== null ? steamProfile.personaName : steamName;
 	}
 
 	if (discordUserExist || steamidExist) {
@@ -224,7 +225,8 @@ async function executeRemove(dm: DiscordManager, interaction: discordjs.ChatInpu
 
 	let steamName: string | null = lm.getIntl(language, 'unknown');
 	if (steamidOption !== null) {
-		steamName = await fetchSteamProfileName(steamidOption);
+		const steamProfile = await fetchSteamProfile(steamidOption);
+		steamName = steamProfile !== null ? steamProfile.personaName : steamName;
 	}
 
 	let userName = '';

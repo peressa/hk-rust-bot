@@ -19,20 +19,29 @@
 */
 
 import axios, { AxiosResponse } from 'axios';
+import { XMLParser } from "fast-xml-parser";
 
 import * as types from './types';
-import * as constants from './constants';
-import { decodeHtml } from './utils';
 import { log } from '../../index';
 
-const STEAM_PROFILE_PICTURE_REGEX = /<img src="(.*_full.jpg)(.*?(?="))/;
-const PROFILE_NAME_REGEX = /class="actual_persona_name">(.+?)<\/span>/gm;
+export interface SteamInfo {
+    steamId: types.SteamId;
+    personaName: string;
+    privateProfile: boolean;
+    realName: string | null;
+    location: string | null;
+    imageUrl: string;
+    summary: string | null;
+    vacBan: boolean;
+    memberSince: string | null;
+}
+
 
 async function fetchUrl(url: string): Promise<AxiosResponse> {
     const fn = `[fetchUrl: ${url}]`;
 
     try {
-        const response = await axios.get(url);
+        const response = await axios.get(url, { timeout: 5000 });
         return response;
     }
     catch (error) {
@@ -41,64 +50,48 @@ async function fetchUrl(url: string): Promise<AxiosResponse> {
     }
 }
 
-export async function fetchSteamProfilePicture(steamId: types.SteamId): Promise<string | null> {
-    const fn = `[fetchSteamProfilePicture: ${steamId}]`;
+export async function fetchSteamProfile(steamId: types.SteamId): Promise<SteamInfo | null> {
+    const fn = `[fetchSteamProfile]`;
+    const logParam = { steamId: steamId };
+    const url = `https://steamcommunity.com/profiles/${steamId}/?xml=1`;
 
-    const url = `${constants.STEAM_PROFILES_URL}${steamId}`;
-
-    try {
-        const response = await fetchUrl(url);
-
-        if (response.status !== 200) {
-            log.error(`${fn} Failed to fetch steam profile picture. Status: ${response.status}`);
-            return null;
-        }
-
-        if (!response.data) {
-            log.error(`${fn} No data received from the fetched url.`);
-            return null;
-        }
-
-        const match = response.data.match(STEAM_PROFILE_PICTURE_REGEX);
-        return match ? match[1] : null;
-    }
-    catch (error) {
-        log.error(`${fn} Error fetching steam profile picture. Error: ${error}`);
+    const response = await fetchUrl(url);
+    if (response.status !== 200) {
+        log.error(`${fn} Failed to fetch steam profile name. Status: ${response.status}`, logParam);
         return null;
     }
-}
 
-export async function fetchSteamProfileName(steamId: types.SteamId): Promise<string | null> {
-    const fn = `[fetchSteamProfileName: ${steamId}]`;
+    const parser = new XMLParser({
+        ignoreAttributes: false,
+        trimValues: true,
+    });
 
-    const url = `${constants.STEAM_PROFILES_URL}${steamId}`;
+    const parsed = parser.parse(response.data);
+    const profile = parsed?.profile;
 
-    try {
-        const response = await fetchUrl(url);
-
-        if (response.status !== 200) {
-            log.error(`${fn} Failed to fetch steam profile name. Status: ${response.status}`);
-            return null;
-        }
-
-        if (!response.data) {
-            log.error(`${fn} No data received from the fetched url.`);
-            return null;
-        }
-
-        const regex = new RegExp(PROFILE_NAME_REGEX);
-        const match = regex.exec(response.data);
-
-        if (match && match[1]) {
-            return decodeHtml(match[1]);
-        }
-        else {
-            log.error(`${fn} Could not find profile name in the response.`);
-            return null;
-        }
-    }
-    catch (error) {
-        log.error(`${fn} Error fetching steam profile name. Error: ${error}`);
+    if (!profile) {
+        log.error(`${fn} Invalid Steam profile XML response.`, logParam);
         return null;
     }
+
+    let memberSince: string | null = profile.memberSince ?? null;
+    if (memberSince !== null) {
+        const date = new Date(memberSince);
+
+        if (!isNaN(date.getTime())) {
+            memberSince = Math.floor(date.getTime() / 1000).toString();
+        }
+    }
+
+    return {
+        steamId: profile.steamID64,
+        personaName: profile.steamID,
+        privateProfile: profile.privacyState !== 'public',
+        realName: profile.realname ?? null,
+        location: profile.location ?? null,
+        imageUrl: profile.avatarFull,
+        summary: profile.summary ?? null,
+        vacBan: profile.vacBanned === 1 || profile.vacBanned === '1',
+        memberSince: memberSince
+    };
 }

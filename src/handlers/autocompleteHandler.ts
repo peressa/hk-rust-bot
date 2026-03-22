@@ -26,7 +26,7 @@ import * as types from '../utils/types';
 import { DiscordManager } from "../managers/discordManager";
 import { GuildInstance } from '../managers/guildInstanceManager';
 import { Credentials } from '../managers/credentialsManager';
-import { fetchSteamProfileName } from '../utils/steam';
+import { fetchSteamProfile } from '../utils/steam';
 
 export async function autocompleteHandler(dm: DiscordManager, interaction: discordjs.AutocompleteInteraction):
     Promise<boolean> {
@@ -206,8 +206,8 @@ async function autocompleteBlacklistHandler(dm: DiscordManager, interaction: dis
             else if (focusedOption.name === 'steamid') {
                 const filteredSteamUsers: { name: string; value: string }[] = [];
                 for (const steamid of gInstance.blacklist.steamIds) {
-                    const steamName = await fetchSteamProfileName(steamid);
-                    const name = steamName ? steamName : lm.getIntl(language, 'unknown');
+                    const steamProfile = await fetchSteamProfile(steamid);
+                    const name = steamProfile !== null ? steamProfile.personaName : lm.getIntl(language, 'unknown');
                     filteredSteamUsers.push({
                         name: `${name} (${steamid})`,
                         value: steamid

@@ -34,7 +34,7 @@ import * as types from '../utils/types';
 import * as utils from '../utils/utils';
 import { Credentials } from '../managers/credentialsManager';
 import { PlayerDeathBody, TeamLoginBody } from '../managers/fcmListenerManager';
-import { fetchSteamProfileName, fetchSteamProfilePicture } from '../utils/steam';
+import { fetchSteamProfile } from '../utils/steam';
 import { ConnectionStatus } from '../managers/rustPlusManager';
 
 export const EmbedLimits = {
@@ -225,15 +225,15 @@ export async function getCredentialsExpiredEmbed(dm: DiscordManager, steamId: ty
 }
 
 export async function getFcmPlayerDeathEmbed(title: string, body: PlayerDeathBody): Promise<discordjs.EmbedBuilder> {
-    let imgUrl = null;
-    if (body.targetId !== '') imgUrl = await fetchSteamProfilePicture(body.targetId);
+    let steamProfile = null;
+    if (body.targetId !== '') steamProfile = await fetchSteamProfile(body.targetId);
 
     // TODO! Based on targetName, change image to like boar, bear, wolf etc
 
     return getEmbed({
         title: title,
         color: colorHexToNumber(constants.COLOR_DEFAULT),
-        thumbnail: { url: imgUrl ? imgUrl : constants.DEFAULT_SERVER_IMAGE },
+        thumbnail: { url: steamProfile !== null ? steamProfile.imageUrl : constants.DEFAULT_SERVER_IMAGE },
         footer: { text: body.name },
         timestamp: new Date(),
         url: body.targetId !== '' ? `${constants.STEAM_PROFILES_URL}${body.targetId}` : ''
@@ -470,8 +470,9 @@ export async function getBlacklistListEmbed(dm: DiscordManager, interaction: dis
     }
 
     for (const steamid of gInstance.blacklist.steamIds) {
-        const steamName = await fetchSteamProfileName(steamid);
-        steamUsers += `\`${steamName ? steamName : lm.getIntl(language, 'unknown')}\` (${steamid})\n`;
+        const steamProfile = await fetchSteamProfile(steamid);
+        const steamName = steamProfile !== null ? steamProfile.personaName : lm.getIntl(language, 'unknown');
+        steamUsers += `\`${steamName}\` (${steamid})\n`;
     }
 
     return getEmbed({
@@ -718,12 +719,12 @@ export async function getFcmTeamLoginEmbed(guildId: types.GuildId, body: TeamLog
     const gInstance = gim.getGuildInstance(guildId) as GuildInstance;
     const language = gInstance.generalSettings.language;
 
-    const imgUrl = await fetchSteamProfilePicture(body.targetId);
+    const steamProfile = await fetchSteamProfile(body.targetId);
 
     return getEmbed({
         title: lm.getIntl(language, 'userJustConnected', { name: body.targetName }),
         color: colorHexToNumber(constants.COLOR_ACTIVE),
-        thumbnail: { url: imgUrl ? imgUrl : constants.DEFAULT_SERVER_IMAGE },
+        thumbnail: { url: steamProfile !== null ? steamProfile.imageUrl : constants.DEFAULT_SERVER_IMAGE },
         timestamp: new Date(),
         footer: { text: body.name },
         url: `${constants.STEAM_PROFILES_URL}${body.targetId}`
