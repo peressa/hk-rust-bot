@@ -28,41 +28,41 @@ export async function handler(rpInstance: RustPlusInstance, time: rp.AppTime) {
     const fn = '[rustPlusTimeHandler: handler]';
     const logParam = {
         guildId: rpInstance.guildId,
-        serverId: rpInstance.serverId,
-        serverName: rpInstance.serverName
+        serverId: rpInstance.serverId
     };
+    const rpTime = rpInstance.rpTime as RustPlusTime;
 
-    if ((rpInstance.rpTime as RustPlusTime).isDayLengthMinutesChanged(time)) {
+    if (rpTime.isDayLengthMinutesChanged(time)) {
         log.info(`${fn} dayLengthMinutes changed, ` +
-            `old: ${rpInstance.rpTime?.appTime.dayLengthMinutes}, ` +
+            `old: ${rpTime?.appTime.dayLengthMinutes}, ` +
             `new: ${time.dayLengthMinutes}`,
             logParam);
     }
 
-    if ((rpInstance.rpTime as RustPlusTime).isTimeScaleChanged(time)) {
+    if (rpTime.isTimeScaleChanged(time)) {
         log.info(`${fn} timeScale changed, ` +
-            `old: ${rpInstance.rpTime?.appTime.timeScale}, ` +
+            `old: ${rpTime?.appTime.timeScale}, ` +
             `new: ${time.timeScale}`,
             logParam);
     }
 
-    if ((rpInstance.rpTime as RustPlusTime).isSunriseChanged(time)) {
+    if (rpTime.isSunriseChanged(time)) {
         log.info(`${fn} sunrise changed, ` +
-            `old: ${rpInstance.rpTime?.appTime.sunrise}, ` +
+            `old: ${rpTime?.appTime.sunrise}, ` +
             `new: ${time.sunrise}`,
             logParam);
     }
 
-    if ((rpInstance.rpTime as RustPlusTime).isSunsetChanged(time)) {
+    if (rpTime.isSunsetChanged(time)) {
         log.info(`${fn} sunset changed, ` +
-            `old: ${rpInstance.rpTime?.appTime.sunset}, ` +
+            `old: ${rpTime?.appTime.sunset}, ` +
             `new: ${time.sunset}`,
             logParam);
     }
 
-    if ((rpInstance.rpTime as RustPlusTime).isTimeChanged(time)) {
+    if (rpTime.isTimeChanged(time)) {
         //log.info(`${fn} time changed, ` +
-        //    `old: ${rpInstance.rpTime?.appTime.time}, ` +
+        //    `old: ${rpTime?.appTime.time}, ` +
         //    `new: ${time.time}`,
         //    logParam);
     }
@@ -71,11 +71,11 @@ export async function handler(rpInstance: RustPlusInstance, time: rp.AppTime) {
      * Custom handlers
      */
 
-    if ((rpInstance.rpTime as RustPlusTime).isTurnedDay(time)) {
+    if (rpTime.isTurnedDay(time)) {
         log.info(`${fn} Just turned day.`, logParam);
     }
 
-    if ((rpInstance.rpTime as RustPlusTime).isTurnedNight(time)) {
+    if (rpTime.isTurnedNight(time)) {
         log.info(`${fn} Just turned night.`, logParam);
     }
 }

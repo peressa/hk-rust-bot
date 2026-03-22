@@ -75,10 +75,10 @@ export async function handler(rpInstance: RustPlusInstance, info: rp.AppInfo) {
     }
 
     if (rpInfo.isPlayersChanged(info)) {
-        log.info(`${fn} players changed, ` +
-            `old: ${rpInfo?.appInfo.players}, ` +
-            `new: ${info.players}`,
-            logParam);
+        //log.info(`${fn} players changed, ` +
+        //    `old: ${rpInfo?.appInfo.players}, ` +
+        //    `new: ${info.players}`,
+        //    logParam);
     }
 
     if (rpInfo.isMaxPlayersChanged(info)) {
@@ -89,10 +89,10 @@ export async function handler(rpInstance: RustPlusInstance, info: rp.AppInfo) {
     }
 
     if (rpInfo.isQueuedPlayersChanged(info)) {
-        log.info(`${fn} queuedPlayers changed, ` +
-            `old: ${rpInfo?.appInfo.queuedPlayers}, ` +
-            `new: ${info.queuedPlayers}`,
-            logParam);
+        //log.info(`${fn} queuedPlayers changed, ` +
+        //    `old: ${rpInfo?.appInfo.queuedPlayers}, ` +
+        //    `new: ${info.queuedPlayers}`,
+        //    logParam);
     }
 
     if (rpInfo.isSeedChanged(info)) {

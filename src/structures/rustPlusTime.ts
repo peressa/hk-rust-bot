@@ -87,6 +87,10 @@ export class RustPlusTime {
         return this.appTime.time !== appTime.time;
     }
 
+    /**
+     * Other methods
+     */
+
     public isTurnedDay(appTime: rp.AppTime): boolean {
         return this.isNight() && appTime.time >= appTime.sunrise && appTime.time < appTime.sunset;
     }
@@ -111,13 +115,13 @@ export class RustPlusTime {
         let isDay = this.isDay();
 
         /* Can't calculate time till sunrise or sunset, so use the default time table */
-        if ((this.isDay() && (this.latestSunrise === null || server.dayDurationSeconds === null)) ||
-            this.isNight() && (this.latestSunset === null || server.nightDurationSeconds === null)) {
+        if ((isDay && (this.latestSunrise === null || server.dayDurationSeconds === null)) ||
+            !isDay && (this.latestSunset === null || server.nightDurationSeconds === null)) {
             const closestTimeKey = getClosestTimeKey(this.appTime.time);
             seconds = timeTable[closestTimeKey];
             isDay = (this.appTime.time >= sunrise) && (this.appTime.time < sunset)
         }
-        else if (this.isDay()) {
+        else if (isDay) {
             const currentTimeSeconds = (new Date()).getTime() / 1000;
             const latestSunriseSeconds = (this.latestSunrise as Date).getTime() / 1000;
             seconds = (server.dayDurationSeconds as number) - (currentTimeSeconds - latestSunriseSeconds);
@@ -135,8 +139,7 @@ export class RustPlusTime {
         const fn = '[RustPlusTime: updateVariables]';
         const logParam = {
             guildId: this.rpInstance.guildId,
-            serverId: this.rpInstance.serverId,
-            serverName: this.rpInstance.serverName
+            serverId: this.rpInstance.serverId
         };
 
         const gInstance = gim.getGuildInstance(this.rpInstance.guildId) as GuildInstance;
