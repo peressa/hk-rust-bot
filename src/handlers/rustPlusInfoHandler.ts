@@ -28,118 +28,118 @@ export async function handler(rpInstance: RustPlusInstance, info: rp.AppInfo) {
     const fn = '[rustPlusInfoHandler: handler]';
     const logParam = {
         guildId: rpInstance.guildId,
-        serverId: rpInstance.serverId,
-        serverName: rpInstance.serverName
+        serverId: rpInstance.serverId
     };
+    const rpInfo = rpInstance.rpInfo as RustPlusInfo;
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isNameChanged(info)) {
+    if (rpInfo.isNameChanged(info)) {
         log.info(`${fn} name changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.name}, ` +
+            `old: ${rpInfo?.appInfo.name}, ` +
             `new: ${info.name}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isHeaderImageChanged(info)) {
+    if (rpInfo.isHeaderImageChanged(info)) {
         log.info(`${fn} headerImage changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.headerImage}, ` +
+            `old: ${rpInfo?.appInfo.headerImage}, ` +
             `new: ${info.headerImage}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isUrlChanged(info)) {
+    if (rpInfo.isUrlChanged(info)) {
         log.info(`${fn} url changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.url}, ` +
+            `old: ${rpInfo?.appInfo.url}, ` +
             `new: ${info.url}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isMapChanged(info)) {
+    if (rpInfo.isMapChanged(info)) {
         log.info(`${fn} map changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.map}, ` +
+            `old: ${rpInfo?.appInfo.map}, ` +
             `new: ${info.map}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isMapSizeChanged(info)) {
+    if (rpInfo.isMapSizeChanged(info)) {
         log.info(`${fn} mapSize changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.mapSize}, ` +
+            `old: ${rpInfo?.appInfo.mapSize}, ` +
             `new: ${info.mapSize}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isWipeTimeChanged(info)) {
+    if (rpInfo.isWipeTimeChanged(info)) {
         log.info(`${fn} wipeTime changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.wipeTime}, ` +
+            `old: ${rpInfo?.appInfo.wipeTime}, ` +
             `new: ${info.wipeTime}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isPlayersChanged(info)) {
-        //log.info(`${fn} players changed, ` +
-        //    `old: ${rpInstance.rpInfo?.appInfo.players}, ` +
-        //    `new: ${info.players}`,
-        //    logParam);
+    if (rpInfo.isPlayersChanged(info)) {
+        log.info(`${fn} players changed, ` +
+            `old: ${rpInfo?.appInfo.players}, ` +
+            `new: ${info.players}`,
+            logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isMaxPlayersChanged(info)) {
+    if (rpInfo.isMaxPlayersChanged(info)) {
         log.info(`${fn} maxPlayers changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.maxPlayers}, ` +
+            `old: ${rpInfo?.appInfo.maxPlayers}, ` +
             `new: ${info.maxPlayers}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isQueuedPlayersChanged(info)) {
-        //log.info(`${fn} queuedPlayers changed, ` +
-        //    `old: ${rpInstance.rpInfo?.appInfo.queuedPlayers}, ` +
-        //    `new: ${info.queuedPlayers}`,
-        //    logParam);
+    if (rpInfo.isQueuedPlayersChanged(info)) {
+        log.info(`${fn} queuedPlayers changed, ` +
+            `old: ${rpInfo?.appInfo.queuedPlayers}, ` +
+            `new: ${info.queuedPlayers}`,
+            logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isSeedChanged(info)) {
+    if (rpInfo.isSeedChanged(info)) {
         log.info(`${fn} seed changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.seed}, ` +
+            `old: ${rpInfo?.appInfo.seed}, ` +
             `new: ${info.seed}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isSaltChanged(info)) {
+    if (rpInfo.isSaltChanged(info)) {
         log.info(`${fn} salt changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.salt}, ` +
+            `old: ${rpInfo?.appInfo.salt}, ` +
             `new: ${info.salt}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isLogoImageChanged(info)) {
+    if (rpInfo.isLogoImageChanged(info)) {
         log.info(`${fn} logoImage changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.logoImage}, ` +
+            `old: ${rpInfo?.appInfo.logoImage}, ` +
             `new: ${info.logoImage}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isNexusChanged(info)) {
+    if (rpInfo.isNexusChanged(info)) {
         log.info(`${fn} nexus changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.nexus}, ` +
+            `old: ${rpInfo?.appInfo.nexus}, ` +
             `new: ${info.nexus}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isNexusIdChanged(info)) {
+    if (rpInfo.isNexusIdChanged(info)) {
         log.info(`${fn} nexusId changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.nexusId}, ` +
+            `old: ${rpInfo?.appInfo.nexusId}, ` +
             `new: ${info.nexusId}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isNexusZoneChanged(info)) {
+    if (rpInfo.isNexusZoneChanged(info)) {
         log.info(`${fn} nexusZone changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.nexusZone}, ` +
+            `old: ${rpInfo?.appInfo.nexusZone}, ` +
             `new: ${info.nexusZone}`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isCamerasEnabledChanged(info)) {
+    if (rpInfo.isCamerasEnabledChanged(info)) {
         log.info(`${fn} camerasEnabled changed, ` +
-            `old: ${rpInstance.rpInfo?.appInfo.camerasEnabled}, ` +
+            `old: ${rpInfo?.appInfo.camerasEnabled}, ` +
             `new: ${info.camerasEnabled}`,
             logParam);
     }
@@ -148,16 +148,16 @@ export async function handler(rpInstance: RustPlusInstance, info: rp.AppInfo) {
      * Custom handlers
      */
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isMaxPlayersIncreased(info)) {
+    if (rpInfo.isMaxPlayersIncreased(info)) {
         log.info(`${fn} Max players increased from ` +
-            `${rpInstance.rpInfo?.appInfo.maxPlayers} to ` +
+            `${rpInfo?.appInfo.maxPlayers} to ` +
             `${info.maxPlayers}.`,
             logParam);
     }
 
-    if ((rpInstance.rpInfo as RustPlusInfo).isMaxPlayersDecreased(info)) {
+    if (rpInfo.isMaxPlayersDecreased(info)) {
         log.info(`${fn} Max players decreased from ` +
-            `${rpInstance.rpInfo?.appInfo.maxPlayers} to ` +
+            `${rpInfo?.appInfo.maxPlayers} to ` +
             `${info.maxPlayers}.`,
             logParam);
     }
