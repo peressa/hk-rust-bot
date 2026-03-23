@@ -789,7 +789,6 @@ async function newsNews(flm: FcmListenerManager, steamId: types.SteamId, title: 
     for (const guildId of associatedGuilds) {
         const gInstance = gim.getGuildInstance(guildId) as GuildInstance;
 
-        // TODO! Update newsReceiver steamId in correct places
         if (steamId === gInstance.newsReceiver) {
             await discordMessages.sendFcmNewsNewsMessage(flm.dm, guildId, title, message, body);
         }

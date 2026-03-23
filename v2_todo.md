@@ -137,3 +137,10 @@
 ## Trackers
 - [ ] Class
 - [ ] Handler
+
+
+## Other todo:
+- gInstance.newsReceiver:
+    - Decide when this should be set. Perhaps set as soon as the first credentials are added?
+    - Perhaps in the future this could be set automatically based on which credentials are not expired etc
+    - Make it possible to set this from a slash command?
