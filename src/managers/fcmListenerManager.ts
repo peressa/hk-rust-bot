@@ -194,6 +194,7 @@ export class FcmListenerManager {
     private listeners: FcmListeners;
 
     constructor(dm: DiscordManager) {
+        log.info(`[${this.constructor.name}] Initializing...`);
         this.dm = dm;
         this.listeners = {};
 
@@ -212,6 +213,9 @@ export class FcmListenerManager {
     }
 
     public startListener(steamId: types.SteamId): boolean {
+        const fn = `[${this.constructor.name}: startListener]`;
+        const logParam = { steamId: steamId };
+
         if (this.isListenerActive(steamId)) {
             this.stopListener(steamId);
         }
@@ -225,60 +229,65 @@ export class FcmListenerManager {
         const securityToken = credentials.gcm.securityToken;
         this.listeners[steamId] = new PushReceiverClient(androidId, securityToken, [], steamId);
         this.listeners[steamId].on('ON_DATA_RECEIVED', (data: unknown) => {
+            const fn = `[${this.constructor.name}: onDataReceived]`;
+            const logParam = { steamId: steamId };
+
             if (!isValidFcmNotificaton(data)) {
-                log.warn(`data is not of type FcmNotification. Data: ${JSON.stringify(data)}`);
+                log.warn(`${fn} data is not of type FcmNotification. Data: ${JSON.stringify(data)}`, logParam);
                 return;
             }
 
             if ((Date.now() - parseInt((data as FcmNotification).sent)) > NOTIFICATION_EXPIRATION_TIME_MS) {
-                log.warn(`data have expired '${(data as FcmNotification).sent}'.`);
+                log.warn(`${fn} data have expired '${(data as FcmNotification).sent}'.`, logParam);
                 return;
             }
 
             this.onDataReceived(steamId, data);
         });
         this.listeners[steamId].connect();
-        log.info(`FCM Listener for steamId '${steamId}' started.`);
+        log.info(`${fn} FCM Listener started.`, logParam);
 
         return true;
     }
 
     public stopListener(steamId: types.SteamId): void {
+        const fn = `[${this.constructor.name}: stopListener]`;
+        const logParam = { steamId: steamId };
+
         if (steamId in this.listeners) {
             this.listeners[steamId].destroy();
             delete this.listeners[steamId];
-            log.info(`FCM Listener for steamId '${steamId}' stopped.`);
+            log.info(`${fn} FCM Listener stopped.`, logParam);
         }
     }
 
     private onDataReceived(steamId: types.SteamId, data: FcmNotification): void {
+        const fn = `[${this.constructor.name}: onDataReceived]`;
+        const logParam = { steamId: steamId };
+
         const appData: AppDataItem[] = data.appData;
 
         const title = appData.find(item => item.key === 'title')?.value;
         if (!title) {
-            log.warn(`FCM-Notification: title not found. Data: ${JSON.stringify(data)}`,
-                { steamId: steamId });
+            log.warn(`${fn} title not found. Data: ${JSON.stringify(data)}`, logParam);
             return;
         }
 
         const message = appData.find(item => item.key === 'message')?.value;
         if (!message) {
-            log.warn(`FCM-Notification: message not found. Data: ${JSON.stringify(data)}`,
-                { steamId: steamId });
+            log.warn(`${fn} message not found. Data: ${JSON.stringify(data)}`, logParam);
             return;
         }
 
         const channelId = appData.find(item => item.key === 'channelId')?.value;
         if (!isValidChannelId(channelId)) {
-            log.warn(`FCM-Notification: channelId '${channelId}' not found. Data: ${JSON.stringify(data)}`,
-                { steamId: steamId });
+            log.warn(`${fn} channelId '${channelId}' not found. Data: ${JSON.stringify(data)}`, logParam);
             return;
         }
 
         const bodyObject = appData.find(item => item.key === 'body');
         if (!bodyObject) {
-            log.warn(`FCM-Notification: body not found. Data: ${JSON.stringify(data)}`,
-                { steamId: steamId });
+            log.warn(`${fn} body not found. Data: ${JSON.stringify(data)}`, logParam);
             return;
         }
         const body = JSON.parse(bodyObject.value);
@@ -287,8 +296,7 @@ export class FcmListenerManager {
             case ChannelIds.PAIRING: {
                 switch (body.type) {
                     case PairingTypes.SERVER: {
-                        log.info(`FCM-Notification: ${ChannelIds.PAIRING}: ${PairingTypes.SERVER}`,
-                            { steamId: steamId });
+                        log.info(`${fn} ${ChannelIds.PAIRING}: ${PairingTypes.SERVER}`, logParam);
                         if (!isValidPairingServerBody(body)) return;
 
                         pairingServer(this, steamId, body);
@@ -299,40 +307,39 @@ export class FcmListenerManager {
                         // entity pairing body
                         switch (body.entityType) {
                             case PairingEntityTypes.SMART_SWITCH: {
-                                log.info(`FCM-Notification: ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: ` +
-                                    `${PairingEntityNames.SMART_SWITCH}`, { steamId: steamId });
+                                log.info(`${fn} ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: ` +
+                                    `${PairingEntityNames.SMART_SWITCH}`, logParam);
                                 if (!isValidPairingEntityBody(body)) return;
 
                                 pairingEntitySmartSwitch(this, steamId, body);
                             } break;
 
                             case PairingEntityTypes.SMART_ALARM: {
-                                log.info(`FCM-Notification: ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: ` +
-                                    `${PairingEntityNames.SMART_ALARM}`, { steamId: steamId });
+                                log.info(`${fn} ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: ` +
+                                    `${PairingEntityNames.SMART_ALARM}`, logParam);
                                 if (!isValidPairingEntityBody(body)) return;
 
                                 pairingEntitySmartAlarm(this, steamId, body);
                             } break;
 
                             case PairingEntityTypes.STORAGE_MONITOR: {
-                                log.info(`FCM-Notification: ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: ` +
-                                    `${PairingEntityNames.STORAGE_MONITOR}`, { steamId: steamId });
+                                log.info(`${fn} ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: ` +
+                                    `${PairingEntityNames.STORAGE_MONITOR}`, logParam);
                                 if (!isValidPairingEntityBody(body)) return;
 
                                 pairingEntityStorageMonitor(this, steamId, body);
                             } break;
 
                             default: {
-                                log.warn(`FCM-Notification: ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: other.`,
-                                    { steamId: steamId });
+                                log.warn(`${fn} ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: other.`, logParam);
                                 if (!isValidPairingEntityBody(body)) return;
                             } break;
                         }
                     } break;
 
                     default: {
-                        log.warn(`FCM-Notification: ${ChannelIds.PAIRING}: other body type: ${body.type}. Data: ` +
-                            `${JSON.stringify(data)}`, { steamId: steamId });
+                        log.warn(`${fn} ${ChannelIds.PAIRING}: other body type: ${body.type}. Data: ` +
+                            `${JSON.stringify(data)}`, logParam);
                     } break;
                 }
             } break;
@@ -340,7 +347,7 @@ export class FcmListenerManager {
             case ChannelIds.ALARM: {
                 switch (body.type) {
                     case AlarmTypes.ALARM: {
-                        log.info(`FCM-Notification: ${ChannelIds.ALARM}: ${AlarmTypes.ALARM}`, { steamId: steamId });
+                        log.info(`${fn} ${ChannelIds.ALARM}: ${AlarmTypes.ALARM}`, logParam);
                         if (!isValidAlarmAlarmBody(body)) return;
 
                         alarmAlarm(this, steamId, title, message, body);
@@ -349,15 +356,15 @@ export class FcmListenerManager {
                     default: {
                         if (title === 'You\'re getting raided!') {
                             /* Custom alarm from plugin: https://umod.org/plugins/raid-alarm */
-                            log.info(`FCM-Notification: ${ChannelIds.ALARM}: plugin`, { steamId: steamId });
+                            log.info(`${fn} ${ChannelIds.ALARM}: plugin`, logParam);
                             if (!isValidAlarmPluginBody(body)) return;
 
                             alarmPlugin(this, steamId, title, message, body);
                             break;
                         }
 
-                        log.warn(`FCM-Notification: ${ChannelIds.ALARM}: other body type: ${body.type}. Data: ` +
-                            `${JSON.stringify(data)}`, { steamId: steamId });
+                        log.warn(`${fn} ${ChannelIds.ALARM}: other body type: ${body.type}. Data: ` +
+                            `${JSON.stringify(data)}`, logParam);
                     } break;
                 }
             } break;
@@ -365,15 +372,15 @@ export class FcmListenerManager {
             case ChannelIds.PLAYER: {
                 switch (body.type) {
                     case PlayerTypes.DEATH: {
-                        log.info(`FCM-Notification: ${ChannelIds.PLAYER}: ${PlayerTypes.DEATH}`, { steamId: steamId });
+                        log.info(`${fn} ${ChannelIds.PLAYER}: ${PlayerTypes.DEATH}`, logParam);
                         if (!isValidPlayerDeathBody(body)) return;
 
                         playerDeath(this, steamId, title, body);
                     } break;
 
                     default: {
-                        log.warn(`FCM-Notification: ${ChannelIds.PLAYER}: other body type: ${body.type}. Data: ` +
-                            `${JSON.stringify(data)}`, { steamId: steamId });
+                        log.warn(`${fn} ${ChannelIds.PLAYER}: other body type: ${body.type}. Data: ` +
+                            `${JSON.stringify(data)}`, logParam);
                     } break;
                 }
             } break;
@@ -381,15 +388,15 @@ export class FcmListenerManager {
             case ChannelIds.TEAM: {
                 switch (body.type) {
                     case TeamTypes.LOGIN: {
-                        log.info(`FCM-Notification: ${ChannelIds.TEAM}: ${TeamTypes.LOGIN}`, { steamId: steamId });
+                        log.info(`${fn} ${ChannelIds.TEAM}: ${TeamTypes.LOGIN}`, logParam);
                         if (!isValidTeamLoginBody(body)) return;
 
                         teamLogin(this, steamId, body);
                     } break;
 
                     default: {
-                        log.warn(`FCM-Notification: ${ChannelIds.TEAM}: other body type: ${body.type}. Data: ` +
-                            `${JSON.stringify(data)}`, { steamId: steamId });
+                        log.warn(`${fn} ${ChannelIds.TEAM}: other body type: ${body.type}. Data: ` +
+                            `${JSON.stringify(data)}`, logParam);
                     } break;
                 }
             } break;
@@ -397,33 +404,36 @@ export class FcmListenerManager {
             case ChannelIds.NEWS: {
                 switch (body.type) {
                     case NewsTypes.NEWS: {
-                        log.info(`FCM-Notification: ${ChannelIds.NEWS}: ${NewsTypes.NEWS}`, { steamId: steamId });
+                        log.info(`${fn} ${ChannelIds.NEWS}: ${NewsTypes.NEWS}`, logParam);
                         if (!isValidNewsNewsBody(body)) return;
 
                         newsNews(this, steamId, title, message, body);
                     } break;
 
                     default: {
-                        log.warn(`FCM-Notification: ${ChannelIds.NEWS}: other body type: ${body.type}. Data: ` +
-                            `${JSON.stringify(data)}`, { steamId: steamId });
+                        log.warn(`${fn} ${ChannelIds.NEWS}: other body type: ${body.type}. Data: ` +
+                            `${JSON.stringify(data)}`, logParam);
                     } break;
                 }
             } break;
 
             default: {
-                log.warn(`FCM-Notification: other channel id: ${channelId}. Data: ` +
-                    `${JSON.stringify(data)}`, { steamId: steamId });
+                log.warn(`${fn} other channel id: ${channelId}. Data: ` +
+                    `${JSON.stringify(data)}`, logParam);
             } break;
         }
     }
 }
 
 async function pairingServer(flm: FcmListenerManager, steamId: types.SteamId, body: PairingServerBody) {
+    const fn = `[${flm.constructor.name}: pairingServer]`;
+    const logParam = { steamId: steamId };
+
     const credentials = cm.getCredentials(steamId);
     const serverId = `${body.ip}-${body.port}`;
 
     if (!credentials) {
-        log.warn(`Could not find Credentials.`, { steamId: steamId });
+        log.warn(`${fn} Could not find Credentials.`, logParam);
         return;
     }
 
@@ -483,11 +493,14 @@ async function pairingServer(flm: FcmListenerManager, steamId: types.SteamId, bo
 }
 
 async function pairingEntitySmartSwitch(flm: FcmListenerManager, steamId: types.SteamId, body: PairingEntityBody) {
+    const fn = `[${flm.constructor.name}: pairingEntitySmartSwitch]`;
+    const logParam = { steamId: steamId };
+
     const credentials = cm.getCredentials(steamId);
     const serverId = `${body.ip}-${body.port}`;
 
     if (!credentials) {
-        log.warn(`Could not find Credentials.`, { steamId: steamId });
+        log.warn(`${fn} Could not find Credentials.`, logParam);
         return;
     }
 
@@ -498,7 +511,7 @@ async function pairingEntitySmartSwitch(flm: FcmListenerManager, steamId: types.
 
         const serverInfo = gInstance.serverInfoMap[serverId];
         if (!serverInfo) {
-            log.warn(`Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
+            log.warn(`${fn} Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
             continue;
         }
 
@@ -529,11 +542,14 @@ async function pairingEntitySmartSwitch(flm: FcmListenerManager, steamId: types.
 }
 
 async function pairingEntitySmartAlarm(flm: FcmListenerManager, steamId: types.SteamId, body: PairingEntityBody) {
+    const fn = `[${flm.constructor.name}: pairingEntitySmartAlarm]`;
+    const logParam = { steamId: steamId };
+
     const credentials = cm.getCredentials(steamId);
     const serverId = `${body.ip}-${body.port}`;
 
     if (!credentials) {
-        log.warn(`Could not find Credentials.`, { steamId: steamId });
+        log.warn(`${fn} Could not find Credentials.`, logParam);
         return;
     }
 
@@ -544,7 +560,7 @@ async function pairingEntitySmartAlarm(flm: FcmListenerManager, steamId: types.S
 
         const serverInfo = gInstance.serverInfoMap[serverId];
         if (!serverInfo) {
-            log.warn(`Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
+            log.warn(`${fn} Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
             continue;
         }
 
@@ -576,11 +592,14 @@ async function pairingEntitySmartAlarm(flm: FcmListenerManager, steamId: types.S
 }
 
 async function pairingEntityStorageMonitor(flm: FcmListenerManager, steamId: types.SteamId, body: PairingEntityBody) {
+    const fn = `[${flm.constructor.name}: pairingEntityStorageMonitor]`;
+    const logParam = { steamId: steamId };
+
     const credentials = cm.getCredentials(steamId);
     const serverId = `${body.ip}-${body.port}`;
 
     if (!credentials) {
-        log.warn(`Could not find Credentials.`, { steamId: steamId });
+        log.warn(`${fn} Could not find Credentials.`, logParam);
         return;
     }
 
@@ -591,7 +610,7 @@ async function pairingEntityStorageMonitor(flm: FcmListenerManager, steamId: typ
 
         const serverInfo = gInstance.serverInfoMap[serverId];
         if (!serverInfo) {
-            log.warn(`Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
+            log.warn(`${fn} Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
             continue;
         }
 
@@ -632,15 +651,18 @@ async function alarmAlarm(flm: FcmListenerManager, steamId: types.SteamId, title
     to the credential owner and which is not part of the currently connected rust server can notify IF the general
     setting fcmAlarmNotificationEnabled is enabled. Those notifications will be handled here. */
 
+    const fn = `[${flm.constructor.name}: alarmAlarm]`;
+    const logParam = { steamId: steamId };
+
     const credentials = cm.getCredentials(steamId);
     const serverId = `${body.ip}-${body.port}`;
 
     if (!credentials) {
-        log.warn(`Could not find Credentials.`, { steamId: steamId });
+        log.warn(`${fn} Could not find Credentials.`, logParam);
         return;
     }
 
-    log.info(`FCM-Notification: alarmAlarm: ${title}: ${message}`, { steamId: steamId });
+    log.info(`${fn} alarmAlarm: ${title}: ${message}`, logParam);
 
     const associatedGuilds = await dm.getGuildIdsForUser(credentials.discordUserId);
     for (const guildId of associatedGuilds) {
@@ -648,7 +670,7 @@ async function alarmAlarm(flm: FcmListenerManager, steamId: types.SteamId, title
 
         const serverInfo = gInstance.serverInfoMap[serverId];
         if (!serverInfo) {
-            log.warn(`Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
+            log.warn(`${fn} Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
             continue;
         }
 
@@ -662,15 +684,18 @@ async function alarmAlarm(flm: FcmListenerManager, steamId: types.SteamId, title
 
 async function alarmPlugin(flm: FcmListenerManager, steamId: types.SteamId, title: string, message: string,
     body: AlarmPluginBody) {
+    const fn = `[${flm.constructor.name}: alarmPlugin]`;
+    const logParam = { steamId: steamId };
+
     const credentials = cm.getCredentials(steamId);
     const serverId = `${body.ip}-${body.port}`;
 
     if (!credentials) {
-        log.warn(`Could not find Credentials.`, { steamId: steamId });
+        log.warn(`${fn} Could not find Credentials.`, logParam);
         return;
     }
 
-    log.info(`FCM-Notification: alarmPlugin: ${title}: ${message}`, { steamId: steamId });
+    log.info(`${fn} alarmPlugin: ${title}: ${message}`, logParam);
 
     const associatedGuilds = await dm.getGuildIdsForUser(credentials.discordUserId);
     for (const guildId of associatedGuilds) {
@@ -678,7 +703,7 @@ async function alarmPlugin(flm: FcmListenerManager, steamId: types.SteamId, titl
 
         const serverInfo = gInstance.serverInfoMap[serverId];
         if (!serverInfo) {
-            log.warn(`Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
+            log.warn(`${fn} Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
             continue;
         }
 
@@ -705,10 +730,13 @@ async function alarmPlugin(flm: FcmListenerManager, steamId: types.SteamId, titl
 }
 
 async function playerDeath(flm: FcmListenerManager, steamId: types.SteamId, title: string, body: PlayerDeathBody) {
+    const fn = `[${flm.constructor.name}: playerDeath]`;
+    const logParam = { steamId: steamId };
+
     const credentials = cm.getCredentials(steamId);
 
     if (!credentials) {
-        log.warn(`Could not find Credentials.`, { steamId: steamId });
+        log.warn(`${fn} Could not find Credentials.`, logParam);
         return;
     }
 
@@ -716,11 +744,14 @@ async function playerDeath(flm: FcmListenerManager, steamId: types.SteamId, titl
 }
 
 async function teamLogin(flm: FcmListenerManager, steamId: types.SteamId, body: TeamLoginBody) {
+    const fn = `[${flm.constructor.name}: teamLogin]`;
+    const logParam = { steamId: steamId };
+
     const credentials = cm.getCredentials(steamId);
     const serverId = `${body.ip}-${body.port}`;
 
     if (!credentials) {
-        log.warn(`Could not find Credentials.`, { steamId: steamId });
+        log.warn(`${fn} Could not find Credentials.`, logParam);
         return;
     }
 
@@ -730,25 +761,27 @@ async function teamLogin(flm: FcmListenerManager, steamId: types.SteamId, body: 
 
         const serverInfo = gInstance.serverInfoMap[serverId];
         if (!serverInfo) {
-            log.warn(`Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
+            log.warn(`${fn} Could not find server.`, { guildId: guildId, serverId: serverId, steamId: steamId });
             continue;
         }
 
         const rpInstance = rpm.getInstance(guildId, serverId);
         if (!rpInstance && !serverInfo.active && steamId === serverInfo.requesterSteamId) {
             await discordMessages.sendFcmTeamLoginMessage(flm.dm, guildId, serverId, body);
-            log.info(`FCM-Notification: teamLogin: ${body.targetName} just connected to ${body.name}.`,
-                { steamId: steamId });
+            log.info(`${fn} teamLogin: ${body.targetName} just connected to ${body.name}.`, logParam);
         }
     }
 }
 
 async function newsNews(flm: FcmListenerManager, steamId: types.SteamId, title: string, message: string,
     body: NewsNewsBody) {
+    const fn = `[${flm.constructor.name}: newsNews]`;
+    const logParam = { steamId: steamId };
+
     const credentials = cm.getCredentials(steamId);
 
     if (!credentials) {
-        log.warn(`Could not find Credentials.`, { steamId: steamId });
+        log.warn(`${fn} Could not find Credentials.`, logParam);
         return;
     }
 
