@@ -29,7 +29,9 @@ import {
     EventNotificationSettings, GuildInstance, ServerInfo, SmartAlarmConfig, StorageMonitorConfig,
     StorageMonitorConfigType
 } from '../managers/guildInstanceManager';
-import { NewsNewsBody, isValidUrl } from '../managers/fcmListenerManager';
+import { NewsNewsBody } from '../managers/fcmListenerManager';
+import { isValidUrl } from '../utils/validationUtils';
+
 
 export const ButtonLimits = {
     CustomId: 100,
