@@ -20,7 +20,7 @@
 
 /* eslint-disable-next-line @typescript-eslint/no-require-imports */
 const PushReceiverClient = require('@liamcottle/push-receiver/src/client');
-import * as axios from 'axios';
+import { z } from 'zod';
 
 import {
     log, guildInstanceManager as gim, credentialsManager as cm, rustPlusManager as rpm,
@@ -44,21 +44,23 @@ export interface FcmListeners {
     [steamId: types.SteamId]: any; /* Client */
 }
 
-export interface FcmNotification {
-    id: string;
-    from: string;
-    category: string;
-    token: string;
-    appData: AppDataItem[];
-    persistentId: string;
-    ttl: number;
-    sent: string;
-}
+export const AppDataItemSchema = z.object({
+    key: z.string(),
+    value: z.string(),
+}).describe('AppDataItem');
+export type AppDataItem = z.infer<typeof AppDataItemSchema>;
 
-export interface AppDataItem {
-    key: string;
-    value: string;
-}
+export const FcmNotificationSchema = z.object({
+    id: z.string(),
+    from: z.string(),
+    category: z.string(),
+    token: z.string(),
+    appData: z.array(AppDataItemSchema),
+    persistentId: z.string(),
+    ttl: z.number(),
+    sent: z.string(),
+}).describe('FcmNotification');
+export type FcmNotification = z.infer<typeof FcmNotificationSchema>;
 
 export enum ChannelIds {
     PAIRING = 'pairing',
@@ -67,126 +69,142 @@ export enum ChannelIds {
     TEAM = 'team',
     NEWS = 'news'
 }
+export const ChannelIdsSchema = z.enum(['pairing', 'alarm', 'player', 'team', 'news']);
 
 export enum PairingTypes {
     SERVER = 'server',
     ENTITY = 'entity'
 }
+export const PairingTypesSchema = z.enum(['server', 'entity']);
 
 export enum PairingEntityTypes {
     SMART_SWITCH = '1',
     SMART_ALARM = '2',
     STORAGE_MONITOR = '3'
 }
+export const PairingEntityTypesSchema = z.enum(['1', '2', '3']);
 
 export enum PairingEntityNames {
     SMART_SWITCH = 'Smart Switch',
     SMART_ALARM = 'Smart Alarm',
     STORAGE_MONITOR = 'Storage Monitor'
 }
+export const PairingEntityNamesSchema = z.enum(['Smart Switch', 'Smart Alarm', 'Storage Monitor']);
 
 export enum AlarmTypes {
     ALARM = 'alarm'
 }
+export const AlarmTypesSchema = z.enum(['alarm']);
 
 export enum PlayerTypes {
     DEATH = 'death'
 }
+export const PlayerTypesSchema = z.enum(['death']);
 
 export enum TeamTypes {
     LOGIN = 'login'
 }
+export const TeamTypesSchema = z.enum(['login']);
 
 export enum NewsTypes {
     NEWS = 'news'
 }
+export const NewsTypesSchema = z.enum(['news']);
 
-export interface PairingServerBody {
-    id: string;
-    name: string;
-    desc: string;
-    img: string;
-    logo: string;
-    url: string;
-    ip: string;
-    port: string;
-    playerId: string;
-    playerToken: string;
-    type: string;
-}
+export const PairingServerBodySchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    desc: z.string(),
+    img: z.string(),
+    logo: z.string(),
+    url: z.string(),
+    ip: z.string(),
+    port: z.string(),
+    playerId: z.string(),
+    playerToken: z.string(),
+    type: z.string(),
+}).describe('PairingServerBody');
+export type PairingServerBody = z.infer<typeof PairingServerBodySchema>;
 
-export interface PairingEntityBody {
-    id: string;
-    name: string;
-    desc: string;
-    img: string;
-    logo: string;
-    url: string;
-    ip: string;
-    port: string;
-    playerId: string;
-    playerToken: string;
-    entityId: string;
-    entityType: string;
-    entityName: string;
-    type: string;
-}
+export const PairingEntityBodySchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    desc: z.string(),
+    img: z.string(),
+    logo: z.string(),
+    url: z.string(),
+    ip: z.string(),
+    port: z.string(),
+    playerId: z.string(),
+    playerToken: z.string(),
+    entityId: z.string(),
+    entityType: z.string(),
+    entityName: z.string(),
+    type: z.string(),
+}).describe('PairingEntityBody');
+export type PairingEntityBody = z.infer<typeof PairingEntityBodySchema>;
 
-export interface AlarmAlarmBody {
-    id: string;
-    name: string;
-    desc: string;
-    img: string;
-    logo: string;
-    url: string;
-    ip: string;
-    port: string;
-    type: string;
-}
 
-export interface AlarmPluginBody {
-    id: string;
-    name: string;
-    desc: string;
-    img: string;
-    logo: string;
-    url: string;
-    ip: string;
-    port: string;
-}
+export const AlarmAlarmBodySchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    desc: z.string(),
+    img: z.string(),
+    logo: z.string(),
+    url: z.string(),
+    ip: z.string(),
+    port: z.string(),
+    type: z.string(),
+}).describe('AlarmAlarmBody');
+export type AlarmAlarmBody = z.infer<typeof AlarmAlarmBodySchema>;
 
-export interface PlayerDeathBody {
-    id: string;
-    name: string;
-    desc: string;
-    img: string;
-    logo: string;
-    url: string;
-    ip: string;
-    port: string;
-    type: string;
-    targetId: string;
-    targetName: string;
-}
+export const AlarmPluginBodySchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    desc: z.string(),
+    img: z.string(),
+    logo: z.string(),
+    url: z.string(),
+    ip: z.string(),
+    port: z.string(),
+}).describe('AlarmPluginBody');
+export type AlarmPluginBody = z.infer<typeof AlarmPluginBodySchema>;
 
-export interface TeamLoginBody {
-    id: string;
-    name: string;
-    desc: string;
-    img: string;
-    logo: string;
-    url: string;
-    ip: string;
-    port: string;
-    type: string;
-    targetId: string;
-    targetName: string;
-}
+export const PlayerDeathBodySchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    desc: z.string(),
+    img: z.string(),
+    logo: z.string(),
+    url: z.string(),
+    ip: z.string(),
+    port: z.string(),
+    type: z.string(),
+    targetId: z.string(),
+    targetName: z.string()
+}).describe('PlayerDeathBody');
+export type PlayerDeathBody = z.infer<typeof PlayerDeathBodySchema>;
 
-export interface NewsNewsBody {
-    type: string;
-    url: string;
-}
+export const TeamLoginBodySchema = z.object({
+    id: z.string(),
+    name: z.string(),
+    desc: z.string(),
+    img: z.string(),
+    logo: z.string(),
+    url: z.string(),
+    ip: z.string(),
+    port: z.string(),
+    type: z.string(),
+    targetId: z.string(),
+    targetName: z.string()
+}).describe('TeamLoginBody');
+export type TeamLoginBody = z.infer<typeof TeamLoginBodySchema>;
+
+export const NewsNewsBodySchema = z.object({
+    type: z.string(),
+    url: z.string(),
+}).describe('NewsNewsBody');
+export type NewsNewsBody = z.infer<typeof NewsNewsBodySchema>;
 
 
 export class FcmListenerManager {
@@ -232,7 +250,7 @@ export class FcmListenerManager {
             const fn = `[${this.constructor.name}: onDataReceived]`;
             const logParam = { steamId: steamId };
 
-            if (!isValidFcmNotificaton(data)) {
+            if (!vu.isValidObject(data, FcmNotificationSchema)) {
                 log.warn(`${fn} data is not of type FcmNotification. Data: ${JSON.stringify(data)}`, logParam);
                 return;
             }
@@ -280,7 +298,7 @@ export class FcmListenerManager {
         }
 
         const channelId = appData.find(item => item.key === 'channelId')?.value;
-        if (!isValidChannelId(channelId)) {
+        if (!vu.isValidObject(channelId, ChannelIdsSchema)) {
             log.warn(`${fn} channelId '${channelId}' not found. Data: ${JSON.stringify(data)}`, logParam);
             return;
         }
@@ -297,7 +315,7 @@ export class FcmListenerManager {
                 switch (body.type) {
                     case PairingTypes.SERVER: {
                         log.info(`${fn} ${ChannelIds.PAIRING}: ${PairingTypes.SERVER}`, logParam);
-                        if (!isValidPairingServerBody(body)) return;
+                        if (!vu.isValidObject(body, PairingServerBodySchema)) return;
 
                         pairingServer(this, steamId, body);
                     } break;
@@ -309,7 +327,7 @@ export class FcmListenerManager {
                             case PairingEntityTypes.SMART_SWITCH: {
                                 log.info(`${fn} ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: ` +
                                     `${PairingEntityNames.SMART_SWITCH}`, logParam);
-                                if (!isValidPairingEntityBody(body)) return;
+                                if (!vu.isValidObject(body, PairingEntityBodySchema)) return;
 
                                 pairingEntitySmartSwitch(this, steamId, body);
                             } break;
@@ -317,7 +335,7 @@ export class FcmListenerManager {
                             case PairingEntityTypes.SMART_ALARM: {
                                 log.info(`${fn} ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: ` +
                                     `${PairingEntityNames.SMART_ALARM}`, logParam);
-                                if (!isValidPairingEntityBody(body)) return;
+                                if (!vu.isValidObject(body, PairingEntityBodySchema)) return;
 
                                 pairingEntitySmartAlarm(this, steamId, body);
                             } break;
@@ -325,14 +343,14 @@ export class FcmListenerManager {
                             case PairingEntityTypes.STORAGE_MONITOR: {
                                 log.info(`${fn} ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: ` +
                                     `${PairingEntityNames.STORAGE_MONITOR}`, logParam);
-                                if (!isValidPairingEntityBody(body)) return;
+                                if (!vu.isValidObject(body, PairingEntityBodySchema)) return;
 
                                 pairingEntityStorageMonitor(this, steamId, body);
                             } break;
 
                             default: {
                                 log.warn(`${fn} ${ChannelIds.PAIRING}: ${PairingTypes.ENTITY}: other.`, logParam);
-                                if (!isValidPairingEntityBody(body)) return;
+                                if (!vu.isValidObject(body, PairingEntityBodySchema)) return;
                             } break;
                         }
                     } break;
@@ -348,7 +366,7 @@ export class FcmListenerManager {
                 switch (body.type) {
                     case AlarmTypes.ALARM: {
                         log.info(`${fn} ${ChannelIds.ALARM}: ${AlarmTypes.ALARM}`, logParam);
-                        if (!isValidAlarmAlarmBody(body)) return;
+                        if (!vu.isValidObject(body, AlarmAlarmBodySchema)) return;
 
                         alarmAlarm(this, steamId, title, message, body);
                     } break;
@@ -357,7 +375,7 @@ export class FcmListenerManager {
                         if (title === 'You\'re getting raided!') {
                             /* Custom alarm from plugin: https://umod.org/plugins/raid-alarm */
                             log.info(`${fn} ${ChannelIds.ALARM}: plugin`, logParam);
-                            if (!isValidAlarmPluginBody(body)) return;
+                            if (!vu.isValidObject(body, AlarmPluginBodySchema)) return;
 
                             alarmPlugin(this, steamId, title, message, body);
                             break;
@@ -373,7 +391,7 @@ export class FcmListenerManager {
                 switch (body.type) {
                     case PlayerTypes.DEATH: {
                         log.info(`${fn} ${ChannelIds.PLAYER}: ${PlayerTypes.DEATH}`, logParam);
-                        if (!isValidPlayerDeathBody(body)) return;
+                        if (!vu.isValidObject(body, PlayerDeathBodySchema)) return;
 
                         playerDeath(this, steamId, title, body);
                     } break;
@@ -389,7 +407,7 @@ export class FcmListenerManager {
                 switch (body.type) {
                     case TeamTypes.LOGIN: {
                         log.info(`${fn} ${ChannelIds.TEAM}: ${TeamTypes.LOGIN}`, logParam);
-                        if (!isValidTeamLoginBody(body)) return;
+                        if (!vu.isValidObject(body, TeamLoginBodySchema)) return;
 
                         teamLogin(this, steamId, body);
                     } break;
@@ -405,7 +423,7 @@ export class FcmListenerManager {
                 switch (body.type) {
                     case NewsTypes.NEWS: {
                         log.info(`${fn} ${ChannelIds.NEWS}: ${NewsTypes.NEWS}`, logParam);
-                        if (!isValidNewsNewsBody(body)) return;
+                        if (!vu.isValidObject(body, NewsNewsBodySchema)) return;
 
                         newsNews(this, steamId, title, message, body);
                     } break;
@@ -454,9 +472,9 @@ async function pairingServer(flm: FcmListenerManager, steamId: types.SteamId, bo
         gInstance.serverInfoMap[serverId] = {
             name: body.name,
             desc: JSON.parse(`"${body.desc}"`),
-            img: await isValidImageUrl(img) ? img : constants.DEFAULT_SERVER_IMAGE,
-            logo: await isValidImageUrl(logo) ? logo : constants.DEFAULT_SERVER_IMAGE,
-            url: isValidUrl(url) ? url : constants.DEFAULT_SERVER_URL,
+            img: await vu.isValidImageUrl(img) ? img : constants.DEFAULT_SERVER_IMAGE,
+            logo: await vu.isValidImageUrl(logo) ? logo : constants.DEFAULT_SERVER_IMAGE,
+            url: vu.isValidUrl(url) ? url : constants.DEFAULT_SERVER_URL,
             ip: body.ip,
             port: body.port,
             messageId: (message) ? message.id : null,
@@ -812,460 +830,4 @@ function updatePairingDetails(pairingDataMap: PairingDataMap, serverId: types.Se
         steamId: body.playerId,
         playerToken: Number(body.playerToken)
     };
-}
-
-
-/**
- * Validation functions.
- */
-
-export function isValidChannelId(value: unknown): value is ChannelIds {
-    return typeof value === 'string' && Object.values(ChannelIds).includes(value as ChannelIds);
-}
-
-export function isValidPairingType(value: unknown): value is PairingTypes {
-    return typeof value === 'string' && Object.values(PairingTypes).includes(value as PairingTypes);
-}
-
-export function isValidPairingEntityType(value: unknown): value is PairingEntityTypes {
-    return typeof value === 'string' && Object.values(PairingEntityTypes).includes(value as PairingEntityTypes);
-}
-
-export function isValidPairingEntityName(value: unknown): value is PairingEntityNames {
-    return typeof value === 'string' && Object.values(PairingEntityNames).includes(value as PairingEntityNames);
-}
-
-export function isValidAlarmType(value: unknown): value is AlarmTypes {
-    return typeof value === 'string' && Object.values(AlarmTypes).includes(value as AlarmTypes);
-}
-
-export function isValidPlayerType(value: unknown): value is PlayerTypes {
-    return typeof value === 'string' && Object.values(PlayerTypes).includes(value as PlayerTypes);
-}
-
-export function isValidTeamType(value: unknown): value is TeamTypes {
-    return typeof value === 'string' && Object.values(TeamTypes).includes(value as TeamTypes);
-}
-
-export function isValidNewsType(value: unknown): value is NewsTypes {
-    return typeof value === 'string' && Object.values(NewsTypes).includes(value as NewsTypes);
-}
-
-export function isValidUrl(url: string): boolean {
-    let urlObj;
-    try {
-        urlObj = new URL(url);
-    }
-    catch {
-        return false;
-    }
-
-    return urlObj.protocol === "http:" || urlObj.protocol === "https:";
-}
-
-export async function isValidImageUrl(url: string): Promise<boolean> {
-    try {
-        const response = await axios.default.get(url, {
-            responseType: 'arraybuffer',
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Node.js image validator)'
-            },
-            method: 'HEAD',
-            timeout: 5000
-        });
-
-        const contentType = response.headers['content-type'];
-        return contentType && contentType.startsWith('image/');
-    }
-    catch {
-        return false;
-    }
-}
-
-export function isValidFcmNotificaton(object: unknown): object is FcmNotification {
-    if (typeof object !== 'object' || object === null || Array.isArray(object)) {
-        return false;
-    }
-
-    const obj = object as FcmNotification;
-
-    const interfaceName = 'FcmNotification';
-    const validKeys = [
-        'id',
-        'from',
-        'category',
-        'token',
-        'appData',
-        'persistentId',
-        'ttl',
-        'sent'
-    ];
-
-    const errors: (vu.ValidationError | null)[] = [];
-    errors.push(vu.validateType('id', obj.id, 'string'));
-    errors.push(vu.validateType('from', obj.from, 'string'));
-    errors.push(vu.validateType('category', obj.category, 'string'));
-    errors.push(vu.validateType('token', obj.token, 'string'));
-    errors.push(vu.validateArrayOfInterfaces('appData', obj.appData, isValidAppDataItem));
-    errors.push(vu.validateType('persistentId', obj.persistentId, 'string'));
-    errors.push(vu.validateType('ttl', obj.ttl, 'number'));
-    errors.push(vu.validateType('sent', obj.sent, 'string'));
-
-    const filteredErrors = errors.filter((error): error is vu.ValidationError => error !== null);
-
-    const objectKeys = Object.keys(object);
-    const missingKeys = validKeys.filter(key => !objectKeys.includes(key));
-    const unknownKeys = objectKeys.filter(key => !validKeys.includes(key));
-    const hasAllRequiredKeys = missingKeys.length === 0;
-    const hasOnlyValidKeys = unknownKeys.length === 0;
-
-    vu.logValidations(interfaceName, filteredErrors, missingKeys, unknownKeys);
-
-    return filteredErrors.length === 0 && hasAllRequiredKeys && hasOnlyValidKeys;
-}
-
-export function isValidAppDataItem(object: unknown): object is AppDataItem {
-    if (typeof object !== 'object' || object === null || Array.isArray(object)) {
-        return false;
-    }
-
-    const obj = object as AppDataItem;
-
-    const interfaceName = 'AppDataItem';
-    const validKeys = [
-        'key',
-        'value'
-    ];
-
-    const errors: (vu.ValidationError | null)[] = [];
-    errors.push(vu.validateType('key', obj.key, 'string'));
-    errors.push(vu.validateType('value', obj.value, 'string'));
-
-    const filteredErrors = errors.filter((error): error is vu.ValidationError => error !== null);
-
-    const objectKeys = Object.keys(object);
-    const missingKeys = validKeys.filter(key => !objectKeys.includes(key));
-    const unknownKeys = objectKeys.filter(key => !validKeys.includes(key));
-    const hasAllRequiredKeys = missingKeys.length === 0;
-    const hasOnlyValidKeys = unknownKeys.length === 0;
-
-    vu.logValidations(interfaceName, filteredErrors, missingKeys, unknownKeys);
-
-    return filteredErrors.length === 0 && hasAllRequiredKeys && hasOnlyValidKeys;
-}
-
-export function isValidPairingServerBody(object: unknown): object is PairingServerBody {
-    if (typeof object !== 'object' || object === null || Array.isArray(object)) {
-        return false;
-    }
-
-    const obj = object as PairingServerBody;
-
-    const interfaceName = 'PairingServerBody';
-    const validKeys = [
-        'id',
-        'name',
-        'desc',
-        'img',
-        'logo',
-        'url',
-        'ip',
-        'port',
-        'playerId',
-        'playerToken',
-        'type'
-    ];
-
-    const errors: (vu.ValidationError | null)[] = [];
-    errors.push(vu.validateType('id', obj.id, 'string'));
-    errors.push(vu.validateType('name', obj.name, 'string'));
-    errors.push(vu.validateType('desc', obj.desc, 'string'));
-    errors.push(vu.validateType('img', obj.img, 'string'));
-    errors.push(vu.validateType('logo', obj.logo, 'string'));
-    errors.push(vu.validateType('url', obj.url, 'string'));
-    errors.push(vu.validateType('ip', obj.ip, 'string'));
-    errors.push(vu.validateType('port', obj.port, 'string'));
-    errors.push(vu.validateType('playerId', obj.playerId, 'string'));
-    errors.push(vu.validateType('playerToken', obj.playerToken, 'string'));
-    errors.push(vu.validateInterface('type', obj.type, isValidPairingType));
-
-    const filteredErrors = errors.filter((error): error is vu.ValidationError => error !== null);
-
-    const objectKeys = Object.keys(object);
-    const missingKeys = validKeys.filter(key => !objectKeys.includes(key));
-    const unknownKeys = objectKeys.filter(key => !validKeys.includes(key));
-    const hasAllRequiredKeys = missingKeys.length === 0;
-    const hasOnlyValidKeys = unknownKeys.length === 0;
-
-    vu.logValidations(interfaceName, filteredErrors, missingKeys, unknownKeys);
-
-    return filteredErrors.length === 0 && hasAllRequiredKeys && hasOnlyValidKeys;
-}
-
-export function isValidPairingEntityBody(object: unknown): object is PairingEntityBody {
-    if (typeof object !== 'object' || object === null || Array.isArray(object)) {
-        return false;
-    }
-
-    const obj = object as PairingEntityBody;
-
-    const interfaceName = 'PairingEntityBody';
-    const validKeys = [
-        'id',
-        'name',
-        'desc',
-        'img',
-        'logo',
-        'url',
-        'ip',
-        'port',
-        'playerId',
-        'playerToken',
-        'entityId',
-        'entityType',
-        'entityName',
-        'type'
-    ];
-
-    const errors: (vu.ValidationError | null)[] = [];
-    errors.push(vu.validateType('id', obj.id, 'string'));
-    errors.push(vu.validateType('name', obj.name, 'string'));
-    errors.push(vu.validateType('desc', obj.desc, 'string'));
-    errors.push(vu.validateType('img', obj.img, 'string'));
-    errors.push(vu.validateType('logo', obj.logo, 'string'));
-    errors.push(vu.validateType('url', obj.url, 'string'));
-    errors.push(vu.validateType('ip', obj.ip, 'string'));
-    errors.push(vu.validateType('port', obj.port, 'string'));
-    errors.push(vu.validateType('playerId', obj.playerId, 'string'));
-    errors.push(vu.validateType('playerToken', obj.playerToken, 'string'));
-    errors.push(vu.validateType('entityId', obj.entityId, 'string'));
-    errors.push(vu.validateInterface('entityType', obj.entityType, isValidPairingEntityType));
-    errors.push(vu.validateInterface('entityName', obj.entityName, isValidPairingEntityName));
-    errors.push(vu.validateInterface('type', obj.type, isValidPairingType));
-
-    const filteredErrors = errors.filter((error): error is vu.ValidationError => error !== null);
-
-    const objectKeys = Object.keys(object);
-    const missingKeys = validKeys.filter(key => !objectKeys.includes(key));
-    const unknownKeys = objectKeys.filter(key => !validKeys.includes(key));
-    const hasAllRequiredKeys = missingKeys.length === 0;
-    const hasOnlyValidKeys = unknownKeys.length === 0;
-
-    vu.logValidations(interfaceName, filteredErrors, missingKeys, unknownKeys);
-
-    return filteredErrors.length === 0 && hasAllRequiredKeys && hasOnlyValidKeys;
-}
-
-export function isValidAlarmAlarmBody(object: unknown): object is AlarmAlarmBody {
-    if (typeof object !== 'object' || object === null || Array.isArray(object)) {
-        return false;
-    }
-
-    const obj = object as AlarmAlarmBody;
-
-    const interfaceName = 'AlarmAlarmBody';
-    const validKeys = [
-        'id',
-        'name',
-        'desc',
-        'img',
-        'logo',
-        'url',
-        'ip',
-        'port',
-        'type'
-    ];
-
-    const errors: (vu.ValidationError | null)[] = [];
-    errors.push(vu.validateType('id', obj.id, 'string'));
-    errors.push(vu.validateType('name', obj.name, 'string'));
-    errors.push(vu.validateType('desc', obj.desc, 'string'));
-    errors.push(vu.validateType('img', obj.img, 'string'));
-    errors.push(vu.validateType('logo', obj.logo, 'string'));
-    errors.push(vu.validateType('url', obj.url, 'string'));
-    errors.push(vu.validateType('ip', obj.ip, 'string'));
-    errors.push(vu.validateType('port', obj.port, 'string'));
-    errors.push(vu.validateType('type', obj.type, 'string'));
-    errors.push(vu.validateInterface('type', obj.type, isValidAlarmType));
-
-    const filteredErrors = errors.filter((error): error is vu.ValidationError => error !== null);
-
-    const objectKeys = Object.keys(object);
-    const missingKeys = validKeys.filter(key => !objectKeys.includes(key));
-    const unknownKeys = objectKeys.filter(key => !validKeys.includes(key));
-    const hasAllRequiredKeys = missingKeys.length === 0;
-    const hasOnlyValidKeys = unknownKeys.length === 0;
-
-    vu.logValidations(interfaceName, filteredErrors, missingKeys, unknownKeys);
-
-    return filteredErrors.length === 0 && hasAllRequiredKeys && hasOnlyValidKeys;
-}
-
-export function isValidAlarmPluginBody(object: unknown): object is AlarmPluginBody {
-    if (typeof object !== 'object' || object === null || Array.isArray(object)) {
-        return false;
-    }
-
-    const obj = object as AlarmPluginBody;
-
-    const interfaceName = 'AlarmPluginBody';
-    const validKeys = [
-        'id',
-        'name',
-        'desc',
-        'img',
-        'logo',
-        'url',
-        'ip',
-        'port'
-    ];
-
-    const errors: (vu.ValidationError | null)[] = [];
-    errors.push(vu.validateType('id', obj.id, 'string'));
-    errors.push(vu.validateType('name', obj.name, 'string'));
-    errors.push(vu.validateType('desc', obj.desc, 'string'));
-    errors.push(vu.validateType('img', obj.img, 'string'));
-    errors.push(vu.validateType('logo', obj.logo, 'string'));
-    errors.push(vu.validateType('url', obj.url, 'string'));
-    errors.push(vu.validateType('ip', obj.ip, 'string'));
-    errors.push(vu.validateType('port', obj.port, 'string'));
-
-    const filteredErrors = errors.filter((error): error is vu.ValidationError => error !== null);
-
-    const objectKeys = Object.keys(object);
-    const missingKeys = validKeys.filter(key => !objectKeys.includes(key));
-    const unknownKeys = objectKeys.filter(key => !validKeys.includes(key));
-    const hasAllRequiredKeys = missingKeys.length === 0;
-    const hasOnlyValidKeys = unknownKeys.length === 0;
-
-    vu.logValidations(interfaceName, filteredErrors, missingKeys, unknownKeys);
-
-    return filteredErrors.length === 0 && hasAllRequiredKeys && hasOnlyValidKeys;
-}
-
-export function isValidPlayerDeathBody(object: unknown): object is PlayerDeathBody {
-    if (typeof object !== 'object' || object === null || Array.isArray(object)) {
-        return false;
-    }
-
-    const obj = object as PlayerDeathBody;
-
-    const interfaceName = 'PlayerDeathBody';
-    const validKeys = [
-        'id',
-        'name',
-        'desc',
-        'img',
-        'logo',
-        'url',
-        'ip',
-        'port',
-        'type',
-        'targetId',
-        'targetName'
-    ];
-
-    const errors: (vu.ValidationError | null)[] = [];
-    errors.push(vu.validateType('id', obj.id, 'string'));
-    errors.push(vu.validateType('name', obj.name, 'string'));
-    errors.push(vu.validateType('desc', obj.desc, 'string'));
-    errors.push(vu.validateType('img', obj.img, 'string'));
-    errors.push(vu.validateType('logo', obj.logo, 'string'));
-    errors.push(vu.validateType('url', obj.url, 'string'));
-    errors.push(vu.validateType('ip', obj.ip, 'string'));
-    errors.push(vu.validateType('port', obj.port, 'string'));
-    errors.push(vu.validateInterface('type', obj.type, isValidPlayerType));
-    errors.push(vu.validateType('targetId', obj.targetId, 'string'));
-    errors.push(vu.validateType('targetName', obj.targetName, 'string'));
-
-    const filteredErrors = errors.filter((error): error is vu.ValidationError => error !== null);
-
-    const objectKeys = Object.keys(object);
-    const missingKeys = validKeys.filter(key => !objectKeys.includes(key));
-    const unknownKeys = objectKeys.filter(key => !validKeys.includes(key));
-    const hasAllRequiredKeys = missingKeys.length === 0;
-    const hasOnlyValidKeys = unknownKeys.length === 0;
-
-    vu.logValidations(interfaceName, filteredErrors, missingKeys, unknownKeys);
-
-    return filteredErrors.length === 0 && hasAllRequiredKeys && hasOnlyValidKeys;
-}
-
-export function isValidTeamLoginBody(object: unknown): object is TeamLoginBody {
-    if (typeof object !== 'object' || object === null || Array.isArray(object)) {
-        return false;
-    }
-
-    const obj = object as TeamLoginBody;
-
-    const interfaceName = 'TeamLoginBody';
-    const validKeys = [
-        'id',
-        'name',
-        'desc',
-        'img',
-        'logo',
-        'url',
-        'ip',
-        'port',
-        'type',
-        'targetId',
-        'targetName'
-    ];
-
-    const errors: (vu.ValidationError | null)[] = [];
-    errors.push(vu.validateType('id', obj.id, 'string'));
-    errors.push(vu.validateType('name', obj.name, 'string'));
-    errors.push(vu.validateType('desc', obj.desc, 'string'));
-    errors.push(vu.validateType('img', obj.img, 'string'));
-    errors.push(vu.validateType('logo', obj.logo, 'string'));
-    errors.push(vu.validateType('url', obj.url, 'string'));
-    errors.push(vu.validateType('ip', obj.ip, 'string'));
-    errors.push(vu.validateType('port', obj.port, 'string'));
-    errors.push(vu.validateInterface('type', obj.type, isValidTeamType));
-    errors.push(vu.validateType('targetId', obj.targetId, 'string'));
-    errors.push(vu.validateType('targetName', obj.targetName, 'string'));
-
-    const filteredErrors = errors.filter((error): error is vu.ValidationError => error !== null);
-
-    const objectKeys = Object.keys(object);
-    const missingKeys = validKeys.filter(key => !objectKeys.includes(key));
-    const unknownKeys = objectKeys.filter(key => !validKeys.includes(key));
-    const hasAllRequiredKeys = missingKeys.length === 0;
-    const hasOnlyValidKeys = unknownKeys.length === 0;
-
-    vu.logValidations(interfaceName, filteredErrors, missingKeys, unknownKeys);
-
-    return filteredErrors.length === 0 && hasAllRequiredKeys && hasOnlyValidKeys;
-}
-
-export function isValidNewsNewsBody(object: unknown): object is NewsNewsBody {
-    if (typeof object !== 'object' || object === null || Array.isArray(object)) {
-        return false;
-    }
-
-    const obj = object as NewsNewsBody;
-
-    const interfaceName = 'NewsNewsBody';
-    const validKeys = [
-        'type',
-        'url'
-    ];
-
-    const errors: (vu.ValidationError | null)[] = [];
-    errors.push(vu.validateType('type', obj.type, 'string'));
-    errors.push(vu.validateInterface('type', obj.type, isValidNewsType));
-    errors.push(vu.validateType('url', obj.url, 'string'));
-
-    const filteredErrors = errors.filter((error): error is vu.ValidationError => error !== null);
-
-    const objectKeys = Object.keys(object);
-    const missingKeys = validKeys.filter(key => !objectKeys.includes(key));
-    const unknownKeys = objectKeys.filter(key => !validKeys.includes(key));
-    const hasAllRequiredKeys = missingKeys.length === 0;
-    const hasOnlyValidKeys = unknownKeys.length === 0;
-
-    vu.logValidations(interfaceName, filteredErrors, missingKeys, unknownKeys);
-
-    return filteredErrors.length === 0 && hasAllRequiredKeys && hasOnlyValidKeys;
 }

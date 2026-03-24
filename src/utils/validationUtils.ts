@@ -18,7 +18,55 @@
 
 */
 
+import * as axios from 'axios';
+import { ZodType } from 'zod';
+
 import { log } from '../../index';
+
+export function isValidObject<T>(object: unknown, schema: ZodType<T>): object is T {
+    const fn = '[isValidObject]';
+
+    const result = schema.safeParse(object);
+    if (!result.success) {
+        log.error(`${fn} Invalid ${schema.description}: ${JSON.stringify(result.error.issues)}`);
+    }
+
+    return result.success;
+}
+
+export function isValidUrl(url: string): boolean {
+    let urlObj;
+    try {
+        urlObj = new URL(url);
+    }
+    catch {
+        return false;
+    }
+
+    return urlObj.protocol === "http:" || urlObj.protocol === "https:";
+}
+
+export async function isValidImageUrl(url: string): Promise<boolean> {
+    try {
+        const response = await axios.default.get(url, {
+            responseType: 'arraybuffer',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Node.js image validator)'
+            },
+            method: 'HEAD',
+            timeout: 5000
+        });
+
+        const contentType = response.headers['content-type'];
+        return contentType && contentType.startsWith('image/');
+    }
+    catch {
+        return false;
+    }
+}
+
+
+
 
 export type ValidationError = { key: string; value: unknown; expected: unknown };
 
