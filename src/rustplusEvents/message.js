@@ -163,7 +163,7 @@ async function messageBroadcastEntityChangedSmartSwitch(rustplus, client, messag
     server.switches[entityId].active = active;
     client.setInstance(rustplus.guildId, instance);
 
-    DiscordMessages.sendSmartSwitchMessage(rustplus.guildId, serverId, entityId);
+    DiscordMessages.sendSmartSwitchMessage(client, rustplus.guildId, serverId, entityId);
     SmartSwitchGroupHandler.updateSwitchGroupIfContainSwitch(
         client, rustplus.guildId, serverId, entityId);
 }
@@ -184,14 +184,14 @@ async function messageBroadcastEntityChangedSmartAlarm(rustplus, client, message
     if (active) {
         server.alarms[entityId].lastTrigger = Math.floor(new Date() / 1000);
         client.setInstance(rustplus.guildId, instance);
-        await DiscordMessages.sendSmartAlarmTriggerMessage(rustplus.guildId, serverId, entityId);
+        await DiscordMessages.sendSmartAlarmTriggerMessage(client, rustplus.guildId, serverId, entityId);
 
         if (instance.generalSettings.smartAlarmNotifyInGame) {
             rustplus.sendInGameMessage(`${server.alarms[entityId].name}: ${server.alarms[entityId].message}`);
         }
     }
 
-    DiscordMessages.sendSmartAlarmMessage(rustplus.guildId, rustplus.serverId, entityId);
+    DiscordMessages.sendSmartAlarmMessage(client, rustplus.guildId, rustplus.serverId, entityId);
 }
 
 async function messageBroadcastEntityChangedStorageMonitor(rustplus, client, message) {
@@ -229,7 +229,7 @@ async function messageBroadcastEntityChangedStorageMonitor(rustplus, client, mes
         }
         client.setInstance(rustplus.guildId, instance);
 
-        await DiscordMessages.sendStorageMonitorMessage(rustplus.guildId, serverId, entityId);
+        await DiscordMessages.sendStorageMonitorMessage(client, rustplus.guildId, serverId, entityId);
     }
 }
 
@@ -255,7 +255,7 @@ async function updateToolCupboard(rustplus, client, message) {
         if (info.entityInfo.payload.protectionExpiry === 0 && server.storageMonitors[entityId].decaying === false) {
             server.storageMonitors[entityId].decaying = true;
 
-            await DiscordMessages.sendDecayingNotificationMessage(rustplus.guildId, rustplus.serverId, entityId);
+            await DiscordMessages.sendDecayingNotificationMessage(client, rustplus.guildId, rustplus.serverId, entityId);
 
             if (server.storageMonitors[entityId].inGame) {
                 rustplus.sendInGameMessage(client.intlGet(rustplus.guildId, 'isDecaying', {
@@ -269,5 +269,5 @@ async function updateToolCupboard(rustplus, client, message) {
         client.setInstance(rustplus.guildId, instance);
     }
 
-    await DiscordMessages.sendStorageMonitorMessage(rustplus.guildId, rustplus.serverId, entityId);
+    await DiscordMessages.sendStorageMonitorMessage(client, rustplus.guildId, rustplus.serverId, entityId);
 }

@@ -47,11 +47,11 @@ module.exports = {
             condition &= rustplus && rustplus.isOperational;
 
             if (condition) {
-                await DiscordMessages.sendUpdateBattlemetricsOnlinePlayersInformationMessage(rustplus, bmId);
+                await DiscordMessages.sendUpdateBattlemetricsOnlinePlayersInformationMessage(client, rustplus, bmId);
             }
             else {
                 if (instance.informationMessageId.battlemetricsPlayers !== null) {
-                    await DiscordTools.deleteMessageById(guildId, instance.channelId.information,
+                    await DiscordTools.deleteMessageById(client, guildId, instance.channelId.information,
                         instance.informationMessageId.battlemetricsPlayers);
 
                     instance.informationMessageId.battlemetricsPlayers = null;
@@ -95,7 +95,7 @@ module.exports = {
                     client.setInstance(guildId, instance);
 
                     if (firstTime) {
-                        await DiscordMessages.sendTrackerMessage(guildId, trackerId);
+                        await DiscordMessages.sendTrackerMessage(client, guildId, trackerId);
                         continue;
                     }
                 }
@@ -121,7 +121,7 @@ module.exports = {
                             name: player.name,
                             tracker: content.name
                         });
-                        await DiscordMessages.sendActivityNotificationMessage(
+                        await DiscordMessages.sendActivityNotificationMessage(client, 
                             guildId, content.serverId, Constants.COLOR_ACTIVE, str, null, content.title,
                             content.everyone);
                         if (rustplus && (rustplus.serverId === content.serverId) && content.inGame) {
@@ -139,7 +139,7 @@ module.exports = {
                             name: player.name,
                             tracker: content.name
                         });
-                        await DiscordMessages.sendActivityNotificationMessage(
+                        await DiscordMessages.sendActivityNotificationMessage(client, 
                             guildId, content.serverId, Constants.COLOR_ACTIVE, str, null, content.title,
                             content.everyone);
                         if (rustplus && (rustplus.serverId === content.serverId) && content.inGame) {
@@ -158,7 +158,7 @@ module.exports = {
                             tracker: content.name
                         });
 
-                        await DiscordMessages.sendActivityNotificationMessage(
+                        await DiscordMessages.sendActivityNotificationMessage(client, 
                             guildId, content.serverId, Constants.COLOR_INACTIVE, str, null, content.title,
                             content.everyone);
                         if (rustplus && (rustplus.serverId === content.serverId) && content.inGame) {
@@ -169,7 +169,7 @@ module.exports = {
 
                 client.setInstance(guildId, instance);
 
-                await DiscordMessages.sendTrackerMessage(guildId, trackerId);
+                await DiscordMessages.sendTrackerMessage(client, guildId, trackerId);
             }
         }
 

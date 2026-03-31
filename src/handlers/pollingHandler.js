@@ -65,7 +65,7 @@ module.exports = {
         rustplus.info.updateInfo(info.info);
         rustplus.mapMarkers.updateMapMarkers(mapMarkers.mapMarkers);
 
-        await InformationHandler.handler(rustplus);
+        await InformationHandler.handler(rustplus, client);
         await StorageMonitorHandler.handler(rustplus, client);
         await SmartAlarmHandler.handler(rustplus, client);
     },

@@ -48,8 +48,8 @@ module.exports = {
             instance.activeServer = null;
             client.setInstance(guildId, instance);
 
-            await DiscordMessages.sendServerConnectionInvalidMessage(guildId, serverId);
-            await DiscordMessages.sendServerMessage(guildId, serverId, null);
+            await DiscordMessages.sendServerConnectionInvalidMessage(client, guildId, serverId);
+            await DiscordMessages.sendServerMessage(client, guildId, serverId, null);
 
             client.resetRustplusVariables(guildId);
 
@@ -67,21 +67,21 @@ module.exports = {
                 rustplus.map = new Map(map.map, rustplus);
 
                 await rustplus.map.writeMap(false, true);
-                await DiscordMessages.sendServerWipeDetectedMessage(guildId, serverId);
-                await DiscordMessages.sendInformationMapMessage(guildId);
+                await DiscordMessages.sendServerWipeDetectedMessage(client, guildId, serverId);
+                await DiscordMessages.sendInformationMapMessage(client, guildId);
             }
             else {
                 rustplus.map = new Map(map.map, rustplus);
 
                 await rustplus.map.writeMap(false, true);
-                await DiscordMessages.sendInformationMapMessage(guildId);
+                await DiscordMessages.sendInformationMapMessage(client, guildId);
             }
         }
         else {
             rustplus.map = new Map(map.map, rustplus);
 
             await rustplus.map.writeMap(false, true);
-            await DiscordMessages.sendInformationMapMessage(guildId);
+            await DiscordMessages.sendInformationMapMessage(client, guildId);
         }
 
         if (client.rustplusReconnecting[guildId]) {
@@ -92,10 +92,10 @@ module.exports = {
                 client.rustplusReconnectTimers[guildId] = null;
             }
 
-            await DiscordMessages.sendServerChangeStateMessage(guildId, serverId, 0);
+            await DiscordMessages.sendServerChangeStateMessage(client, guildId, serverId, 0);
         }
 
-        await DiscordMessages.sendServerMessage(guildId, serverId, null);
+        await DiscordMessages.sendServerMessage(client, guildId, serverId, null);
 
         /* Setup Smart Devices */
         await require('../discordTools/SetupSwitches')(client, rustplus);

@@ -20,7 +20,7 @@
 
 const Axios = require('axios');
 
-const Client = require('../../index.ts');
+// const Client = require('../../index.ts'); -- Eliminado para Multi-Tenant
 const RandomUsernames = require('../staticFiles/RandomUsernames.json');
 const Utils = require = require('../util/utils.js');
 
@@ -33,10 +33,12 @@ class Battlemetrics {
 
     /**
      *  Constructor for the Battlemetrics Class.
+     *  @param {DiscordBot} discordBot The discord bot instance.
      *  @param {number|null} id The id of the server, default null.
      *  @param {string|null} name The name of the server, default null.
      */
-    constructor(id = null, name = null) {
+    constructor(discordBot, id = null, name = null) {
+        this.discordBot = discordBot;
         this._id = id;
         this._name = name;
 
@@ -384,8 +386,8 @@ class Battlemetrics {
         const response = await this.#request(api_call);
 
         if (response.status !== 200) {
-            Client.client.log(Client.client.intlGet(null, 'errorCap'),
-                Client.client.intlGet(null, 'battlemetricsApiRequestFailed', { api_call: api_call }), 'error');
+            this.discordBot.log(this.discordBot.intlGet(null, 'errorCap'),
+                this.discordBot.intlGet(null, 'battlemetricsApiRequestFailed', { api_call: api_call }), 'error');
             return null;
         }
 
@@ -399,8 +401,8 @@ class Battlemetrics {
      */
     async setup() {
         if (this.id === null && this.name === null) {
-            Client.client.log(Client.client.intlGet(null, 'errorCap'),
-                Client.client.intlGet(null, 'battlemetricsIdAndNameMissing'), 'error');
+            this.discordBot.log(this.discordBot.intlGet(null, 'errorCap'),
+                this.discordBot.intlGet(null, 'battlemetricsIdAndNameMissing'), 'error');
             return;
         }
 
@@ -443,8 +445,8 @@ class Battlemetrics {
         const response = await this.#request(search);
 
         if (response.status !== 200) {
-            Client.client.log(Client.client.intlGet(null, 'errorCap'),
-                Client.client.intlGet(null, 'battlemetricsApiRequestFailed', { api_call: search }), 'error');
+            this.discordBot.log(this.discordBot.intlGet(null, 'errorCap'),
+                this.discordBot.intlGet(null, 'battlemetricsApiRequestFailed', { api_call: search }), 'error');
             return null;
         }
 
@@ -484,8 +486,8 @@ class Battlemetrics {
 
         if (!data) {
             this.lastUpdateSuccessful = false;
-            Client.client.log(Client.client.intlGet(null, 'errorCap'),
-                Client.client.intlGet(null, 'battlemetricsFailedToUpdate', { server: this.id }), 'error');
+            this.discordBot.log(this.discordBot.intlGet(null, 'errorCap'),
+                this.discordBot.intlGet(null, 'battlemetricsFailedToUpdate', { server: this.id }), 'error');
             return false;
         }
 

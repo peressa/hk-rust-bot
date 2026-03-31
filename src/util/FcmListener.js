@@ -222,7 +222,7 @@ async function pairingServer(client, guild, title, message, body) {
     const server = instance.serverList[serverId];
 
     let messageObj = undefined;
-    if (server) messageObj = await DiscordTools.getMessageById(guild.id, instance.channelId.servers, server.messageId);
+    if (server) messageObj = await DiscordTools.getMessageById(client, guild.id, instance.channelId.servers, server.messageId);
 
     let battlemetricsId = null;
     const bmInstance = new Battlemetrics(null, title);
@@ -270,7 +270,7 @@ async function pairingServer(client, guild, title, message, body) {
     };
     client.setInstance(guild.id, instance);
 
-    await DiscordMessages.sendServerMessage(guild.id, serverId, null);
+    await DiscordMessages.sendServerMessage(client, guild.id, serverId, null);
 }
 
 async function pairingEntitySwitch(client, guild, title, message, body) {
@@ -319,7 +319,7 @@ async function pairingEntitySwitch(client, guild, title, message, body) {
         }
         client.setInstance(guild.id, instance);
 
-        await DiscordMessages.sendSmartSwitchMessage(guild.id, serverId, body.entityId);
+        await DiscordMessages.sendSmartSwitchMessage(client, guild.id, serverId, body.entityId);
     }
 }
 
@@ -368,7 +368,7 @@ async function pairingEntitySmartAlarm(client, guild, title, message, body) {
         client.setInstance(guild.id, instance);
     }
 
-    await DiscordMessages.sendSmartAlarmMessage(guild.id, serverId, body.entityId);
+    await DiscordMessages.sendSmartAlarmMessage(client, guild.id, serverId, body.entityId);
 }
 
 async function pairingEntityStorageMonitor(client, guild, title, message, body) {
@@ -436,7 +436,7 @@ async function pairingEntityStorageMonitor(client, guild, title, message, body) 
         }
         client.setInstance(guild.id, instance);
 
-        await DiscordMessages.sendStorageMonitorMessage(guild.id, serverId, body.entityId);
+        await DiscordMessages.sendStorageMonitorMessage(client, guild.id, serverId, body.entityId);
     }
 }
 
@@ -463,7 +463,7 @@ async function alarmAlarm(client, guild, title, message, body) {
         instance.generalSettings.fcmAlarmNotificationEnabled) {
         server.alarms[entityId].lastTrigger = Math.floor(new Date() / 1000);
         client.setInstance(guild.id, instance);
-        await DiscordMessages.sendSmartAlarmTriggerMessage(guild.id, serverId, entityId);
+        await DiscordMessages.sendSmartAlarmTriggerMessage(client, guild.id, serverId, entityId);
         client.log(client.intlGet(null, 'infoCap'), `${title}: ${message}`);
     }
 }
@@ -481,13 +481,13 @@ async function alarmRaidAlarm(client, guild, title, message, body) {
     }
 
     const content = {
-        embeds: [DiscordEmbeds.getAlarmRaidAlarmEmbed({ title: title, message: message }, body)],
+        embeds: [DiscordEmbeds.getAlarmRaidAlarmEmbed(client, { title: title, message: message }, body)],
         content: '@everyone',
         files: files
     }
 
     if (rustplus && (serverId === rustplus.serverId)) {
-        await DiscordMessages.sendMessage(guild.id, content, null, instance.channelId.activity);
+        await DiscordMessages.sendMessage(client, guild.id, content, null, instance.channelId.activity);
         rustplus.sendInGameMessage(`${title}: ${message}`);
     }
 
@@ -495,14 +495,14 @@ async function alarmRaidAlarm(client, guild, title, message, body) {
 }
 
 async function playerDeath(client, guild, title, message, body, discordUserId) {
-    const user = await DiscordTools.getUserById(guild.id, discordUserId);
+    const user = await DiscordTools.getUserById(client, guild.id, discordUserId);
 
     let png = null;
     if (body.targetId !== '') png = await Scrape.scrapeSteamProfilePicture(client, body.targetId);
     if (png === null) png = isValidUrl(body.img) ? body.img : Constants.DEFAULT_SERVER_IMG;
 
     const content = {
-        embeds: [DiscordEmbeds.getPlayerDeathEmbed({ title: title }, body, png)]
+        embeds: [DiscordEmbeds.getPlayerDeathEmbed(client, { title: title }, body, png)]
     }
 
     if (user) {
@@ -514,7 +514,7 @@ async function teamLogin(client, guild, title, message, body) {
     const instance = client.getInstance(guild.id);
 
     const content = {
-        embeds: [DiscordEmbeds.getTeamLoginEmbed(
+        embeds: [DiscordEmbeds.getTeamLoginEmbed(client, 
             guild.id, body, await Scrape.scrapeSteamProfilePicture(client, body.targetId))]
     }
 
@@ -522,7 +522,7 @@ async function teamLogin(client, guild, title, message, body) {
     const serverId = `${body.ip}-${body.port}`;
 
     if (!rustplus || (rustplus && (serverId !== rustplus.serverId))) {
-        await DiscordMessages.sendMessage(guild.id, content, null, instance.channelId.activity);
+        await DiscordMessages.sendMessage(client, guild.id, content, null, instance.channelId.activity);
         client.log(client.intlGet(null, 'infoCap'),
             client.intlGet(null, 'playerJustConnectedTo', {
                 name: body.targetName,

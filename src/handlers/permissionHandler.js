@@ -95,7 +95,7 @@ module.exports = {
 
         if (instance.channelId.category === null) return;
 
-        const category = await DiscordTools.getCategoryById(guild.id, instance.channelId.category);
+        const category = await DiscordTools.getCategoryById(client, guild.id, instance.channelId.category);
         if (category) {
             const perms = module.exports.getPermissionsReset(client, guild);
             try {
@@ -109,7 +109,7 @@ module.exports = {
         for (const [name, id] of Object.entries(instance.channelId)) {
             const writePerm = (name !== 'commands' && name !== 'teamchat') ? false : true;
 
-            const channel = DiscordTools.getTextChannelById(guild.id, id);
+            const channel = DiscordTools.getTextChannelById(client, guild.id, id);
             if (channel) {
                 const perms = module.exports.getPermissionsReset(client, guild, writePerm);
                 try {

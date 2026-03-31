@@ -21,11 +21,11 @@
 const DiscordMessages = require('../discordTools/discordMessages.js');
 
 module.exports = {
-    handler: async function (rustplus) {
+    handler: async function (rustplus, client) {
         if (rustplus.informationIntervalCounter === 0) {
-            await DiscordMessages.sendUpdateServerInformationMessage(rustplus);
-            await DiscordMessages.sendUpdateEventInformationMessage(rustplus);
-            await DiscordMessages.sendUpdateTeamInformationMessage(rustplus);
+            await DiscordMessages.sendUpdateServerInformationMessage(client, rustplus);
+            await DiscordMessages.sendUpdateEventInformationMessage(client, rustplus);
+            await DiscordMessages.sendUpdateTeamInformationMessage(client, rustplus);
         }
 
         if (rustplus.informationIntervalCounter === 5) {

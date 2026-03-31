@@ -27,24 +27,15 @@ const DiscordBot = require('./src/structures/DiscordBot');
 
 createMissingDirectories();
 
-const client = new DiscordBot({
-    intents: [
-        Discord.GatewayIntentBits.Guilds,
-        Discord.GatewayIntentBits.GuildMessages,
-        Discord.GatewayIntentBits.MessageContent,
-        Discord.GatewayIntentBits.GuildMembers,
-        Discord.GatewayIntentBits.GuildVoiceStates],
-    retryLimit: 2,
-    restRequestTimeout: 60000,
-    disableEveryone: false
-});
+const BotManager = require('./src/structures/BotManager');
+const WebDashboard = require('./src/web/server');
 
-client.build();
+// Iniciar servidor de Panel de Control Web
+const dashboard = new WebDashboard();
+dashboard.start();
 
-// [MÓDULO 5] Iniciar servidor de Panel de Control Web
-// Descomentar una vez intaladas las dependencias Express / Passport:
-// const WebDashboard = require('./src/web/server');
-// new WebDashboard(client).start();
+// Reactivar bots que estaban encendidos (opcional, según preferencia del usuario)
+BotManager.bootAllActive();
 
 function createMissingDirectories() {
     if (!Fs.existsSync(Path.join(__dirname, 'logs'))) {
@@ -65,10 +56,5 @@ function createMissingDirectories() {
 }
 
 process.on('unhandledRejection', error => {
-    client.log(client.intlGet(null, 'errorCap'), client.intlGet(null, 'unhandledRejection', {
-        error: error
-    }), 'error');
-    console.log(error);
+    console.error('[Unhandled Rejection]', error);
 });
-
-exports.client = client;

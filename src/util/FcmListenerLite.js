@@ -225,7 +225,7 @@ async function pairingEntitySwitch(client, guild, title, message, body) {
         }
         client.setInstance(guild.id, instance);
 
-        await DiscordMessages.sendSmartSwitchMessage(guild.id, serverId, body.entityId);
+        await DiscordMessages.sendSmartSwitchMessage(client, guild.id, serverId, body.entityId);
     }
 }
 
@@ -274,7 +274,7 @@ async function pairingEntitySmartAlarm(client, guild, title, message, body) {
         client.setInstance(guild.id, instance);
     }
 
-    await DiscordMessages.sendSmartAlarmMessage(guild.id, serverId, body.entityId);
+    await DiscordMessages.sendSmartAlarmMessage(client, guild.id, serverId, body.entityId);
 }
 
 async function pairingEntityStorageMonitor(client, guild, title, message, body) {
@@ -342,12 +342,12 @@ async function pairingEntityStorageMonitor(client, guild, title, message, body) 
         }
         client.setInstance(guild.id, instance);
 
-        await DiscordMessages.sendStorageMonitorMessage(guild.id, serverId, body.entityId);
+        await DiscordMessages.sendStorageMonitorMessage(client, guild.id, serverId, body.entityId);
     }
 }
 
 async function playerDeath(client, guild, title, message, body, discordUserId) {
-    const user = await DiscordTools.getUserById(guild.id, discordUserId);
+    const user = await DiscordTools.getUserById(client, guild.id, discordUserId);
     if (!user) return;
 
     let png = null;
@@ -355,7 +355,7 @@ async function playerDeath(client, guild, title, message, body, discordUserId) {
     if (png === null) png = isValidUrl(body.img) ? body.img : Constants.DEFAULT_SERVER_IMG;
 
     const content = {
-        embeds: [DiscordEmbeds.getPlayerDeathEmbed({ title: title }, body, png)]
+        embeds: [DiscordEmbeds.getPlayerDeathEmbed(client, { title: title }, body, png)]
     }
 
     await client.messageSend(user, content);

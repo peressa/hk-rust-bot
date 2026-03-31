@@ -44,7 +44,7 @@ module.exports = {
                 const info = await rustplus.getEntityInfoAsync(entityId);
                 if (!(await rustplus.isResponseValid(info))) {
                     if (instance.serverList[serverId].storageMonitors[entityId].reachable) {
-                        await DiscordMessages.sendStorageMonitorNotFoundMessage(guildId, serverId, entityId);
+                        await DiscordMessages.sendStorageMonitorNotFoundMessage(client, guildId, serverId, entityId);
                     }
                     instance.serverList[serverId].storageMonitors[entityId].reachable = false;
                 }
@@ -58,7 +58,7 @@ module.exports = {
                         (rustplus.storageMonitors[entityId].capacity !== 0 &&
                             info.entityInfo.payload.capacity === 0)) {
                         await DiscordMessages.sendStorageMonitorDisconnectNotificationMessage(
-                            guildId, serverId, entityId);
+                            client, guildId, serverId, entityId);
                     }
 
                     rustplus.storageMonitors[entityId] = {
@@ -76,7 +76,7 @@ module.exports = {
                                 instance.serverList[serverId].storageMonitors[entityId].decaying = true;
 
                                 await DiscordMessages.sendDecayingNotificationMessage(
-                                    guildId, serverId, entityId);
+                                    client, guildId, serverId, entityId);
 
                                 if (instance.serverList[serverId].storageMonitors[entityId].inGame) {
                                     rustplus.sendInGameMessage(client.intlGet(rustplus.guildId, 'isDecaying', {
@@ -100,7 +100,7 @@ module.exports = {
                     }
                 }
 
-                await DiscordMessages.sendStorageMonitorMessage(guildId, serverId, entityId);
+                await DiscordMessages.sendStorageMonitorMessage(client, guildId, serverId, entityId);
             }
         }
     },

@@ -1,36 +1,23 @@
-/*
-    [MÓDULO 5] - Web Dashboard (Express + Steam Auth)
-    Esqueleto del servidor web para configurar bots desde una interfaz gráfica.
-*/
-
 const express = require('express');
-// TODO: Instalar dependencias requeridas usando:
-// npm install express express-session passport passport-steam
-
-// Comentado para no crashear hasta que se instalen:
-// const session = require('express-session');
-// const passport = require('passport');
-// const SteamStrategy = require('passport-steam').Strategy;
-
+const session = require('express-session');
+const passport = require('passport');
+const SteamStrategy = require('passport-steam').Strategy;
 const routes = require('./routes');
+const BotManager = require('../structures/BotManager');
+const db = require('../structures/database');
 
 class WebDashboard {
-    constructor(client) {
-        this.client = client;
+    constructor() {
         this.app = express();
         this.port = process.env.WEB_PORT || 3000;
         this.hostUrl = process.env.HOST_URL || `http://localhost:${this.port}`;
         
-        // Descomentar cuando se instalen las dependencias:
-        // this._setupPassport();
-        // this._setupMiddleware();
+        this._setupPassport();
+        this._setupMiddleware();
         this._setupRoutes();
     }
 
     _setupPassport() {
-        const passport = require('passport');
-        const SteamStrategy = require('passport-steam').Strategy;
-
         passport.serializeUser((user, done) => {
             done(null, user);
         });
@@ -46,7 +33,8 @@ class WebDashboard {
                 realm: `${this.hostUrl}/`,
                 apiKey: apiKey
             }, (identifier, profile, done) => {
-                // Aquí se verifica el ID de Steam en la base de datos de usuarios autorizados
+                // Sincronizar usuario con la base de datos local
+                db.upsertTenant(profile.id, profile.displayName, null);
                 profile.identifier = identifier;
                 return done(null, profile);
             }));
@@ -56,9 +44,6 @@ class WebDashboard {
     }
 
     _setupMiddleware() {
-        const session = require('express-session');
-        const passport = require('passport');
-
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true }));
         this.app.use(session({
@@ -71,9 +56,9 @@ class WebDashboard {
         this.app.use(passport.initialize());
         this.app.use(passport.session());
 
-        // Middleware para inyectar el Discord Client en los requests
+        // Inyectar BotManager en los requests
         this.app.use((req, res, next) => {
-            req.discordClient = this.client;
+            req.botManager = BotManager;
             next();
         });
     }

@@ -168,24 +168,47 @@ class DiscordBot extends Discord.Client {
         }, variables);
     }
 
-    build() {
-        this.login(Config.discord.token).catch(error => {
-            switch (error.code) {
-                case 502: {
-                    this.log(this.intlGet(null, 'errorCap'),
-                        this.intlGet(null, 'badGateway', { error: JSON.stringify(error) }), 'error')
-                } break;
+    async build(token = Config.discord.token, rustConfig = null) {
+        try {
+            await this.login(token);
+            
+            if (rustConfig) {
+                const virtualGuildId = 'default'; // O usar un ID específico del tenant
+                
+                // Asegurar que exista una instancia mínima en memoria para que RustPlus no falle al leer settings
+                if (!this.instances[virtualGuildId]) {
+                    this.instances[virtualGuildId] = {
+                        firstTime: false,
+                        activeServer: 'main',
+                        role: null,
+                        blacklist: { discordIds: [], steamIds: [] },
+                        trackers: {},
+                        serverList: {
+                            'main': {
+                                title: 'Server Principal',
+                                serverIp: rustConfig.ip,
+                                appPort: rustConfig.port,
+                                steamId: rustConfig.steamId,
+                                playerToken: rustConfig.token,
+                                battlemetricsId: null,
+                                markers: {},
+                                switches: {},
+                                alarms: {},
+                                storageMonitors: {}
+                            }
+                        },
+                        generalSettings: this.readGeneralSettingsTemplate(),
+                        notificationSettings: this.readNotificationSettingsTemplate()
+                    };
+                }
 
-                case 503: {
-                    this.log(this.intlGet(null, 'errorCap'),
-                        this.intlGet(null, 'serviceUnavailable', { error: JSON.stringify(error) }), 'error')
-                } break;
-
-                default: {
-                    this.log(this.intlGet(null, 'errorCap'), `${JSON.stringify(error)}`, 'error');
-                } break;
+                console.log(`[DiscordBot] Conectando a Rust+ (${rustConfig.ip}:${rustConfig.port})...`);
+                this.createRustplusInstance(virtualGuildId, rustConfig.ip, rustConfig.port, rustConfig.steamId, rustConfig.token);
             }
-        });
+        } catch (error) {
+            this.log(this.intlGet(null, 'errorCap'), `Fallo en build/login: ${JSON.stringify(error)}`, 'error');
+            throw error;
+        }
     }
 
     log(title, text, level = 'info') {
@@ -193,7 +216,7 @@ class DiscordBot extends Discord.Client {
     }
 
     logInteraction(interaction, verifyId, type) {
-        const channel = DiscordTools.getTextChannelById(interaction.guildId, interaction.channelId);
+        const channel = DiscordTools.getTextChannelById(this, interaction.guildId, interaction.channelId);
         const args = new Object();
         args['guild'] = `${interaction.member.guild.name} (${interaction.member.guild.id})`;
         args['channel'] = `${channel.name} (${interaction.channelId})`;
@@ -300,7 +323,7 @@ class DiscordBot extends Discord.Client {
     }
 
     createRustplusInstance(guildId, serverIp, appPort, steamId, playerToken) {
-        let rustplus = new RustPlus(guildId, serverIp, appPort, steamId, playerToken);
+        let rustplus = new RustPlus(this, guildId, serverIp, appPort, steamId, playerToken);
 
         /* Add rustplus instance to Object */
         this.rustplusInstances[guildId] = rustplus;
@@ -396,7 +419,7 @@ class DiscordBot extends Discord.Client {
                         }
                         else {
                             /* Add */
-                            const bmInstance = new Battlemetrics(battlemetricsId);
+                            const bmInstance = new Battlemetrics(this, battlemetricsId);
                             await bmInstance.setup();
                             this.battlemetricsInstances[battlemetricsId] = bmInstance;
                         }
@@ -405,7 +428,7 @@ class DiscordBot extends Discord.Client {
                 else {
                     /* Battlemetrics ID is missing, try with server name. */
                     const name = instance.serverList[activeServer].title;
-                    const bmInstance = new Battlemetrics(null, name);
+                    const bmInstance = new Battlemetrics(this, null, name);
                     await bmInstance.setup();
                     if (bmInstance.lastUpdateSuccessful) {
                         /* Found an Id, is it a new Id? */
@@ -435,7 +458,7 @@ class DiscordBot extends Discord.Client {
                     }
                     else {
                         /* Add */
-                        const bmInstance = new Battlemetrics(content.battlemetricsId);
+                        const bmInstance = new Battlemetrics(this, content.battlemetricsId);
                         await bmInstance.setup();
                         this.battlemetricsInstances[content.battlemetricsId] = bmInstance;
                     }
@@ -535,9 +558,9 @@ class DiscordBot extends Discord.Client {
 
         if (!interaction.member.permissions.has(Discord.PermissionsBitField.Flags.Administrator) &&
             !interaction.member.roles.cache.has(instance.role)) {
-            let role = DiscordTools.getRole(interaction.guildId, instance.role);
+            let role = DiscordTools.getRole(this, interaction.guildId, instance.role);
             const str = this.intlGet(interaction.guildId, 'notPartOfRole', { role: role.name });
-            await this.interactionReply(interaction, DiscordEmbeds.getActionInfoEmbed(1, str));
+            await this.interactionReply(interaction, DiscordEmbeds.getActionInfoEmbed(this, 1, str));
             this.log(this.intlGet(null, 'warningCap'), str);
             return false;
         }

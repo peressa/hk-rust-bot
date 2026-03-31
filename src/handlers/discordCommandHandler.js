@@ -210,11 +210,11 @@ module.exports = {
         }
 
         if (response !== null) {
-            await DiscordMessages.sendDiscordCommandResponseMessage(rustplus, client, message, response);
+            await DiscordMessages.sendDiscordCommandResponseMessage(client, rustplus, message, response);
         }
 
-        const guild = DiscordTools.getGuild(message.guild.id);
-        const channel = DiscordTools.getTextChannelById(guild.id, message.channelId);
+        const guild = DiscordTools.getGuild(client, message.guild.id);
+        const channel = DiscordTools.getTextChannelById(client, guild.id, message.channelId);
         client.log(client.intlGet(null, 'infoCap'), client.intlGet(null, `logDiscordCommand`, {
             guild: `${guild.name} (${guild.id})`,
             channel: `${channel.name} (${channel.id})`,
