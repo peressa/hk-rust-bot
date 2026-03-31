@@ -51,6 +51,10 @@ class WebDashboard {
         this.app.use(express.json());
         this.app.use(express.urlencoded({ extended: true }));
         this.app.use(express.static('public'));
+        
+        // Habilitar trust proxy si está detrás de Nginx/Cloudflare para que las cookies secure funcionen
+        this.app.set('trust proxy', 1);
+        
         this.app.use(session({
             secret: process.env.SESSION_SECRET || 'rustplusplus_secret_dashboard_key_2024',
             name: 'rustplusplus.session',
