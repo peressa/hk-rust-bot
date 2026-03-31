@@ -2748,6 +2748,48 @@ class RustPlus extends RustPlusLib {
 
         return strings;
     }
+
+    /**
+     * Detiene todas las tareas y desconecta la instancia de Rust+.
+     */
+    async stop() {
+        // 1. Limpiar tareas de polling y tokens
+        if (this.pollingTaskId) {
+            clearInterval(this.pollingTaskId);
+            this.pollingTaskId = null;
+        }
+        if (this.tokensReplenishTaskId) {
+            clearInterval(this.tokensReplenishTaskId);
+            this.tokensReplenishTaskId = null;
+        }
+
+        // 2. Limpiar timeouts de chat in-game
+        if (this.inGameChatTimeout) {
+            clearTimeout(this.inGameChatTimeout);
+            this.inGameChatTimeout = null;
+        }
+
+        // 3. Limpiar timeouts de switches inteligentes
+        for (const id in this.currentSwitchTimeouts) {
+            if (this.currentSwitchTimeouts[id]) {
+                clearTimeout(this.currentSwitchTimeouts[id]);
+                this.currentSwitchTimeouts[id] = null;
+            }
+        }
+
+        // 4. Limpiar timers personalizados
+        for (const id in this.timers) {
+            if (this.timers[id]) {
+                clearTimeout(this.timers[id]);
+                this.timers[id] = null;
+            }
+        }
+
+        // 5. Desconectar el socket
+        this.disconnect();
+        this.isOperational = false;
+        this.isDeleted = true;
+    }
 }
 
 module.exports = RustPlus;

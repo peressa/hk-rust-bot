@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../structures/database');
 const passport = require('passport');
+const path = require('path');
+
 
 // Middleware para verificar si el usuario está logueado
 function ensureAuthenticated(req, res, next) {
@@ -16,10 +18,19 @@ function ensureAuthenticated(req, res, next) {
 // ============================================
 
 router.get('/auth/steam', (req, res, next) => {
+    if (!req.steamStrategyActive) {
+        return res.status(503).json({ 
+            error: 'Servicio de autenticación no disponible', 
+            message: 'La STEAM_API_KEY no está configurada en el servidor.' 
+        });
+    }
     passport.authenticate('steam', { failureRedirect: '/' })(req, res, next);
 });
 
 router.get('/auth/steam/return', (req, res, next) => {
+    if (!req.steamStrategyActive) {
+        return res.redirect('/');
+    }
     passport.authenticate('steam', { failureRedirect: '/' })(req, res, () => {
         res.redirect('/panel');
     });
@@ -104,10 +115,7 @@ router.post('/api/bot/stop', ensureAuthenticated, async (req, res) => {
 
 // Ruta base / Landing
 router.get('/', (req, res) => {
-    res.send(`
-        <h1>RustPlusPlus Multi-Tenant Dashboard</h1>
-        <p><a href="/auth/steam">Iniciar Sesión con Steam</a></p>
-    `);
+    res.sendFile(path.join(__dirname, '../../public/index.html'));
 });
 
 // Panel Simple (Placeholder HTML)

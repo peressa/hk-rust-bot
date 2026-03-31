@@ -66,6 +66,7 @@ class DiscordBot extends Discord.Client {
         this.pollingIntervalMs = Config.general.pollingIntervalMs;
 
         this.battlemetricsInstances = new Object();
+        this.a2sTrackers = new Map(); // guildId -> A2STracker instance
 
         this.battlemetricsIntervalId = null;
         this.battlemetricsIntervalCounter = 0;
@@ -569,6 +570,61 @@ class DiscordBot extends Discord.Client {
 
     isAdministrator(interaction) {
         return interaction.member.permissions.has(Discord.PermissionFlagsBits.Administrator);
+    }
+
+    /**
+     * Cierre limpio de la instancia del bot.
+     * Limpia intervalos, desconecta sockets y destruye el cliente de Discord.
+     */
+    async destroy() {
+        this.log(this.intlGet(null, 'infoCap'), "Destruyendo instancia y liberando recursos...");
+
+        // 1. Limpiar intervalo de Battlemetrics
+        if (this.battlemetricsIntervalId) {
+            clearInterval(this.battlemetricsIntervalId);
+            this.battlemetricsIntervalId = null;
+        }
+
+        // 2. Detener todas las instancias de RustPlus asociadas
+        for (const guildId in this.rustplusInstances) {
+            const rustplus = this.rustplusInstances[guildId];
+            if (rustplus) {
+                await rustplus.stop();
+            }
+        }
+
+        // 3. Limpiar todos los timeouts de reconexión
+        for (const guildId in this.rustplusReconnectTimers) {
+            if (this.rustplusReconnectTimers[guildId]) {
+                clearTimeout(this.rustplusReconnectTimers[guildId]);
+                this.rustplusReconnectTimers[guildId] = null;
+            }
+        }
+        for (const guildId in this.rustplusLiteReconnectTimers) {
+            if (this.rustplusLiteReconnectTimers[guildId]) {
+                clearTimeout(this.rustplusLiteReconnectTimers[guildId]);
+                this.rustplusLiteReconnectTimers[guildId] = null;
+            }
+        }
+
+        // 4. Limpiar timeouts de salida de voz
+        for (const guildId in this.voiceLeaveTimeouts) {
+            if (this.voiceLeaveTimeouts[guildId]) {
+                clearTimeout(this.voiceLeaveTimeouts[guildId]);
+                this.voiceLeaveTimeouts[guildId] = null;
+            }
+        }
+
+        // 5. Detener todos los trackers A2S
+        for (const [guildId, tracker] of this.a2sTrackers) {
+            if (tracker) {
+                tracker.stop();
+            }
+        }
+        this.a2sTrackers.clear();
+
+        // 6. Destruir el cliente de Discord (padre)
+        super.destroy();
     }
 }
 
