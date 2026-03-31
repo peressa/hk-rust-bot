@@ -18,6 +18,7 @@
 
 */
 
+require('dotenv').config();
 const Discord = require('discord.js');
 const Fs = require('fs');
 const Path = require('path');
@@ -39,6 +40,11 @@ const client = new DiscordBot({
 });
 
 client.build();
+
+// [MÓDULO 5] Iniciar servidor de Panel de Control Web
+// Descomentar una vez intaladas las dependencias Express / Passport:
+// const WebDashboard = require('./src/web/server');
+// new WebDashboard(client).start();
 
 function createMissingDirectories() {
     if (!Fs.existsSync(Path.join(__dirname, 'logs'))) {

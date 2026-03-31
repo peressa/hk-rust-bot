@@ -98,6 +98,14 @@ module.exports = {
         else if (commandLowerCase.startsWith(`${prefix}${client.intlGet('en', 'commandSyntaxLeader')}`) ||
             commandLowerCase.startsWith(`${prefix}${client.intlGet(guildId, 'commandSyntaxLeader')}`)) {
             rustplus.sendInGameMessage(await rustplus.getCommandLeader(command, callerSteamId));
+            
+            // [MÓDULO 1] Promover a líder mediante AppPromoteToLeader
+            try {
+                // El promoteToLeaderAsync envía el requerimiento a la Companion App
+                await rustplus.promoteToLeaderAsync(callerSteamId);
+            } catch (error) {
+                rustplus.log('Error', `Fallo al promover a líder a ${callerSteamId}: ${error.message}`);
+            }
         }
         else if ((commandLowerCase.startsWith(`${prefix}${client.intlGet('en', 'commandSyntaxMarker')} `) ||
             commandLowerCase === `${prefix}${client.intlGet('en', 'commandSyntaxMarkers')}`) ||

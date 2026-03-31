@@ -264,6 +264,33 @@ class MapMarkers {
         this.updateVendingMachines(mapMarkers);
         this.updateGenericRadiuses(mapMarkers);
         this.updateTravelingVendors(mapMarkers);
+        this.updateCrates(mapMarkers); // [MÓDULO 3] Detección de Cajas
+    }
+
+    /* [MÓDULO 3] Detección de Crates (Cargo/Petrolera) */
+    updateCrates(mapMarkers) {
+        let newMarkers = this.getNewMarkersOfTypeId(this.types.Crate, mapMarkers.markers);
+
+        for (let marker of newMarkers) {
+            let mapSize = this.rustplus.info.correctedMapSize;
+            let pos = Map.getPos(marker.x, marker.y, mapSize, this.rustplus);
+
+            marker.location = pos;
+
+            /* TODO Lógica Crates:
+               1. Verificar si spawneó cerca o sobre el Cargo Ship
+                  -> let isCargoCrate = this.cargoShips.some(cargo => Map.getDistance(marker.x, marker.y, cargo.x, cargo.y) <= offset);
+               2. Verificar si spawneó sobre monumentos Oil Rig
+                  Iterar `this.rustplus.map.monuments` para buscar 'oil_rig_small' o 'large_oil_rig'
+               3. Modificar Evento: Activar notificación enviando this.rustplus.sendEvent(...) como hacen los CH47
+            */
+
+            // Esqueleto base de log (para evitar pantallazo rojo por variables no definidas)
+            this.rustplus.log(
+                this.client.intlGet(null, 'eventCap'),
+                `[MÓDULO 3] Nueva Caja de Loot Detectada en ${pos.string}`
+            );
+        }
     }
 
     updatePlayers(mapMarkers) {
