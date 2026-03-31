@@ -21,8 +21,8 @@
     --text: #f0f0f0;
     --text2: #a0a0b0;
     --text3: #606070;
-    --radius: 12px;
-    --radius2: 8px;
+    --radius: 0px;
+    --radius2: 0px;
 }
 
 html {
@@ -83,7 +83,7 @@ nav {
     width: 32px;
     height: 32px;
     background: linear-gradient(135deg, var(--accent), var(--accent3));
-    border-radius: 8px;
+    border-radius: var(--radius2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -422,6 +422,38 @@ nav {
 
 .platform-item .icon {
     font-size: 18px;
+}
+
+/* ── FOOTER REFINED ── */
+footer {
+    padding: 60px 40px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    background: var(--bg);
+    text-align: center;
+}
+
+.footer-peressa {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+
+.footer-peressa:hover {
+    color: var(--accent);
+}
+
+.footer-copy {
+    font-size: 0.75rem;
+    color: var(--text3);
+    margin-top: 10px;
 }
 
 /* ── SECTIONS ── */
