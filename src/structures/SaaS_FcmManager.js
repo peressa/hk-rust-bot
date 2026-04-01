@@ -16,17 +16,15 @@ class FcmManager {
         try {
             console.log(`[FCM] Generando credenciales Push-Receiver para usuario ${steamId}...`);
             
-            // 1. Generar credenciales GCM robustas
-            const appId = `wp:receiver.push.com#${crypto.randomUUID()}`;
+            // 1. Generar credenciales GCM
+            // Usamos un appId más estándar para evitar PHONE_REGISTRATION_ERROR
+            const appId = `org.facepunch.rust.companion`;
             
-            // Generar un AndroidID aleatorio de 64 bits (numérico como string)
-            // Esto evita PHONE_REGISTRATION_ERROR al simular mejor un dispositivo real.
-            const randomAndroidId = BigInt(`0x${crypto.randomBytes(8).toString('hex')}`).toString();
+            console.log(`[FCM] Solicitando nuevo AndroidID a Google (Check-In)...`);
             
-            console.log(`[FCM] Intentando Check-In inicial con AndroidID: ${randomAndroidId}...`);
-            
-            // Realizar registro GCM
-            const subscription = await registerGCM(randomAndroidId, undefined, appId);
+            // Para un registro NUEVO, androidId y securityToken DEBEN ser undefined
+            // Esto evita el Error 401 (bad security token)
+            const subscription = await registerGCM(undefined, undefined, appId);
             
             const androidId = subscription.androidId.toString();
             const securityToken = subscription.securityToken.toString();

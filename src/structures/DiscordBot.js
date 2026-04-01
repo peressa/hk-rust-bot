@@ -201,6 +201,10 @@ class DiscordBot extends Discord.Client {
         
         let loaded = 0;
         for (const guildData of activeGuilds) {
+            if (!this.guilds.cache.has(guildData.guild_id)) {
+                console.log(`[CentralBot] Saltando GuildID ${guildData.guild_id} (No encontrado en cache de Discord)`);
+                continue;
+            }
             const servers = db.getRustServersByOwner(guildData.steam_id_owner);
             // Por simplicidad, tomamos el primer servidor activo
             const activeServer = servers.find(s => s.is_active === 1);
