@@ -31,20 +31,17 @@ const Intl = require('../util/intl');
 const DiscordTools = require('../discordTools/discordTools.js');
 const InstanceUtils = require('../util/instanceUtils.js');
 const Map = require('../util/map.js');
-const Scrape = require('../util/map.js');
+const Scrape = require('../util/scrape.js');
 
 
 
 module.exports = async (client, guild) => {
-    // Helpers locales con acceso a client
     const _intlGet = (guildId, id, vars = {}) => {
-        if (client && typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
-        return Intl.get(id, vars);
+        return (client && typeof client.intlGet === 'function') ? client.intlGet(guildId, id, vars) : (global.intlGet || Intl.get)(guildId, id, vars);
     };
 
     const _log = (title, msg, level = 'info') => {
-        if (client && typeof client.log === 'function') return client.log(title, msg, level);
-        Intl.log(title, msg, level);
+        return (client && typeof client.log === 'function') ? client.log(title, msg, level) : (global._log || Intl.log || console.log)(title, msg, level);
     };
 
 

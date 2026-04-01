@@ -66,7 +66,12 @@ class FcmManager {
                     console.warn(`[FCM] Reintentando registro GCM para ${steamId} (${retry + 1})...`);
                     await new Promise(r => setTimeout(r, 2000));
                 } catch (err) {
-                    if (retry === 2) throw err;
+                    if (retry === 2) {
+                        if (err.response && err.response.status === 500) {
+                            console.error(`[FCM] ERROR 500 DETECTADO para ${steamId}. ADVERTENCIA: Facepunch requiere Steam Guard ACTIVO. Si no lo tienes, la vinculación fallará siempre.`);
+                        }
+                        throw err;
+                    }
                     console.warn(`[FCM] Fallo en intento GCM ${retry + 1} para ${steamId}: ${err.message}`);
                     await new Promise(r => setTimeout(r, 2000));
                 }

@@ -41,13 +41,11 @@ module.exports = async (client, guild) => {
     }
 
     const _intlGet = (guildId, id, vars = {}) => {
-        if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
-        return Intl.get(id, vars);
+        return (client && typeof client.intlGet === 'function') ? client.intlGet(guildId, id, vars) : (global.intlGet || Intl.get)(guildId, id, vars);
     };
 
     const _log = (title, msg, level = 'info') => {
-        if (typeof client.log === 'function') return client.log(title, msg, level);
-        console.log(`[${level.toUpperCase()}] ${title}: ${msg}`);
+        return (client && typeof client.log === 'function') ? client.log(title, msg, level) : (global._log || console.log)(title, msg, level);
     };
 
     const appId = client.application?.id || client.user?.id;

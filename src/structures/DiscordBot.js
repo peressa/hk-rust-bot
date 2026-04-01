@@ -73,6 +73,7 @@ class DiscordBot extends Discord.Client {
         this.battlemetricsIntervalCounter = 0;
 
         this.voiceLeaveTimeouts = new Object();
+        global.client = this;
 
         // ===================================================================
         // RESILIENCIA ABSOLUTA: Object.defineProperty hace que log e intlGet
@@ -80,16 +81,7 @@ class DiscordBot extends Discord.Client {
         // qué haga Discord.js internally con el objeto.
         // ===================================================================
         const _self = this;
-        Object.defineProperty(this, 'log', {
-            value: function(title, text, level) { return _self._logImpl(title, text, level); },
-            writable: true,
-            configurable: true
-        });
-        Object.defineProperty(this, 'intlGet', {
-            value: function(guildId, id, variables) { return _self._intlGetImpl(guildId, id, variables); },
-            writable: true,
-            configurable: true
-        });
+        // Los métodos intlGet y log ahora están blindados en el prototipo y globalmente
 
         this.loadDiscordCommands();
         this.loadDiscordEvents();
@@ -98,11 +90,11 @@ class DiscordBot extends Discord.Client {
     }
 
     log(title, text, level) {
-        return this._logImpl(title, text, level);
+        return (this._logImpl || global._log || console.log)(title, text, level);
     }
 
     intlGet(guildId, id, variables) {
-        return this._intlGetImpl(guildId, id, variables);
+        return (this._intlGetImpl || global.intlGet)(guildId, id, variables);
     }
 
     loadDiscordCommands() {

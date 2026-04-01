@@ -29,47 +29,42 @@ if (typeof Discord.Client.prototype._safeLog !== 'function') {
     };
 }
 
-// Inyectar método de fallback _safeIntlGet 
-if (typeof Discord.Client.prototype._safeIntlGet !== 'function') {
-    Discord.Client.prototype._safeIntlGet = function(guildId: any, id: string, variables: any = {}) {
-        try {
-            const intl = (this as any).guildIntl?.[guildId] || (this as any).botIntl || (this as any).enIntl;
-            if (intl) return intl.formatMessage({ id, defaultMessage: (this as any).enMessages?.[id] || id }, variables);
-        } catch(e) {}
-        return IntlHelper.get(id, variables);
-    };
-}
-
-// CARCHE DE SEGURIDAD ABSOLUTO: Exponer helpers globales
-(global as any).intlGet = (guildId: string | null, id: string, vars: any = {}) => {
-    return IntlHelper.get(id, vars);
-};
-(global as any)._log = (title: string, msg: string, level: string = 'info') => {
-    return IntlHelper.log(title, msg, level);
+// ===================================================================
+// ARQUITECTURA DE RESILIENCIA GLOBAL (HK BOT ANTI-CRASH)
+// ===================================================================
+const safeIntlGet = (guildId: string | null, id: string, vars: any = {}) => {
+    try {
+        // 1. Intentar usar el cliente global si existe y tiene el método
+        const client = (global as any).client;
+        if (client && typeof client._intlGetImpl === 'function') {
+            return client._intlGetImpl(guildId, id, vars) || id;
+        }
+        // 2. Fallback al módulo base de traducción
+        return IntlHelper.get(id, vars) || id;
+    } catch (e) {
+        return id;
+    }
 };
 
-if (typeof Discord.Client.prototype.log !== 'function' || true) {
+const safeLog = (title: string, text: string, level: string = 'info') => {
     try {
-        Object.defineProperty(Discord.Client.prototype, 'log', {
-            value: function(title: string, text: string, level: string = 'info') {
-                return IntlHelper.log(title, text, level);
-            },
-            writable: false,
-            configurable: false
-        });
+        const client = (global as any).client;
+        if (client && typeof client._logImpl === 'function') {
+            return client._logImpl(title, text, level);
+        }
     } catch(e) {}
-}
-if (typeof Discord.Client.prototype.intlGet !== 'function' || true) {
-    try {
-        Object.defineProperty(Discord.Client.prototype, 'intlGet', {
-            value: function(guildId: string | null, id: string, vars: any = {}) {
-                return IntlHelper.get(id, vars);
-            },
-            writable: false,
-            configurable: false
-        });
-    } catch(e) {}
-}
+    return IntlHelper.log(title, text, level);
+};
+
+// Inyectar en Global para acceso desde cualquier módulo sin 'require'
+(global as any).intlGet = safeIntlGet;
+(global as any)._log = safeLog;
+
+// Inyectar en el prototipo de Discord.Client para blindaje total
+// Nota: Usamos writable: true para que DiscordBot.js pueda extenderlo si es necesario
+Object.defineProperty(Discord.Client.prototype, 'intlGet', { value: safeIntlGet, writable: true, configurable: true });
+Object.defineProperty(Discord.Client.prototype, 'log', { value: safeLog, writable: true, configurable: true });
+// ===================================================================
 
 const Fs = require('fs');
 const Path = require('path');
