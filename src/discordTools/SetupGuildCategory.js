@@ -18,10 +18,17 @@
 
 */
 
+const Intl = require('../util/intl');
 const DiscordTools = require('../discordTools/discordTools.js');
 const PermissionHandler = require('../handlers/permissionHandler.js');
 
 module.exports = async (client, guild) => {
+    // helpers locales de resiliencia
+    const _intlGet = (guildId, id, vars = {}) => {
+        if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+        return Intl.get(id, vars);
+    };
+
     const instance = client.getInstance(guild.id);
 
     let category = undefined;

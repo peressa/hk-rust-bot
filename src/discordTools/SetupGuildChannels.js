@@ -18,26 +18,38 @@
 
 */
 
+const Intl = require('../util/intl');
 const DiscordTools = require('../discordTools/discordTools.js');
 const PermissionHandler = require('../handlers/permissionHandler.js');
 
 module.exports = async (client, guild, category) => {
-    await addTextChannel(client.intlGet(guild.id, 'channelNameInformation'), 'information', client, guild, category);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameServers'), 'servers', client, guild, category);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameSettings'), 'settings', client, guild, category);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameCommands'), 'commands', client, guild, category, true);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameEvents'), 'events', client, guild, category);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameTeamchat'), 'teamchat', client, guild, category, true);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameSwitches'), 'switches', client, guild, category);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameSwitchGroups'), 'switchGroups', client, guild, category);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameAlarms'), 'alarms', client, guild, category);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameStorageMonitors'),
-        'storageMonitors', client, guild, category);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameActivity'), 'activity', client, guild, category);
-    await addTextChannel(client.intlGet(guild.id, 'channelNameTrackers'), 'trackers', client, guild, category);
+    // helpers locales de resiliencia
+    const _intlGet = (guildId, id, vars = {}) => {
+        if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+        return Intl.get(id, vars);
+    };
+
+    const _log = (title, msg, level = 'info') => {
+        if (typeof client.log === 'function') return client.log(title, msg, level);
+        Intl.log(title, msg, level);
+    };
+
+    await addTextChannel(_intlGet(guild.id, 'channelNameInformation'), 'information', client, guild, category, false, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameServers'), 'servers', client, guild, category, false, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameSettings'), 'settings', client, guild, category, false, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameCommands'), 'commands', client, guild, category, true, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameEvents'), 'events', client, guild, category, false, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameTeamchat'), 'teamchat', client, guild, category, true, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameSwitches'), 'switches', client, guild, category, false, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameSwitchGroups'), 'switchGroups', client, guild, category, false, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameAlarms'), 'alarms', client, guild, category, false, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameStorageMonitors'),
+        'storageMonitors', client, guild, category, false, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameActivity'), 'activity', client, guild, category, false, _intlGet, _log);
+    await addTextChannel(_intlGet(guild.id, 'channelNameTrackers'), 'trackers', client, guild, category, false, _intlGet, _log);
 };
 
-async function addTextChannel(name, idName, client, guild, parent, permissionWrite = false) {
+async function addTextChannel(name, idName, client, guild, parent, permissionWrite = false, _intlGet, _log) {
     const instance = client.getInstance(guild.id);
 
     let channel = undefined;
@@ -53,8 +65,8 @@ async function addTextChannel(name, idName, client, guild, parent, permissionWri
             channel.setParent(parent.id);
         }
         catch (e) {
-            client.log(client.intlGet(null, 'errorCap'),
-                client.intlGet(null, 'couldNotSetParent', { channelId: channel.id }), 'error');
+            _log(_intlGet(null, 'errorCap'),
+                _intlGet(null, 'couldNotSetParent', { channelId: channel.id }), 'error');
         }
     }
 
@@ -63,8 +75,8 @@ async function addTextChannel(name, idName, client, guild, parent, permissionWri
             channel.setParent(parent.id);
         }
         catch (e) {
-            client.log(client.intlGet(null, 'errorCap'),
-                client.intlGet(null, 'couldNotSetParent', { channelId: channel.id }), 'error');
+            _log(_intlGet(null, 'errorCap'),
+                _intlGet(null, 'couldNotSetParent', { channelId: channel.id }), 'error');
         }
     }
 

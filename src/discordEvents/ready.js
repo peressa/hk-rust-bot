@@ -55,14 +55,14 @@ module.exports = {
             await client.user.setUsername(Config.discord.username);
         }
         catch (e) {
-            client.log(client.intlGet(null, 'warningCap'), client.intlGet(null, 'ignoreSetUsername'));
+            _log(_intlGet(null, 'warningCap'), _intlGet(null, 'ignoreSetUsername'));
         }
 
         try {
             await client.user.setAvatar(Path.join(__dirname, '..', 'resources/images/rustplusplus_logo.png'));
         }
         catch (e) {
-            client.log(client.intlGet(null, 'warningCap'), client.intlGet(null, 'ignoreSetAvatar'));
+            _log(_intlGet(null, 'warningCap'), _intlGet(null, 'ignoreSetAvatar'));
         }
 
         client.user.setPresence({
@@ -79,7 +79,7 @@ module.exports = {
                 await guild.members.me.setNickname(Config.discord.username);
             }
             catch (e) {
-                client.log(client.intlGet(null, 'warningCap'), client.intlGet(null, 'ignoreSetNickname'));
+                _log(_intlGet(null, 'warningCap'), _intlGet(null, 'ignoreSetNickname'));
             }
             await client.syncCredentialsWithUsers(guild);
             await client.setupGuild(guild);
