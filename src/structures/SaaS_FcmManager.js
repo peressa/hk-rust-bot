@@ -73,24 +73,22 @@ class FcmManager {
                     }
                     
                     if (registerResponse.data.includes('PHONE_REGISTRATION_ERROR')) {
-                         console.error(`[FCM] ERROR CRÍTICO para ${steamId}: Google denegó el registro (PHONE_REGISTRATION_ERROR).`);
-                         console.error(`[FCM] TIP: Esto suele ocurrir por demasiados intentos o IP marcada por Google.`);
-                         throw new Error('Google PHONE_REGISTRATION_ERROR');
+                         console.error(`[FCM] ERROR CRÍTICO para ${steamId}: Google denegó el registro.`);
+                         throw new Error('Google_Deny_FCM');
                     }
 
-                    if (retry === 2) throw new Error(`Google denegó el registro GCM: ${registerResponse.data}`);
-                    console.warn(`[FCM] Reintentando registro GCM para ${steamId} (${retry + 1})...`);
+                    if (retry === 2) throw new Error(`Google denegó registro: ${registerResponse.data}`);
+                    // Silenciamos reintentos normales para no ensuciar logs
                     await new Promise(r => setTimeout(r, 2000));
                 } catch (err) {
-                    if (err.message.includes('PHONE_REGISTRATION_ERROR')) throw err;
+                    if (err.message === 'Google_Deny_FCM') throw err;
 
                     if (retry === 2) {
                         if (err.response && err.response.status === 500) {
-                            console.error(`[FCM] ERROR 500 DETECTADO para ${steamId}. ADVERTENCIA: Facepunch requiere Steam Guard ACTIVO. Si no lo tienes, la vinculación fallará siempre.`);
+                            console.error(`[FCM] ERROR 500: Cuenta ${steamId} requiere Steam Guard activo.`);
                         }
                         throw err;
                     }
-                    console.warn(`[FCM] Fallo en intento GCM ${retry + 1} para ${steamId}: ${err.message}`);
                     await new Promise(r => setTimeout(r, 2000));
                 }
             }
@@ -122,6 +120,108 @@ class FcmManager {
             console.error(`[FCM] Error crítico al registrar dispositivo para ${steamId}:`, error.message);
             if (error.response) console.error(`[FCM] Detalle error Google:`, error.response.data);
             throw error;
+        } finally {
+            this.inProgressRegistrations.delete(steamId);
+        }
+    }
+
+    /**
+     * Versión de diagnóstico que reporta progreso paso a paso para el Dashboard Visual
+     */
+    async debugRegisterDevice(steamId, authToken, onProgress = (step, msg, status) => {}) {
+        if (this.inProgressRegistrations.has(steamId)) {
+            onProgress('init', 'Ya hay un registro en curso para este usuario.', 'error');
+            return;
+        }
+
+        this.inProgressRegistrations.add(steamId);
+        onProgress('init', 'Iniciando diagnóstico de vinculación...', 'loading');
+
+        try {
+            // Paso 1: Google Check-In
+            onProgress('gcm_checkin', 'Solicitando nuevo AndroidID a Google...', 'loading');
+            const checkinResponse = await gcmCheckIn(undefined, undefined);
+            const androidId = checkinResponse.androidId.toString();
+            const securityToken = checkinResponse.securityToken.toString();
+            onProgress('gcm_checkin', `Check-In exitoso. ID: ${androidId}`, 'success');
+
+            // Paso 2: Google Register (FCM Token)
+            onProgress('gcm_register', 'Obteniendo Token FCM de Google...', 'loading');
+            const rustSenderId = '976529667804';
+            const appId = 'com.facepunch.rust.companion';
+            
+            const registerResponse = await axios.post('https://android.clients.google.com/c2dm/register3', 
+                querystring.stringify({
+                    app: appId,
+                    'X-subtype': appId,
+                    device: androidId,
+                    sender: rustSenderId,
+                    'X-scope': '*',
+                    'X-app_ver': '2507',
+                    'X-os_ver': '30',
+                    'X-cliv': 'fcm-23.1.2',
+                    'X-messenger_ver': '2507'
+                }), 
+                {
+                    headers: {
+                        Authorization: `AidLogin ${androidId}:${securityToken}`,
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'User-Agent': 'Android-GCM/1.5',
+                    },
+                    timeout: 10000
+                }
+            );
+
+            if (registerResponse.data.includes('Error=')) {
+                onProgress('gcm_register', `Google denegó el registro: ${registerResponse.data}`, 'error');
+                throw new Error(`Google_Deny: ${registerResponse.data}`);
+            }
+
+            const pushToken = registerResponse.data.split('=')[1]?.trim();
+            onProgress('gcm_register', 'Token FCM obtenido correctamente.', 'success');
+
+            // Paso 3: Facepunch Link
+            onProgress('fp_link', 'Sincronizando con los servidores de Facepunch...', 'loading');
+            const hexDeviceId = BigInt(androidId).toString(16).padStart(16, '0');
+            
+            try {
+                const fpResponse = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
+                    serverType: "Official",
+                    deviceId: hexDeviceId,
+                    deviceName: "HK Debugger",
+                    pushService: 1,
+                    pushToken: pushToken,
+                    steamId: steamId,
+                    authToken: authToken
+                }, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': authToken,
+                        'User-Agent': 'Rust/2507 (Android; 11; Google Pixel 4) CFNetwork/1410.0.3'
+                    },
+                    timeout: 10000
+                });
+
+                if (fpResponse.status === 200) {
+                    // Guardar en DB
+                    db.updateFcmCredentials(steamId, JSON.stringify({
+                        gcm: { androidId, securityToken }
+                    }), pushToken);
+                    
+                    onProgress('fp_link', '¡Vinculación EXITOSA con Facepunch!', 'success');
+                    onProgress('final', 'Tu sistema de notificaciones de Rust+ está listo y verificado.', 'success');
+                }
+            } catch (err) {
+                if (err.response?.status === 500) {
+                    onProgress('fp_link', 'Error 500 de Facepunch. Asegúrate de tener Steam Guard móvil activo.', 'error');
+                } else {
+                    onProgress('fp_link', `Error Facepunch: ${err.message}`, 'error');
+                }
+                throw err;
+            }
+
+        } catch (error) {
+            onProgress('final', `Diagnóstico fallido: ${error.message}`, 'error');
         } finally {
             this.inProgressRegistrations.delete(steamId);
         }

@@ -159,6 +159,37 @@ router.get('/api/events/combatlog', ensureAuthenticated, (req, res) => {
 });
 
 // ============================================
+// DIAGNÓSTICO VISUAL DE VINCULACIÓN (SSE)
+// ============================================
+
+router.get('/api/debug/pair/stream', ensureAuthenticated, (req, res) => {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
+    
+    const user = db.getUser(req.user.id);
+    const authToken = req.query.token || (user ? user.auth_token : null);
+
+    if (!authToken) {
+        send({ step: 'init', msg: 'Falta Token de Facepunch', status: 'error' });
+        return res.end();
+    }
+
+    global.fcmManager.debugRegisterDevice(req.user.id, authToken, (step, msg, status) => {
+        send({ step, msg, status });
+        if (step === 'final') {
+             setTimeout(() => res.end(), 1000);
+        }
+    });
+
+    req.on('close', () => {
+        // Nada que abortar por ahora, dejamos que termine el registro
+    });
+});
+
+// ============================================
 // RUTAS FRONTEND
 // ============================================
 
@@ -169,6 +200,11 @@ router.get('/', (req, res) => {
 // Sirve la nueva versión moderna del dashboard
 router.get('/panel', ensureAuthenticated, (req, res) => {
     res.sendFile(path.join(__dirname, '../../public/panel.html'));
+});
+
+// Ruta para el diagnóstico visual
+router.get('/debug-pairing', ensureAuthenticated, (req, res) => {
+    res.sendFile(path.join(__dirname, '../../public/debug-pairing.html'));
 });
 
 module.exports = router;

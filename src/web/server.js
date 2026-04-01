@@ -56,14 +56,16 @@ class WebDashboard {
         // Habilitar trust proxy si está detrás de Nginx/Cloudflare para que las cookies secure funcionen
         this.app.set('trust proxy', 1);
         
+        const sessionStore = new SQLiteStore({
+            db: 'rustplusplus_saas.db',
+            dir: path.join(__dirname, '../../data'),
+            table: 'sessions'
+        });
+
         this.app.use(session({
             secret: process.env.SESSION_SECRET || 'rustplusplus_secret_dashboard_key_2024',
             name: 'rustplusplus.session',
-            store: new SQLiteStore({
-                db: 'rustplusplus_saas.db',
-                dir: path.join(__dirname, '../../data'),
-                table: 'sessions'
-            }),
+            store: sessionStore,
             resave: false,
             saveUninitialized: false,
             cookie: {
