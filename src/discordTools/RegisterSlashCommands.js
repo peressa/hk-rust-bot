@@ -41,7 +41,7 @@ module.exports = async (client, guild) => {
     const rest = new Rest.REST({ version: '9' }).setToken(Config.discord.token);
 
     try {
-        await rest.put(Types.Routes.applicationGuildCommands(Config.discord.clientId, guild.id), { body: commands });
+        await rest.put(Types.Routes.applicationGuildCommands(client.user.id, guild.id), { body: commands });
     }
     catch (e) {
         client.log(

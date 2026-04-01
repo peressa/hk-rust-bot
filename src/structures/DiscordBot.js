@@ -211,6 +211,21 @@ class DiscordBot extends Discord.Client {
                                 storageMonitors: {}
                             }
                         },
+                        channelId: {
+                            category: null,
+                            events: null,
+                            information: null,
+                            commands: null,
+                            storageMonitors: null,
+                            activity: null,
+                            trackers: null,
+                            servers: null,
+                            teamchat: null,
+                            switches: null,
+                            switchGroups: null,
+                            alarms: null,
+                            settings: null
+                        },
                         generalSettings: this.readGeneralSettingsTemplate(),
                         notificationSettings: this.readNotificationSettingsTemplate()
                     };
