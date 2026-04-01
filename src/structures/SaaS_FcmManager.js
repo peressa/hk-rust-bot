@@ -92,6 +92,12 @@ class FcmManager {
                 console.log(`[FCM ZERO-FRICTION] Auto-Conectando Rust+ para Guild: ${guildId}`);
                 this.discordBot.createRustplusInstance(guildId, body.ip, body.port, body.playerId, body.playerToken);
             }
+            
+            // Notificar Mágicamente al Frontend si el usuario lo tiene abierto
+            const sseRes = global.sseClients ? global.sseClients.get(steamId) : null;
+            if (sseRes) {
+                sseRes.write(`data: ${JSON.stringify({ type: 'server_paired', serverIp: body.ip, serverPort: body.port })}\n\n`);
+            }
         }
 
         // ============================================

@@ -41,15 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const cancelPairBtn = document.getElementById('btn-cancel-pair');
 
     pairBtn.addEventListener('click', async () => {
+        // Enlazar In-Game ya no debe generar /api/pair/init, 
+        // porque el botón de arriba ("Vincular Steam") es el que debe hacer el init
         pairModal.classList.remove('hidden');
-        try {
-            await fetch('/api/pair/init', { method: 'POST' });
-            // Here we would normally open a WebSocket or poll 
-            // the server to know when the push notification arrives
-            console.log("Servidor está listo para recibir el aviso FCM de Rust+");
-        } catch (e) {
-            console.error(e);
-        }
     });
 
     cancelPairBtn.addEventListener('click', () => {
@@ -57,20 +51,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     enableFcmBtn.addEventListener('click', async () => {
-        enableFcmBtn.innerHTML = "Generando Tokens...";
+        enableFcmBtn.innerHTML = "Generando Tokens FCM...";
         enableFcmBtn.disabled = true;
-        // In real flow, this would trigger Steam OAuth for companion app
-        setTimeout(() => {
-            enableFcmBtn.innerHTML = "FCM Activo. Listo.";
-            enableFcmBtn.classList.replace('btn-outline', 'btn-primary');
-            alert("Cuenta vinculada a notificaciones. Ahora puedes 'Emparejar' en el juego.");
-            
-            document.getElementById('kpi-fcm').innerText = "Activo";
-            document.getElementById('kpi-fcm').classList.remove('warning');
-            document.getElementById('kpi-fcm').classList.add('ok');
+        
+        try {
+            const req = await fetch('/api/pair/init', { method: 'POST' });
+            if (req.status === 200) {
+                enableFcmBtn.innerHTML = "FCM Activo. Listo.";
+                enableFcmBtn.classList.replace('btn-outline', 'btn-primary');
+                
+                document.getElementById('kpi-fcm').innerText = "Activo";
+                document.getElementById('kpi-fcm').classList.remove('warning');
+                document.getElementById('kpi-fcm').classList.add('ok');
 
-            pairBtn.disabled = false;
-        }, 1500);
+                pairBtn.disabled = false;
+                alert("Cuenta vinculada a notificaciones de capa baja. Ahora puedes avanzar al Paso 2: 'Escanear In-Game'.");
+            } else {
+                throw new Error("Failed server interaction");
+            }
+        } catch (e) {
+            enableFcmBtn.innerHTML = "Error. Reintentar";
+            enableFcmBtn.disabled = false;
+            console.error(e);
+            alert("No se pudo contactar con los servidores de Rust+ (Google Cloud).");
+        }
     });
 
     // Load Initial Data
@@ -224,6 +228,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         killfeedList.removeChild(killfeedList.firstElementChild);
                     }
                 }
+                if (data.type === 'server_paired') {
+                    // Cierra el modal, muestra confeti/alerta y recarga la lista
+                    pairModal.classList.add('hidden');
+                    alert(`¡Éxito! Tu servidor ${data.serverIp}:${data.serverPort} se conectó dinámicamente.`);
+                    
+                    // Recargar los datos del panel para mostrar el server en UI
+                    await loadData();
+                    document.getElementById('nav-servers').click(); // Redirige a los servidores
+                }
+
             } catch(e) { console.error("Error parsing SSE:", e); }
         };
 

@@ -198,11 +198,25 @@
 
     <!-- UI Modal -->
     <div id="pairing-modal" class="modal-overlay hidden">
-        <div class="modal">
-            <div class="radar-spinner"></div>
-            <h3>Esperando solicitud In-Game...</h3>
-            <p class="text-muted">Entra a Rust -> ESC -> Rust+ -> Emparejar.</p>
-            <button class="btn btn-outline mt-4" id="btn-cancel-pair">Cancelar</button>
+        <div class="modal" style="text-align: left; min-width: 400px;">
+            <div style="display:flex; justify-content:center; margin-bottom: 20px;">
+                <div class="radar-spinner"></div>
+            </div>
+            <h3 style="text-align:center;">Esperando ping de Rust+...</h3>
+            <p class="text-muted" style="text-align:center; margin-bottom: 20px;">El sistema está escuchando. Sigue estos pasos dentro del juego:</p>
+            
+            <ol style="color: var(--text-main); line-height: 1.8; margin-left: 20px; font-size: 0.95rem;">
+                <li>Entra al servidor de Rust que deseas vincular.</li>
+                <li>Presiona la tecla <strong>ESC</strong>.</li>
+                <li>Haz clic en la pestaña <strong>Rust+</strong> en el menú.</li>
+                <li>Haz clic en el botón verde <strong>"Emparejar con Servidor"</strong>.</li>
+            </ol>
+            
+            <p class="text-muted" style="text-align:center; font-size: 0.85rem; margin-top: 20px;">Esta ventana se cerrará automáticamente al detectar tu servidor.</p>
+            
+            <div style="text-align:center;">
+                <button class="btn btn-outline mt-4" id="btn-cancel-pair">Cancelar</button>
+            </div>
         </div>
     </div>
 
