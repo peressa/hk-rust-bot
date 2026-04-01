@@ -39,6 +39,8 @@ module.exports = async (client, guild) => {
     }
 
     const appId = client.application?.id || client.user?.id;
+    const rest = new Rest.REST({ version: '9' }).setToken(Config.discord.token);
+
     if (!appId) {
         client.log(client.intlGet(null, 'errorCap'), 'No se pudo obtener el ID de la aplicacion de Discord.', 'error');
         return;
