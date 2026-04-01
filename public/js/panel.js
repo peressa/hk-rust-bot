@@ -194,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const killfeedList = document.getElementById('killfeed-list');
         const statusEl = document.getElementById('kf-status');
 
-        source.onmessage = function(event) {
+        source.onmessage = async function(event) {
             try {
                 const data = JSON.parse(event.data);
                 
