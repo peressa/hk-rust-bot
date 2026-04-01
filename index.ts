@@ -74,6 +74,9 @@ const FcmManager = require('./src/structures/SaaS_FcmManager');
 // Crear directorios necesarios
 createMissingDirectories();
 
+// Mantenimiento de logs de analítica (limpiar > 7 días)
+db.cleanupLogs();
+
 const CentralBot = require('./src/structures/DiscordBot');
 const WebDashboard = require('./src/web/server');
 

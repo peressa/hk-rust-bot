@@ -23,6 +23,7 @@ const Path = require('path');
 const PushReceiverClient = require('@liamcottle/push-receiver/src/client');
 
 const Battlemetrics = require('../structures/Battlemetrics');
+const db = require('../structures/database');
 const Constants = require('../util/constants.js');
 const DiscordButtons = require('../discordTools/discordButtons.js');
 const DiscordEmbeds = require('../discordTools/discordEmbeds.js');
@@ -476,6 +477,10 @@ async function alarmAlarm(client, guild, title, message, body) {
         server.alarms[entityId].lastTrigger = Math.floor(new Date() / 1000);
         client.setInstance(guild.id, instance);
         await DiscordMessages.sendSmartAlarmTriggerMessage(client, guild.id, serverId, entityId);
+        
+        // Historial: Alerta Smart Alarm (Posible Raid)
+        db.logEvent(guild.id, serverId, 'raid', title, message, body);
+        
         client.log(client.intlGet(null, 'infoCap'), `${title}: ${message}`);
     }
 }
@@ -504,6 +509,9 @@ async function alarmRaidAlarm(client, guild, title, message, body) {
     }
 
     client.log(client.intlGet(null, 'infoCap'), `${title} ${message}`);
+    
+    // Historial: Alarma de Raideo (Plugin RaidAlarm)
+    db.logEvent(guild.id, serverId, 'raid', title, message, body);
 }
 
 async function playerDeath(client, guild, title, message, body, discordUserId) {
@@ -520,6 +528,9 @@ async function playerDeath(client, guild, title, message, body, discordUserId) {
     if (user) {
         await client.messageSend(user, content);
     }
+
+    // Historial: Registro de Muerte
+    db.logDeath(guild.id, body.targetId || discordUserId, body.attackerId, body.attackerName, body.weapon, body.distance, body.x, body.y);
 }
 
 async function teamLogin(client, guild, title, message, body) {
@@ -535,6 +546,10 @@ async function teamLogin(client, guild, title, message, body) {
 
     if (!rustplus || (rustplus && (serverId !== rustplus.serverId))) {
         await DiscordMessages.sendMessage(client, guild.id, content, null, instance.channelId.activity);
+        
+        // Historial: Conexión de Teammate
+        db.logEvent(guild.id, serverId, 'login', body.targetName, `Se ha conectado al servidor: ${body.name}`, body);
+        
         client.log(client.intlGet(null, 'infoCap'),
             client.intlGet(null, 'playerJustConnectedTo', {
                 name: body.targetName,

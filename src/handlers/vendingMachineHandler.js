@@ -20,6 +20,7 @@
 
 const DiscordMessages = require('../discordTools/discordMessages.js');
 const Map = require('../util/map.js');
+const db = require('../structures/database');
 
 module.exports = {
     handler: async function (rustplus, client, mapMarkers) {
@@ -89,6 +90,9 @@ module.exports = {
                     });
 
                     await DiscordMessages.sendItemAvailableInVendingMachineMessage(client, rustplus, str);
+                    
+                    // Historial: Registro de cambio de stock en Vending Machine
+                    db.logVendingChange(guildId, rustplus.serverId, itemId, itemName, currencyId, order.costPerItem, amountInStock, vId);
 
                     if (rustplus.generalSettings.itemAvailableInVendingMachineNotifyInGame) {
                         rustplus.sendInGameMessage(str);

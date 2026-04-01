@@ -61,6 +61,90 @@ class DB {
                 UNIQUE(steam_id_owner, rust_ip, rust_port)
             )
         `).run();
+
+        // ============================================
+        // NUEVAS TABLAS DE ANALÍTICA (HISTORIAL)
+        // ============================================
+
+        // Registro de Eventos (Cargo, Heli, Alarms/Raids)
+        this.db.prepare(`
+            CREATE TABLE IF NOT EXISTS event_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT,
+                server_id TEXT, -- ip:port
+                event_type TEXT, -- 'cargo', 'heli', 'raid', 'oil_rig'
+                title TEXT,
+                message TEXT,
+                raw_data TEXT, -- JSON completo de la notificación
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+
+        // Registro de Muertes
+        this.db.prepare(`
+            CREATE TABLE IF NOT EXISTS death_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT,
+                steam_id TEXT,
+                attacker_id TEXT,
+                attacker_name TEXT,
+                weapon TEXT,
+                distance REAL,
+                location_x REAL,
+                location_y REAL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+
+        // Registro de Mercado (Vending Machines)
+        this.db.prepare(`
+            CREATE TABLE IF NOT EXISTS vending_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                guild_id TEXT,
+                server_id TEXT,
+                item_id TEXT,
+                item_name TEXT,
+                currency_id TEXT,
+                cost INTEGER,
+                stock INTEGER,
+                v_id TEXT, -- unique id de la vending machine (x:y)
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        `).run();
+    }
+
+    // ============================================
+    // MÉTODOS DE ANALÍTICA e INSERCIÓN
+    // ============================================
+
+    logEvent(guildId, serverId, type, title, message, rawData = null) {
+        return this.db.prepare(`
+            INSERT INTO event_logs (guild_id, server_id, event_type, title, message, raw_data)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `).run(guildId, serverId, type, title, message, rawData ? JSON.stringify(rawData) : null);
+    }
+
+    logDeath(guildId, steamId, attackerId, attackerName, weapon, distance, x, y) {
+        return this.db.prepare(`
+            INSERT INTO death_logs (guild_id, steam_id, attacker_id, attacker_name, weapon, distance, location_x, location_y)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(guildId, steamId, attackerId, attackerName, weapon, distance, x, y);
+    }
+
+    logVendingChange(guildId, serverId, itemId, itemName, currencyId, cost, stock, vId) {
+        return this.db.prepare(`
+            INSERT INTO vending_logs (guild_id, server_id, item_id, item_name, currency_id, cost, stock, v_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `).run(guildId, serverId, itemId, itemName, currencyId, cost, stock, vId);
+    }
+
+    // Mantenimiento Automático (TTL: 7 días por defecto)
+    cleanupLogs(days = 7) {
+        const dateLimit = `DATETIME('now', '-${days} days')`;
+        this.db.prepare(`DELETE FROM event_logs WHERE created_at < ${dateLimit}`).run();
+        this.db.prepare(`DELETE FROM death_logs WHERE created_at < ${dateLimit}`).run();
+        this.db.prepare(`DELETE FROM vending_logs WHERE created_at < ${dateLimit}`).run();
+        console.log(`[Database] Mantenimiento completado: Logs anteriores a ${days} días eliminados.`);
     }
 
     // ============================================

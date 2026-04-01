@@ -97,25 +97,37 @@ router.get('/api/admin/stats', ensureAuthenticated, (req, res) => {
     });
 });
 
-// Generar una solicitud de emparejamiento (Zero-Friction FCM)
+// Generar o recuperar una solicitud de emparejamiento (Zero-Friction FCM)
 router.post('/api/pair/init', ensureAuthenticated, express.json(), async (req, res) => {
     try {
         const { authToken } = req.body;
+        const user = db.getUser(req.user.id);
+        
+        // Priorizar el nuevo token si se provee, o usar el existente
+        const finalAuthToken = authToken || (user ? user.auth_token : null);
+        
         if (authToken) {
             db.updateAuthToken(req.user.id, authToken);
         }
 
-        const user = db.getUser(req.user.id);
-        if(!user || !user.fcm_credentials) {
+        if (!user || !user.fcm_credentials || authToken) {
+            // Si es nuevo o estamos actualizando el token, registramos/re-vinculamos
+            console.log(`[API] Iniciando registro/re-vinculación FCM para ${req.user.id}`);
             await global.fcmManager.registerNewDevice(req.user.id);
         } else {
-            // Asegurar que esté corriendo
+            // Si ya existe y no hay token nuevo, simplemente aseguramos que el listener esté vivo
+            console.log(`[API] Re-activando listener existente para ${req.user.id}`);
             global.fcmManager.startListenerForUser(req.user.id, JSON.parse(user.fcm_credentials));
         }
-        res.json({ message: 'Listening for Rust+ pairing...', status: 'waiting' });
+
+        res.json({ 
+            message: 'HK Rust Protector Activo', 
+            status: 'ready',
+            isLinked: true 
+        });
     } catch(err) {
         console.error('[API] Error on FCM registration:', err);
-        res.status(500).json({ error: 'Error on FCM registration', message: err.toString() });
+        res.status(500).json({ error: 'Error de vinculación', message: err.toString() });
     }
 });
 
