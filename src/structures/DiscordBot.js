@@ -152,22 +152,25 @@ class DiscordBot extends Discord.Client {
 
     intlGet(guildId, id, variables = {}) {
         let intl = null;
-        if (guildId && guildId !== 'en') {
-            intl = this.guildIntl[guildId];
-        }
-        else {
-            if (guildId === 'en') {
+        try {
+            if (guildId && guildId !== 'en' && this.guildIntl[guildId]) {
+                intl = this.guildIntl[guildId];
+            } else if (guildId === 'en' && this.enIntl) {
                 intl = this.enIntl;
+            } else {
+                intl = this.botIntl || this.enIntl;
             }
-            else {
-                intl = this.botIntl;
-            }
-        }
 
-        return intl.formatMessage({
-            id: id,
-            defaultMessage: this.enMessages[id]
-        }, variables);
+            if (!intl) return id; // Fallback extremo: devolver el ID del mensaje
+
+            return intl.formatMessage({
+                id: id,
+                defaultMessage: this.enMessages ? this.enMessages[id] : id
+            }, variables);
+        } catch (e) {
+            console.error('[intlGet Error]', e);
+            return id; 
+        }
     }
 
     async build(token = Config.discord.token, rustConfig = null) {
@@ -190,57 +193,53 @@ class DiscordBot extends Discord.Client {
             const activeServer = servers.find(s => s.is_active === 1);
             if (activeServer) {
                 // Instanciar dummy guild data para compatibilidad
-                if (!this.instances[guildData.guild_id]) {
-                     this.instances[guildData.guild_id] = {
-                        firstTime: false,
-                        activeServer: 'main',
-                        role: null,
-                        blacklist: { discordIds: [], steamIds: [] },
-                        trackers: {},
-                        serverList: {
-                            'main': {
-                                title: 'Server de ' + guildData.steam_id_owner,
-                                serverIp: activeServer.rust_ip,
-                                appPort: activeServer.rust_port,
-                                steamId: activeServer.rust_steam_id,
-                                playerToken: activeServer.player_token,
-                                battlemetricsId: null,
-                                markers: {},
-                                switches: {},
-                                alarms: {},
-                                storageMonitors: {}
-                            }
-                        },
-                        channelId: {
-                            category: null,
-                            events: null,
-                            information: null,
-                            commands: null,
-                            storageMonitors: null,
-                            activity: null,
-                            trackers: null,
-                            servers: null,
-                            teamchat: null,
-                            switches: null,
-                            switchGroups: null,
-                            alarms: null,
-                            settings: null
-                        },
-                        generalSettings: this.readGeneralSettingsTemplate(),
-                        notificationSettings: this.readNotificationSettingsTemplate()
-                    };
-                }
-                
-                console.log(`[CentralBot] Conectando Rust+ para Guild ${guildData.guild_id} (Propietario: ${guildData.steam_id_owner}) -> ${activeServer.rust_ip}`);
-                this.createRustplusInstance(guildData.guild_id, activeServer.rust_ip, activeServer.rust_port, activeServer.rust_steam_id, activeServer.player_token);
-                loaded++;
+                // Cargar datos por defecto para compatibilidad Multi-Tenant
+                this.instances[guildData.guild_id] = {
+                    firstTime: false,
+                    activeServer: 'main',
+                    role: null,
+                    blacklist: { discordIds: [], steamIds: [] },
+                    trackers: {},
+                    serverList: {
+                        'main': {
+                            title: 'Server de ' + guildData.steam_id_owner,
+                            serverIp: activeServer.rust_ip,
+                            appPort: activeServer.rust_port,
+                            steamId: activeServer.rust_steam_id,
+                            playerToken: activeServer.player_token,
+                            battlemetricsId: null,
+                            markers: {},
+                            switches: {},
+                            alarms: {},
+                            storageMonitors: {}
+                        }
+                    },
+                    channelId: {
+                        category: null, information: null, servers: null, settings: null, 
+                        commands: null, events: null, teamchat: null, switches: null, 
+                        switchGroups: null, alarms: null, storageMonitors: null, 
+                        activity: null, trackers: null
+                    },
+                    informationMessageId: {
+                        map: null, server: null, event: null, team: null, 
+                        battlemetricsPlayers: null
+                    },
+                    generalSettings: this.readGeneralSettingsTemplate(),
+                    notificationSettings: this.readNotificationSettingsTemplate()
+                };
             }
+            
+            console.log(`[CentralBot] Conectando Rust+ para Guild ${guildData.guild_id} (Propietario: ${guildData.steam_id_owner}) -> ${activeServer.rust_ip}`);
+            this.createRustplusInstance(guildData.guild_id, activeServer.rust_ip, activeServer.rust_port, activeServer.rust_steam_id, activeServer.player_token);
+            loaded++;
         }
         console.log(`[CentralBot] Enrutados ${loaded} servidores de Rust+ a Guilds de Discord.`);
     }
 
     log(title, text, level = 'info') {
-        this.logger.log(title, text, level);
+        const t = title || 'Info';
+        const msg = text || '';
+        this.logger.log(t, msg, level);
     }
 
     logInteraction(interaction, verifyId, type) {

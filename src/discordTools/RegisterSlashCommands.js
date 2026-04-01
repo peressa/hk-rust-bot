@@ -38,10 +38,16 @@ module.exports = async (client, guild) => {
         commands.push(builder.toJSON());
     }
 
-    const rest = new Rest.REST({ version: '9' }).setToken(Config.discord.token);
+    const appId = client.application?.id || client.user?.id;
+    if (!appId) {
+        client.log(client.intlGet(null, 'errorCap'), 'No se pudo obtener el ID de la aplicacion de Discord.', 'error');
+        return;
+    }
 
     try {
-        await rest.put(Types.Routes.applicationGuildCommands(client.user.id, guild.id), { body: commands });
+        await rest.put(Types.Routes.applicationGuildCommands(appId, guild.id), { body: commands });
+        client.log(client.intlGet(null, 'infoCap'),
+            client.intlGet(null, 'slashCommandsSuccessRegister', { guildId: guild.id }));
     }
     catch (e) {
         client.log(
@@ -51,8 +57,6 @@ module.exports = async (client, guild) => {
             'error'
         );
         console.error('[SlashCommands] API Error:', e);
-        // SaaS FIX: Nunca matar toda la plataforma web (process.exit) por un fallo de un solo Discord Guild.
+        // SaaS FIX: Nunca matar la plataforma por fallos de red/API con Discord.
     }
-    client.log(client.intlGet(null, 'infoCap'),
-        client.intlGet(null, 'slashCommandsSuccessRegister', { guildId: guild.id }));
 };
