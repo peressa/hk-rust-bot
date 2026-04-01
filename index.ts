@@ -52,14 +52,16 @@ if (typeof Discord.Client.prototype.log !== 'function' || true) {
     });
 }
 if (typeof Discord.Client.prototype.intlGet !== 'function' || true) {
-    Object.defineProperty(Discord.Client.prototype, 'intlGet', {
-        value: function(guildId: string | null, id: string, vars: any = {}) {
-            const Intl = require('./src/util/intl');
-            return Intl.get(id, vars);
-        },
-        writable: true,
-        configurable: true
-    });
+    try {
+        Object.defineProperty(Discord.Client.prototype, 'intlGet', {
+            value: function(guildId: string | null, id: string, vars: any = {}) {
+                const Intl = require('./src/util/intl');
+                return Intl.get(id, vars);
+            },
+            writable: false,
+            configurable: false
+        });
+    } catch(e) {}
 }
 
 const Fs = require('fs');

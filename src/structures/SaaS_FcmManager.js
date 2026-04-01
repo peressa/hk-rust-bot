@@ -252,16 +252,17 @@ class FcmManager {
 
             // Endpoint oficial de Rust+ para registrar dispositivos de notificaciones
             const response = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
-                ServerType: "Official",
-                DeviceId: hexDeviceId,
-                DeviceName: "HK Rust Bot",
-                PushService: 1, // 1 = GCM/FCM
-                PushToken: pushToken,
-                SteamId: steamId.toString(),
-                AuthToken: authToken
+                serverType: "Official",
+                deviceId: hexDeviceId,
+                deviceName: "HK Rust Bot",
+                pushService: 1, // 1 = GCM/FCM
+                pushToken: pushToken,
+                steamId: steamId.toString(),
+                authToken: authToken
             }, {
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': authToken,
                     'User-Agent': 'Rust/2507 CFNetwork/1410.0.3 Darwin/22.6.0' 
                 },
                 timeout: 10000

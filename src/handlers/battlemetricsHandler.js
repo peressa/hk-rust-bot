@@ -25,6 +25,12 @@ const Scrape = require('../util/scrape.js');
 
 module.exports = {
     handler: async function (client, firstTime = false) {
+        const _intlGet = (guildId, id, vars = {}) => {
+            if (client && typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+            const Intl = require('../util/intl');
+            return Intl.get(id, vars);
+        };
+
         const searchSteamProfiles = (client.battlemetricsIntervalCounter === 0) ? true : false;
         const calledSteamProfiles = new Object();
 
@@ -117,7 +123,7 @@ module.exports = {
                     for (const player of content.players) {
                         if (player.playerId !== playerId) continue;
 
-                        const str = client.intlGet(guildId, 'playerJustConnectedTracker', {
+                        const str = _intlGet(guildId, 'playerJustConnectedTracker', {
                             name: player.name,
                             tracker: content.name
                         });
@@ -135,7 +141,7 @@ module.exports = {
                     for (const player of content.players) {
                         if (player.playerId !== playerId) continue;
 
-                        const str = client.intlGet(guildId, 'playerJustConnectedTracker', {
+                        const str = _intlGet(guildId, 'playerJustConnectedTracker', {
                             name: player.name,
                             tracker: content.name
                         });
@@ -153,7 +159,7 @@ module.exports = {
                     for (const player of content.players) {
                         if (player.playerId !== playerId) continue;
 
-                        const str = client.intlGet(guildId, 'playerJustDisconnectedTracker', {
+                        const str = _intlGet(guildId, 'playerJustDisconnectedTracker', {
                             name: player.name,
                             tracker: content.name
                         });
@@ -214,20 +220,20 @@ module.exports = {
                 const oldName = bmInstance.serverEvaluation['server_name'].from;
                 const newName = bmInstance.serverEvaluation['server_name'].to;
 
-                const title = client.intlGet(guildId, 'battlemetricsServerNameChanged');
-                const description = `__**${client.intlGet(guildId, 'old')}:**__ ${oldName}\n` +
-                    `__**${client.intlGet(guildId, 'new')}:**__ ${newName}`;
+                const title = _intlGet(guildId, 'battlemetricsServerNameChanged');
+                const description = `__**${_intlGet(guildId, 'old')}:**__ ${oldName}\n` +
+                    `__**${_intlGet(guildId, 'new')}:**__ ${newName}`;
 
                 await DiscordMessages.sendBattlemetricsEventMessage(guildId, battlemetricsId, title, description);
             }
 
             /* Players whos name have changed */
             if (settings.battlemetricsGlobalNameChanges && bmInstance.nameChangedPlayers.length !== 0) {
-                const title = client.intlGet(guildId, 'battlemetricsPlayersNameChanged');
+                const title = _intlGet(guildId, 'battlemetricsPlayersNameChanged');
 
-                const oldNameFieldName = client.intlGet(guildId, 'old');
-                const playerIdFieldName = client.intlGet(guildId, 'playerId');
-                const newNameFieldName = client.intlGet(guildId, 'new');
+                const oldNameFieldName = _intlGet(guildId, 'old');
+                const playerIdFieldName = _intlGet(guildId, 'playerId');
+                const newNameFieldName = _intlGet(guildId, 'new');
 
                 let totalCharacters = 50; /* Start of with 50 characters as a base. */
 
@@ -285,7 +291,7 @@ module.exports = {
 
                 let description = '';
                 if (isEmbedFull) {
-                    description = client.intlGet(interaction.guildId, 'andMorePlayers', {
+                    description = _intlGet(guildId, 'andMorePlayers', {
                         number: bmInstance.nameChangedPlayers.length - playerCounter
                     });
                 }
@@ -294,17 +300,17 @@ module.exports = {
                 for (let i = 0; i < (fieldIndex + 1); i++) {
                     fields.push({
                         name: i === 0 ? oldNameFieldName : '\u200B',
-                        value: oldName[i] !== '' ? oldName[i] : client.intlGet(guildId, 'empty'),
+                        value: oldName[i] !== '' ? oldName[i] : _intlGet(guildId, 'empty'),
                         inline: true
                     });
                     fields.push({
                         name: i === 0 ? playerIdFieldName : '\u200B',
-                        value: playerId[i] !== '' ? playerId[i] : client.intlGet(guildId, 'empty'),
+                        value: playerId[i] !== '' ? playerId[i] : _intlGet(guildId, 'empty'),
                         inline: true
                     });
                     fields.push({
                         name: i === 0 ? newNameFieldName : '\u200B',
-                        value: newName[i] !== '' ? newName[i] : client.intlGet(guildId, 'empty'),
+                        value: newName[i] !== '' ? newName[i] : _intlGet(guildId, 'empty'),
                         inline: true
                     });
                 }
@@ -317,7 +323,7 @@ module.exports = {
             if (settings.battlemetricsGlobalLogin &&
                 (bmInstance.loginPlayers.length !== 0 || bmInstance.newPlayers.length !== 0)) {
                 const playerIds = Array.from(new Set(bmInstance.loginPlayers.concat(bmInstance.newPlayers)));
-                const title = client.intlGet(guildId, 'battlemetricsPlayersLogin');
+                const title = _intlGet(guildId, 'battlemetricsPlayersLogin');
 
                 let totalCharacters = 50; /* Start of with 50 characters as a base. */
                 let fieldCharacters = 0;
@@ -349,7 +355,7 @@ module.exports = {
 
                 let description = '';
                 if (isEmbedFull) {
-                    description = client.intlGet(interaction.guildId, 'andMorePlayers', {
+                    description = _intlGet(guildId, 'andMorePlayers', {
                         number: playerIds.length - playerCounter
                     });
                 }
@@ -371,7 +377,7 @@ module.exports = {
 
             /* Players that just logged out */
             if (settings.battlemetricsGlobalLogout && bmInstance.logoutPlayers.length !== 0) {
-                const title = client.intlGet(guildId, 'battlemetricsPlayersLogout');
+                const title = _intlGet(guildId, 'battlemetricsPlayersLogout');
 
                 let totalCharacters = 50; /* Start of with 50 characters as a base. */
                 let fieldCharacters = 0;
@@ -403,7 +409,7 @@ module.exports = {
 
                 let description = '';
                 if (isEmbedFull) {
-                    description = client.intlGet(interaction.guildId, 'andMorePlayers', {
+                    description = _intlGet(guildId, 'andMorePlayers', {
                         number: playerIds.length - playerCounter
                     });
                 }
@@ -429,10 +435,10 @@ module.exports = {
         const instance = client.getInstance(guildId);
         const trackerName = instance.trackers[trackerId].name;
 
-        const title = client.intlGet(guildId, 'battlemetricsTrackerPlayerNameChanged');
-        const description = `__**${client.intlGet(guildId, 'tracker')}:**__ ${trackerName}\n\n` +
-            `__**${client.intlGet(guildId, 'old')}:**__ ${oldName}\n` +
-            `__**${client.intlGet(guildId, 'new')}:**__ ${newName}`;
+        const title = _intlGet(guildId, 'battlemetricsTrackerPlayerNameChanged');
+        const description = `__**${_intlGet(guildId, 'tracker')}:**__ ${trackerName}\n\n` +
+            `__**${_intlGet(guildId, 'old')}:**__ ${oldName}\n` +
+            `__**${_intlGet(guildId, 'new')}:**__ ${newName}`;
 
         await DiscordMessages.sendBattlemetricsEventMessage(guildId, battlemetricsId, title, description, null,
             instance.trackers[trackerId].everyone);
