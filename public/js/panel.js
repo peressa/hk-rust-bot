@@ -51,9 +51,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     enableFcmBtn.addEventListener('click', async () => {
-        const authToken = document.getElementById('inp-auth-token').value;
-        if (!authToken) {
-            alert("Por favor, ingresa tu Facepunch AuthToken. Lo necesitas para que el bot simule tu aplicación Rust+.");
+        let authToken = document.getElementById('inp-auth-token').value.trim();
+        
+        // Smart Token Extraction: Si el usuario pega el JSON o el script de Facepunch
+        if (authToken.includes('Token') || authToken.includes('{')) {
+            try {
+                // Intentar extraer de JSON dentro de un string (postMessage pattern)
+                const tokenMatch = authToken.match(/"Token":\s*"([^"]+)"/);
+                if (tokenMatch && tokenMatch[1]) {
+                    authToken = tokenMatch[1];
+                } else {
+                    // Intentar extraer si pegó solo el JSON limpio
+                    const parsed = JSON.parse(authToken.replace(/\\"/g, '"'));
+                    if (parsed.Token) authToken = parsed.Token;
+                }
+            } catch (e) {
+                console.warn("No se pudo parsear como JSON, intentando regex crudo...");
+                const rawMatch = authToken.match(/ey[A-Za-z0-9._\-\/\\+=]+/);
+                if (rawMatch) authToken = rawMatch[0];
+            }
+        }
+
+        if (!authToken || authToken.length < 50) {
+            alert("No parece un token válido. Por favor, pega el bloque de código que te dio Facepunch o el token que empieza por 'eyJ...'");
             return;
         }
 
