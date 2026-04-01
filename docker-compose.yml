@@ -1,13 +1,17 @@
 version: '3.3'
 services:
     app:
+        build: .
         volumes:
+            - ./src:/app/src
+            - ./public:/app/public
+            - ./index.ts:/app/index.ts
             - ./credentials:/app/credentials
             - ./instances:/app/instances
             - ./logs:/app/logs
             - ./maps:/app/maps
+            - ./.env:/app/.env
         environment:
-            - RPP_DISCORD_CLIENT_ID=111....1111
-            - RPP_DISCORD_TOKEN=token
+            - RPP_LOG_CALL_STACK=true
         container_name: rpp
-        image: ghcr.io/alexemanuelol/rustplusplus
+        restart: always
