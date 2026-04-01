@@ -124,9 +124,14 @@
                     <div class="action-card">
                         <div class="action-header">
                             <h3>1. Habilitar Emparejamiento</h3>
-                            <button class="btn btn-outline" id="btn-enable-fcm">Vincular Steam</button>
-                        </div>
                         <p class="text-muted">Autoriza a la plataforma a escuchar las notificaciones enviadas desde el juego para vincular servidores de forma transparente (Zero-Friction).</p>
+                        
+                        <div style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+                            <label style="font-size:0.8rem; color:var(--text-muted);">Facepunch Auth Token (Requerido):</label>
+                            <input type="password" id="inp-auth-token" placeholder="Pega tu token aquí..." class="form-input" style="width:100%;">
+                            <p style="font-size:0.75rem; color:#facc15;">* Obtén tu token en <a href="https://companion-rust.facepunch.com/login" target="_blank" style="color:#facc15; text-decoration:underline;">Facepunch Login</a></p>
+                            <button class="btn btn-outline" id="btn-enable-fcm">Vincular Steam + Rust+</button>
+                        </div>
                     </div>
 
                     <div class="action-card">

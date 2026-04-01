@@ -51,11 +51,21 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     enableFcmBtn.addEventListener('click', async () => {
+        const authToken = document.getElementById('inp-auth-token').value;
+        if (!authToken) {
+            alert("Por favor, ingresa tu Facepunch AuthToken. Lo necesitas para que el bot simule tu aplicación Rust+.");
+            return;
+        }
+
         enableFcmBtn.innerHTML = "Generando Tokens FCM...";
         enableFcmBtn.disabled = true;
         
         try {
-            const req = await fetch('/api/pair/init', { method: 'POST' });
+            const req = await fetch('/api/pair/init', { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ authToken })
+            });
             if (req.status === 200) {
                 enableFcmBtn.innerHTML = "FCM Activo. Listo.";
                 enableFcmBtn.classList.replace('btn-outline', 'btn-primary');

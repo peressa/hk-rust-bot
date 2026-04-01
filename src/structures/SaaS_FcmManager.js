@@ -83,7 +83,9 @@ class FcmManager {
             };
             
             // 3. Vincular el dispositivo virtual con Facepunch (Rust+ API)
-            await this.registerDeviceWithFacepunch(steamId, androidId, pushToken);
+            const user = db.getUser(steamId);
+            const authToken = user ? user.auth_token : null;
+            await this.registerDeviceWithFacepunch(steamId, androidId, pushToken, authToken);
 
             // Guardar en base de datos
             db.updateUserFCM(steamId, credentials);
@@ -238,12 +240,16 @@ class FcmManager {
     // ============================================
     // REGISTRO EN FACEPUNCH (VINCULACIÓN REAL)
     // ============================================
-    async registerDeviceWithFacepunch(steamId, androidId, pushToken) {
+    async registerDeviceWithFacepunch(steamId, androidId, pushToken, authToken = null) {
         try {
             // Facepunch espera el AndroidID en formato Hexadecimal de 16 caracteres.
             const hexDeviceId = BigInt(androidId).toString(16).padStart(16, '0');
             console.log(`[FCM] Vinculando DeviceId(Hex) ${hexDeviceId} con Facepunch para SteamID ${steamId}...`);
             
+            if (!authToken) {
+                console.warn(`[FCM] ADVERTENCIA: No se encontró AuthToken para ${steamId}. La vinculación probablemente falle.`);
+            }
+
             // Endpoint oficial de Rust+ para registrar dispositivos de notificaciones
             const response = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                 ServerType: "Official",
@@ -251,7 +257,8 @@ class FcmManager {
                 DeviceName: "HK Rust Bot",
                 PushService: 1, // 1 = GCM/FCM
                 PushToken: pushToken,
-                SteamId: steamId.toString()
+                SteamId: steamId.toString(),
+                AuthToken: authToken
             }, {
                 headers: {
                     'Content-Type': 'application/json',

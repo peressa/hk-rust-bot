@@ -80,8 +80,16 @@ class DiscordBot extends Discord.Client {
         // qué haga Discord.js internally con el objeto.
         // ===================================================================
         const _self = this;
-        const _boundLog = function(title, text, level) { return _self._logImpl(title, text, level); };
-        const _boundIntlGet = function(guildId, id, variables) { return _self._intlGetImpl(guildId, id, variables); };
+        Object.defineProperty(this, 'log', {
+            value: function(title, text, level) { return _self._logImpl(title, text, level); },
+            writable: true,
+            configurable: true
+        });
+        Object.defineProperty(this, 'intlGet', {
+            value: function(guildId, id, variables) { return _self._intlGetImpl(guildId, id, variables); },
+            writable: true,
+            configurable: true
+        });
 
         this.loadDiscordCommands();
         this.loadDiscordEvents();

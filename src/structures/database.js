@@ -24,9 +24,15 @@ class DB {
                 steam_id TEXT PRIMARY KEY,
                 steam_name TEXT,
                 fcm_credentials TEXT, -- Expo Push Token asignado al usuario (JSON)
+                auth_token TEXT,      -- Token de autenticación de Facepunch
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         `).run();
+
+        // Migración: Asegurar que existe la columna auth_token
+        try {
+            this.db.prepare('ALTER TABLE users ADD COLUMN auth_token TEXT').run();
+        } catch(e) { /* Columna ya existe */ }
 
         // Tabla de Configuración y Enrutamiento de Discord
         this.db.prepare(`
@@ -65,15 +71,21 @@ class DB {
         return this.db.prepare('SELECT * FROM users WHERE steam_id = ?').get(steamId);
     }
 
-    upsertUser(steamId, steamName, fcmCredentials = null) {
+    upsertUser(steamId, steamName, fcmCredentials = null, authToken = null) {
         const stmt = this.db.prepare(`
-            INSERT INTO users (steam_id, steam_name, fcm_credentials)
-            VALUES (?, ?, ?)
+            INSERT INTO users (steam_id, steam_name, fcm_credentials, auth_token)
+            VALUES (?, ?, ?, ?)
             ON CONFLICT(steam_id) DO UPDATE SET
                 steam_name = excluded.steam_name,
-                fcm_credentials = COALESCE(excluded.fcm_credentials, users.fcm_credentials)
+                fcm_credentials = COALESCE(excluded.fcm_credentials, users.fcm_credentials),
+                auth_token = COALESCE(excluded.auth_token, users.auth_token)
         `);
-        return stmt.run(steamId, steamName, fcmCredentials);
+        return stmt.run(steamId, steamName, fcmCredentials, authToken);
+    }
+
+    updateAuthToken(steamId, authToken) {
+        return this.db.prepare('UPDATE users SET auth_token = ? WHERE steam_id = ?')
+            .run(authToken, steamId);
     }
 
     updateUserFCM(steamId, fcmCredentials) {

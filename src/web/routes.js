@@ -98,8 +98,13 @@ router.get('/api/admin/stats', ensureAuthenticated, (req, res) => {
 });
 
 // Generar una solicitud de emparejamiento (Zero-Friction FCM)
-router.post('/api/pair/init', ensureAuthenticated, async (req, res) => {
+router.post('/api/pair/init', ensureAuthenticated, express.json(), async (req, res) => {
     try {
+        const { authToken } = req.body;
+        if (authToken) {
+            db.updateAuthToken(req.user.id, authToken);
+        }
+
         const user = db.getUser(req.user.id);
         if(!user || !user.fcm_credentials) {
             await global.fcmManager.registerNewDevice(req.user.id);
@@ -109,6 +114,7 @@ router.post('/api/pair/init', ensureAuthenticated, async (req, res) => {
         }
         res.json({ message: 'Listening for Rust+ pairing...', status: 'waiting' });
     } catch(err) {
+        console.error('[API] Error on FCM registration:', err);
         res.status(500).json({ error: 'Error on FCM registration', message: err.toString() });
     }
 });
