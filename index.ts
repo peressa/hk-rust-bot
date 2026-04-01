@@ -36,6 +36,17 @@ const fcm = new FcmManager(bot);
 (global as any).fcmManager = fcm;
 
 if (process.env.RPP_DISCORD_TOKEN) {
+    // SECURITY FALLBACK: Asegurar que intlGet existe en la instancia pase lo que pase
+    if (typeof (bot as any).intlGet !== 'function') {
+        (bot as any).intlGet = function(guildId: any, id: string, variables: any = {}) {
+            try {
+                const intl = this.guildIntl?.[guildId] || this.botIntl || this.enIntl;
+                if (!intl) return id;
+                return intl.formatMessage({ id: id, defaultMessage: this.enMessages?.[id] || id }, variables);
+            } catch (e) { return id; }
+        };
+    }
+
     bot.build(process.env.RPP_DISCORD_TOKEN).then(() => {
         console.log('[Sistema] Bot oficial encendido.');
         // Cargar todos los servidores RUST de todos los usuarios
