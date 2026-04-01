@@ -224,14 +224,14 @@ class FcmManager {
             
             // RESET DE IDENTIDAD: Usar un UUID fresco para evitar registros fantasmas
             const crypto = require('crypto');
-            const hexDeviceId = crypto.randomUUID(); 
+            const hexDeviceId = crypto.randomUUID().toLowerCase(); // Asegurar minúsculas
             
             try {
                 const fpResponse = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                     serverType: "Official",
                     deviceId: hexDeviceId,
                     deviceName: "HK-RUST Pro",
-                    pushService: "fcm", // Usar string "fcm" en lugar de 1 por compatibilidad v3004
+                    pushService: 1, // REVERTIR A ENTERO (1) para v3004
                     pushToken: pushToken,
                     steamId: steamId,
                     authToken: authToken

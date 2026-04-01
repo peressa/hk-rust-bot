@@ -189,8 +189,9 @@ router.get('/api/fcm/stream', ensureAuthenticated, (req, res) => {
 
 router.post('/api/fcm/reset', ensureAuthenticated, (req, res) => {
     try {
-        db.updateUserFCM(req.user.id, { gcm: { androidId: null, securityToken: null } });
-        res.json({ success: true, msg: 'Identidad GCM eliminada con éxito.' });
+        // Borrado absoluto del objeto JSON de credenciales
+        db.updateUserFCM(req.user.id, null);
+        res.json({ success: true, msg: 'Identidad GCM/FCM reseteada por completo.' });
     } catch (e) {
         res.status(500).json({ success: false, msg: e.message });
     }
