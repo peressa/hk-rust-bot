@@ -16,22 +16,30 @@ class FcmManager {
         try {
             console.log(`[FCM] Generando credenciales Push-Receiver para usuario ${steamId}...`);
             
-            // Generar un appId único (formato Chrome/Electron)
+            // 1. Generar credenciales GCM robustas
             const appId = `wp:receiver.push.com#${crypto.randomUUID()}`;
             
-            // 2. Realizar registro GCM (evitando el bug de 'interior hyphen' y el 404 de FCM)
-            const subscription = await registerGCM(undefined, undefined, appId);
+            // Generar un AndroidID aleatorio de 64 bits (numérico como string)
+            // Esto evita PHONE_REGISTRATION_ERROR al simular mejor un dispositivo real.
+            const randomAndroidId = BigInt(`0x${crypto.randomBytes(8).toString('hex')}`).toString();
             
+            console.log(`[FCM] Intentando Check-In inicial con AndroidID: ${randomAndroidId}...`);
+            
+            // Realizar registro GCM
+            const subscription = await registerGCM(randomAndroidId, undefined, appId);
+            
+            const androidId = subscription.androidId.toString();
+            const securityToken = subscription.securityToken.toString();
+
             const credentials = {
                 gcm: {
-                    androidId: subscription.androidId,
-                    securityToken: subscription.securityToken
+                    androidId: androidId,
+                    securityToken: securityToken
                 }
             };
             
             // 3. Vincular el dispositivo virtual con Facepunch (Rust+ API)
-            // Esto es CRUCIAL para que el servidor de Rust sepa a qué AndroidID mandarle el pairing.
-            await this.registerDeviceWithFacepunch(steamId, subscription.androidId, subscription.token);
+            await this.registerDeviceWithFacepunch(steamId, androidId, subscription.token);
 
             // Guardar en base de datos
             db.updateUserFCM(steamId, credentials);
@@ -192,15 +200,15 @@ class FcmManager {
             // Endpoint oficial de Rust+ para registrar dispositivos de notificaciones
             const response = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                 ServerType: "Official",
-                DeviceId: androidId,
-                DeviceName: "HK Rust Bot (Virtual Device)",
+                DeviceId: androidId.toString(),
+                DeviceName: "HK Rust Bot",
                 PushService: 1, // 1 = GCM/FCM
                 PushToken: pushToken,
-                SteamId: steamId
+                SteamId: steamId.toString()
             }, {
                 headers: {
                     'Content-Type': 'application/json',
-                    'User-Agent': 'Rust/2507 CFNetwork/1410.0.3 Darwin/22.6.0' // User agent de la app real
+                    'User-Agent': 'Rust/2507 CFNetwork/1410.0.3 Darwin/22.6.0' 
                 },
                 timeout: 10000
             });

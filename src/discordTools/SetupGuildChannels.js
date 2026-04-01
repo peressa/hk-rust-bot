@@ -54,10 +54,10 @@ async function addTextChannel(name, idName, client, guild, parent, permissionWri
 
     let channel = undefined;
     if (instance.channelId[idName] !== null) {
-        channel = DiscordTools.getTextChannelById(guild.id, instance.channelId[idName]);
+        channel = DiscordTools.getTextChannelById(client, guild.id, instance.channelId[idName]);
     }
     if (channel === undefined) {
-        channel = await DiscordTools.addTextChannel(guild.id, name);
+        channel = await DiscordTools.addTextChannel(client, guild.id, name);
         instance.channelId[idName] = channel.id;
         client.setInstance(guild.id, instance);
 

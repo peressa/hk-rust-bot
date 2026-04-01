@@ -178,8 +178,8 @@ module.exports = {
         return undefined;
     },
 
-    deleteMessageById: async function (guildId, channelId, messageId) {
-        const message = await module.exports.getMessageById(guildId, channelId, messageId);
+    deleteMessageById: async function (client, guildId, channelId, messageId) {
+        const message = await module.exports.getMessageById(client, guildId, channelId, messageId);
 
         try {
             await message.delete();
@@ -192,8 +192,8 @@ module.exports = {
         return undefined;
     },
 
-    addCategory: async function (guildId, name) {
-        const guild = module.exports.getGuild(guildId);
+    addCategory: async function (client, guildId, name) {
+        const guild = module.exports.getGuild(client, guildId);
 
         if (guild) {
             try {
@@ -214,8 +214,8 @@ module.exports = {
         return undefined;
     },
 
-    removeCategory: async function (guildId, categoryId) {
-        const category = module.exports.getCategoryById(guildId, categoryId);
+    removeCategory: async function (client, guildId, categoryId) {
+        const category = module.exports.getCategoryById(client, guildId, categoryId);
 
         try {
             await category.delete();
@@ -228,8 +228,8 @@ module.exports = {
         return true;
     },
 
-    addTextChannel: async function (guildId, name) {
-        const guild = module.exports.getGuild(guildId);
+    addTextChannel: async function (client, guildId, name) {
+        const guild = module.exports.getGuild(client, guildId);
 
         if (guild) {
             try {
@@ -250,8 +250,8 @@ module.exports = {
         return undefined;
     },
 
-    removeTextChannel: async function (guildId, channelId) {
-        const channel = module.exports.getTextChannelById(guildId, channelId);
+    removeTextChannel: async function (client, guildId, channelId) {
+        const channel = module.exports.getTextChannelById(client, guildId, channelId);
 
         try {
             await channel.delete();
@@ -264,8 +264,8 @@ module.exports = {
         return true;
     },
 
-    clearTextChannel: async function (guildId, channelId, numberOfMessages) {
-        const channel = module.exports.getTextChannelById(guildId, channelId);
+    clearTextChannel: async function (client, guildId, channelId, numberOfMessages) {
+        const channel = module.exports.getTextChannelById(client, guildId, channelId);
 
         if (channel) {
             for (let messagesLeft = numberOfMessages; messagesLeft > 0; messagesLeft -= 100) {
