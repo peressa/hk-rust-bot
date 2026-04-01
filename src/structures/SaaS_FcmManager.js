@@ -1,4 +1,4 @@
-const { checkIn: gcmCheckIn } = require('@liamcottle/push-receiver/src/gcm');
+const { checkIn: gcmCheckIn, register: gcmRegister } = require('@liamcottle/push-receiver/src/gcm');
 const { Client: PushReceiverClient } = require('@liamcottle/push-receiver');
 const db = require('./database');
 const crypto = require('crypto');
@@ -29,35 +29,51 @@ class FcmManager {
             console.log(`[FCM] Check-In exitoso. AndroidID: ${androidId}. Registrando con Rust+ SenderID...`);
 
             // Paso 2: Register con GCM usando el SenderID oficial de Rust+ (976529667804)
-            // Esto evita PHONE_REGISTRATION_ERROR al ser una petición válida para el proyecto.
             const rustSenderId = '976529667804';
-            const registerResponse = await axios.post('https://android.clients.google.com/c2dm/register3', 
-                querystring.stringify({
-                    app: 'com.google.android.gms', // Simular GMS Core (Google Play Services)
-                    'X-subtype': appId, // com.facepunch.rust.companion
-                    device: androidId,
-                    sender: rustSenderId,
-                    cert: '5e8f16062ea3cd2c4a0d547876ba1675e90c5dc2', // SHA-1 Rust+
-                    app_display_name: 'Rust+',
-                    target_ver: '34',
-                    'X-scope': '*', // Requerido para Firebase
-                    'X-cliv': 'fcm-23.1.2' // Identificador de librería Firebase moderna
-                }), 
-                {
-                    headers: {
-                        Authorization: `AidLogin ${androidId}:${securityToken}`,
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                        'User-Agent': 'Android/14.0.0 (GCM/1.0)',
-                        'X-app_ver': '2507',
-                        'X-os_ver': '14'
+            
+            // Reintentar el registro en caso de PHONE_REGISTRATION_ERROR transitorio
+            let registerResponse;
+            for (let retry = 0; retry < 3; retry++) {
+                try {
+                    registerResponse = await axios.post('https://android.clients.google.com/c2dm/register3', 
+                        querystring.stringify({
+                            app: appId, // com.facepunch.rust.companion
+                            'X-subtype': appId,
+                            device: androidId,
+                            sender: rustSenderId,
+                            'X-scope': '*',
+                            'X-app_ver': '2507',
+                            'X-os_ver': '30',
+                            'X-cliv': 'fcm-23.1.2',
+                            'X-messenger_ver': '2507'
+                        }), 
+                        {
+                            headers: {
+                                Authorization: `AidLogin ${androidId}:${securityToken}`,
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'User-Agent': 'Android-GCM/1.5',
+                            },
+                            timeout: 10000
+                        }
+                    );
+
+                    const pushToken = registerResponse.data.split('=')[1];
+                    if (pushToken && !registerResponse.data.includes('Error')) {
+                        break; // Éxito
                     }
+                    
+                    if (retry === 2) throw new Error(`Google denegó el registro GCM: ${registerResponse.data}`);
+                    console.warn(`[FCM] Reintentando registro (${retry + 1})...`);
+                    await new Promise(r => setTimeout(r, 2000));
+                } catch (err) {
+                    if (retry === 2) throw err;
+                    console.warn(`[FCM] Fallo en intento ${retry + 1}: ${err.message}`);
+                    await new Promise(r => setTimeout(r, 2000));
                 }
-            );
+            }
 
             const pushToken = registerResponse.data.split('=')[1];
-            if (!pushToken || registerResponse.data.includes('Error')) {
-                throw new Error(`Google denegó el registro GCM: ${registerResponse.data}`);
-            }
+
 
             const credentials = {
                 gcm: {
