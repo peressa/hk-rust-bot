@@ -50,7 +50,8 @@ module.exports = async (client, guild) => {
             client.intlGet(null, 'makeSureApplicationsCommandsEnabled'),
             'error'
         );
-        process.exit(1);
+        console.error('[SlashCommands] API Error:', e);
+        // SaaS FIX: Nunca matar toda la plataforma web (process.exit) por un fallo de un solo Discord Guild.
     }
     client.log(client.intlGet(null, 'infoCap'),
         client.intlGet(null, 'slashCommandsSuccessRegister', { guildId: guild.id }));
