@@ -38,7 +38,6 @@ class FcmManager {
             }
 
             const appId = `com.facepunch.rust.companion`;
-
             if (!androidId || !securityToken) {
                 console.log(`[FCM] Generando NUEVA identidad Push-Receiver para usuario ${steamId}...`);
                 // 1. Generar credenciales GCM (Check-In)
@@ -47,6 +46,11 @@ class FcmManager {
                 androidId = checkinResponse.androidId.toString();
                 securityToken = checkinResponse.securityToken.toString();
                 console.log(`[FCM] Check-In exitoso. AndroidID: ${androidId}.`);
+
+                // PERSISTENCIA INMEDIATA: Guardar identidad GCM aunque falle el registro posterior (importante para reintentos)
+                db.updateUserFCM(steamId, {
+                    gcm: { androidId, securityToken }
+                });
             }
 
             console.log(`[FCM] Registrando con Rust+ SenderID usando identidad: ${androidId}...`);
@@ -65,10 +69,10 @@ class FcmManager {
                             device: androidId,
                             sender: rustSenderId,
                             'X-scope': '*',
-                            'X-app_ver': '2507',
+                            'X-app_ver': '2516',
                             'X-os_ver': '30',
-                            'X-cliv': 'fcm-23.1.2',
-                            'X-messenger_ver': '2507'
+                            'X-cliv': 'fcm-23.3.4',
+                            'X-messenger_ver': '2516'
                         }), 
                         {
                             headers: {
@@ -173,6 +177,11 @@ class FcmManager {
                 androidId = checkinResponse.androidId.toString();
                 securityToken = checkinResponse.securityToken.toString();
                 onProgress('gcm_checkin', `Check-In exitoso. ID: ${androidId}`, 'success');
+
+                // PERSISTENCIA INMEDIATA: Guardar identidad GCM aunque falle el registro posterior (importante para reintentos)
+                db.updateUserFCM(steamId, {
+                    gcm: { androidId, securityToken }
+                });
             } else {
                 onProgress('gcm_checkin', `Reutilizando identidad GCM: ${androidId}`, 'done');
             }
@@ -189,10 +198,10 @@ class FcmManager {
                     device: androidId,
                     sender: rustSenderId,
                     'X-scope': '*',
-                    'X-app_ver': '2507',
+                    'X-app_ver': '2516',
                     'X-os_ver': '30',
-                    'X-cliv': 'fcm-23.1.2',
-                    'X-messenger_ver': '2507'
+                    'X-cliv': 'fcm-23.3.4',
+                    'X-messenger_ver': '2516'
                 }), 
                 {
                     headers: {
