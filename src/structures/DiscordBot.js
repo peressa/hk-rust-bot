@@ -83,17 +83,8 @@ class DiscordBot extends Discord.Client {
         const _boundLog = function(title, text, level) { return _self._logImpl(title, text, level); };
         const _boundIntlGet = function(guildId, id, variables) { return _self._intlGetImpl(guildId, id, variables); };
 
-        Object.defineProperty(this, 'log', {
-            get: () => _boundLog,
-            configurable: true,
-            enumerable: true
-        });
-
-        Object.defineProperty(this, 'intlGet', {
-            get: () => _boundIntlGet,
-            configurable: true,
-            enumerable: true
-        });
+        this.log = _boundLog;
+        this.intlGet = _boundIntlGet;
 
         this.loadDiscordCommands();
         this.loadDiscordEvents();

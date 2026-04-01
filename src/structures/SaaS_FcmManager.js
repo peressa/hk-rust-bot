@@ -32,15 +32,21 @@ class FcmManager {
             const rustSenderId = '976529667804';
             const registerResponse = await axios.post('https://android.clients.google.com/c2dm/register3', 
                 querystring.stringify({
-                    app: 'org.chromium.linux',
+                    app: appId, // Ahora usamos el PackageName oficial como 'app'
                     'X-subtype': appId,
                     device: androidId,
                     sender: rustSenderId,
+                    cert: '5e8f16062ea3cd2c4a0d547876ba1675e90c5dc2', // Huella SHA-1 de Rust+ original
+                    app_display_name: 'Rust+',
+                    target_ver: '34' // Android 14
                 }), 
                 {
                     headers: {
                         Authorization: `AidLogin ${androidId}:${securityToken}`,
                         'Content-Type': 'application/x-www-form-urlencoded',
+                        'User-Agent': 'Android/14.0.0 (GCM/1.0)',
+                        'X-app_ver': '2507',
+                        'X-os_ver': '14'
                     }
                 }
             );
