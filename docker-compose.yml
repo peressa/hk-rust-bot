@@ -15,3 +15,5 @@ services:
             - RPP_LOG_CALL_STACK=true
         container_name: rpp
         restart: always
+        ports:
+            - "3000:3000"

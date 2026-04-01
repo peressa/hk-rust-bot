@@ -14,4 +14,5 @@ VOLUME [ "/app/instances" ]
 VOLUME [ "/app/logs" ]
 VOLUME [ "/app/maps" ]
 
+EXPOSE 3000
 CMD ["npm", "start"]
