@@ -267,9 +267,13 @@ class FcmManager {
             }
         } catch (error) {
             console.error(`[FCM] Error crítico vinculando con Facepunch para ${steamId}:`, error.message);
+            if (error.response) {
+                console.error(`[FCM] Detalle error Facepunch:`, JSON.stringify(error.response.data));
+            }
             // No lanzamos el error para no bloquear el proceso, pero lo logueamos
         }
     }
 }
+
 
 module.exports = FcmManager;

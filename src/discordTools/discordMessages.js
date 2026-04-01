@@ -65,38 +65,42 @@ module.exports = {
     sendServerMessage: async function (client, guildId, serverId, state = null, interaction = null) {
         const instance = client.getInstance(guildId);
         const server = instance.serverList[serverId];
+        if (!server) return; // Protección
 
         const content = {
-            embeds: [await DiscordEmbeds.getServerEmbed(guildId, serverId)],
+            embeds: [await DiscordEmbeds.getServerEmbed(client, guildId, serverId)],
             components: DiscordButtons.getServerButtons(guildId, serverId, state)
         }
 
-        const message = await module.exports.sendMessage(guildId, content, server.messageId,
+        const message = await module.exports.sendMessage(client, guildId, content, server.messageId,
             instance.channelId.servers, interaction);
 
-        if (!interaction) {
+        if (!interaction && message) {
             instance.serverList[serverId].messageId = message.id;
             client.setInstance(guildId, instance);
         }
     },
 
+
     sendTrackerMessage: async function (client, guildId, trackerId, interaction = null) {
         const instance = client.getInstance(guildId);
         const tracker = instance.trackers[trackerId];
+        if (!tracker) return;
 
         const content = {
-            embeds: [DiscordEmbeds.getTrackerEmbed(guildId, trackerId)],
+            embeds: [DiscordEmbeds.getTrackerEmbed(client, guildId, trackerId)],
             components: DiscordButtons.getTrackerButtons(guildId, trackerId)
         }
 
-        const message = await module.exports.sendMessage(guildId, content, tracker.messageId,
+        const message = await module.exports.sendMessage(client, guildId, content, tracker.messageId,
             instance.channelId.trackers, interaction);
 
-        if (!interaction) {
+        if (!interaction && message) {
             instance.trackers[trackerId].messageId = message.id;
             client.setInstance(guildId, instance);
         }
     },
+
 
     sendSmartSwitchMessage: async function (client, guildId, serverId, entityId, interaction = null) {
         const instance = client.getInstance(guildId);
@@ -124,27 +128,28 @@ module.exports = {
         }
     },
 
-    sendSmartAlarmMessage: async function (guildId, serverId, entityId, interaction = null) {
+    sendSmartAlarmMessage: async function (client, guildId, serverId, entityId, interaction = null) {
         const instance = client.getInstance(guildId);
         const entity = instance.serverList[serverId].alarms[entityId];
 
         const content = {
             embeds: [entity.reachable ?
-                DiscordEmbeds.getSmartAlarmEmbed(guildId, serverId, entityId) :
-                DiscordEmbeds.getNotFoundSmartDeviceEmbed(guildId, serverId, entityId, 'alarms')],
+                DiscordEmbeds.getSmartAlarmEmbed(client, guildId, serverId, entityId) :
+                DiscordEmbeds.getNotFoundSmartDeviceEmbed(client, guildId, serverId, entityId, 'alarms')],
             components: [DiscordButtons.getSmartAlarmButtons(guildId, serverId, entityId)],
             files: [new Discord.AttachmentBuilder(
                 Path.join(__dirname, '..', `resources/images/electrics/${entity.image}`))]
         }
 
-        const message = await module.exports.sendMessage(guildId, content, entity.messageId,
+        const message = await module.exports.sendMessage(client, guildId, content, entity.messageId,
             instance.channelId.alarms, interaction);
 
-        if (!interaction) {
+        if (!interaction && message) {
             instance.serverList[serverId].alarms[entityId].messageId = message.id;
             client.setInstance(guildId, instance);
         }
     },
+
 
     sendStorageMonitorMessage: async function (client, guildId, serverId, entityId, interaction = null) {
         let instance = client.getInstance(guildId);
@@ -152,8 +157,8 @@ module.exports = {
 
         const content = {
             embeds: [entity.reachable ?
-                DiscordEmbeds.getStorageMonitorEmbed(guildId, serverId, entityId) :
-                DiscordEmbeds.getNotFoundSmartDeviceEmbed(guildId, serverId, entityId, 'storageMonitors')],
+                DiscordEmbeds.getStorageMonitorEmbed(client, guildId, serverId, entityId) :
+                DiscordEmbeds.getNotFoundSmartDeviceEmbed(client, guildId, serverId, entityId, 'storageMonitors')],
             components: [entity.type === 'toolCupboard' ?
                 DiscordButtons.getStorageMonitorToolCupboardButtons(guildId, serverId, entityId) :
                 DiscordButtons.getStorageMonitorContainerButton(guildId, serverId, entityId)],
@@ -164,34 +169,36 @@ module.exports = {
 
         instance = client.getInstance(guildId);
 
-        const message = await module.exports.sendMessage(guildId, content, entity.messageId,
+        const message = await module.exports.sendMessage(client, guildId, content, entity.messageId,
             instance.channelId.storageMonitors, interaction);
 
-        if (!interaction) {
+        if (!interaction && message) {
             instance.serverList[serverId].storageMonitors[entityId].messageId = message.id;
             client.setInstance(guildId, instance);
         }
     },
 
-    sendSmartSwitchGroupMessage: async function (guildId, serverId, groupId, interaction = null) {
+
+    sendSmartSwitchGroupMessage: async function (client, guildId, serverId, groupId, interaction = null) {
         const instance = client.getInstance(guildId);
         const group = instance.serverList[serverId].switchGroups[groupId];
 
         const content = {
-            embeds: [DiscordEmbeds.getSmartSwitchGroupEmbed(guildId, serverId, groupId)],
+            embeds: [DiscordEmbeds.getSmartSwitchGroupEmbed(client, guildId, serverId, groupId)],
             components: DiscordButtons.getSmartSwitchGroupButtons(guildId, serverId, groupId),
             files: [new Discord.AttachmentBuilder(
                 Path.join(__dirname, '..', `resources/images/electrics/${group.image}`))]
         }
 
-        const message = await module.exports.sendMessage(guildId, content, group.messageId,
+        const message = await module.exports.sendMessage(client, guildId, content, group.messageId,
             instance.channelId.switchGroups, interaction);
 
-        if (!interaction) {
+        if (!interaction && message) {
             instance.serverList[serverId].switchGroups[groupId].messageId = message.id;
             client.setInstance(guildId, instance);
         }
     },
+
 
     sendStorageMonitorRecycleMessage: async function (guildId, serverId, entityId, items) {
         const instance = client.getInstance(guildId);

@@ -50,8 +50,9 @@ module.exports = async (client, guild, forced = false) => {
     if (instance.firstTime || forced) {
         await DiscordTools.clearTextChannel(client, guild.id, instance.channelId.settings, 100);
 
-        await setupGeneralSettings(client, guild.id, channel);
-        await setupNotificationSettings(client, guild.id, channel);
+        await setupGeneralSettings(client, guild.id, channel, _intlGet, _log);
+        await setupNotificationSettings(client, guild.id, channel, _intlGet, _log);
+
 
         instance.firstTime = false;
         client.setInstance(guild.id, instance);
@@ -59,7 +60,7 @@ module.exports = async (client, guild, forced = false) => {
 
 };
 
-async function setupGeneralSettings(client, guildId, channel) {
+async function setupGeneralSettings(client, guildId, channel, _intlGet, _log) {
     const instance = client.getInstance(guildId);
 
     await client.messageSend(channel, {
@@ -279,7 +280,7 @@ async function setupGeneralSettings(client, guildId, channel) {
     });
 }
 
-async function setupNotificationSettings(client, guildId, channel) {
+async function setupNotificationSettings(client, guildId, channel, _intlGet, _log) {
     const instance = client.getInstance(guildId);
 
     await client.messageSend(channel, {
