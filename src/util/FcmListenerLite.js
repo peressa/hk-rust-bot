@@ -33,15 +33,15 @@ module.exports = async (client, guild, steamId) => {
     const hoster = credentials.hoster;
 
     if (!Object.keys(credentials).includes(steamId)) {
-        client.log(client.intlGet(null, 'warningCap'), client.intlGet(null, 'credentialsNotRegistered', {
+        (client.log || global._log)((client.intlGet || global.intlGet)(null, 'warningCap'), (client.intlGet || global.intlGet)(null, 'credentialsNotRegistered', {
             steamId: steamId
         }));
         return;
     }
 
     if (steamId === hoster) {
-        client.log(client.intlGet(null, 'warningCap'),
-            client.intlGet(null, 'credentialsCannotStartLiteAlreadyHoster', {
+        (client.log || global._log)((client.intlGet || global.intlGet)(null, 'warningCap'),
+            (client.intlGet || global.intlGet)(null, 'credentialsCannotStartLiteAlreadyHoster', {
                 steamId: steamId
             }));
         return;
@@ -52,7 +52,7 @@ module.exports = async (client, guild, steamId) => {
         delete client.fcmListenersLite[guild.id][steamId];
     }
 
-    client.log(client.intlGet(null, 'infoCap'), client.intlGet(null, 'fcmListenerStartLite', {
+    client.log((client.intlGet || global.intlGet)(null, 'infoCap'), (client.intlGet || global.intlGet)(null, 'fcmListenerStartLite', {
         guildId: guild.id,
         steamId: steamId
     }));

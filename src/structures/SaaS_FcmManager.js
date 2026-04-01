@@ -63,11 +63,11 @@ class FcmManager {
                     }
                     
                     if (retry === 2) throw new Error(`Google denegó el registro GCM: ${registerResponse.data}`);
-                    console.warn(`[FCM] Reintentando registro (${retry + 1})...`);
+                    console.warn(`[FCM] Reintentando registro GCM para ${steamId} (${retry + 1})...`);
                     await new Promise(r => setTimeout(r, 2000));
                 } catch (err) {
                     if (retry === 2) throw err;
-                    console.warn(`[FCM] Fallo en intento ${retry + 1}: ${err.message}`);
+                    console.warn(`[FCM] Fallo en intento GCM ${retry + 1} para ${steamId}: ${err.message}`);
                     await new Promise(r => setTimeout(r, 2000));
                 }
             }
