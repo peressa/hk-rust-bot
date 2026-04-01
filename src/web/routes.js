@@ -4,13 +4,15 @@ const db = require('../structures/database');
 const passport = require('passport');
 const path = require('path');
 
-
 // Middleware para verificar si el usuario está logueado
 function ensureAuthenticated(req, res, next) {
     if (req.isAuthenticated && req.isAuthenticated()) {
         return next();
     }
-    res.status(401).json({ error: 'No autorizado. Por favor inicia sesión mediante Steam (/auth/steam).' });
+    if (req.xhr || req.path.startsWith('/api/')) {
+        return res.status(401).json({ error: 'No autorizado. Por favor inicia sesión.' });
+    }
+    res.redirect('/auth/steam');
 }
 
 // ============================================
@@ -20,8 +22,8 @@ function ensureAuthenticated(req, res, next) {
 router.get('/auth/steam', (req, res, next) => {
     if (!req.steamStrategyActive) {
         return res.status(503).json({ 
-            error: 'Servicio de autenticación no disponible', 
-            message: 'La STEAM_API_KEY no está configurada en el servidor.' 
+            error: 'Servicio no disponible', 
+            message: 'Steam login no está configurado.' 
         });
     }
     passport.authenticate('steam', { failureRedirect: '/' })(req, res, next);
@@ -43,155 +45,112 @@ router.get('/auth/logout', (req, res) => {
 });
 
 // ============================================
-// RUTAS DE LA API / PANEL (MULTI-TENANT)
+// RUTAS DE LA API SAAS
 // ============================================
 
-// Ver mi información y estado del bot
+// Ver mi información y mis servidores vinculados
 router.get('/api/me', ensureAuthenticated, (req, res) => {
-    const tenant = db.getTenant(req.user.id);
+    const user = db.getUser(req.user.id);
+    const servers = db.getRustServersByOwner(req.user.id);
+    const guilds = db.getGuildsByOwner(req.user.id);
+
+    // Bandera de super admin (Temporal / .env configurado)
+    const isAdmin = (req.user.id === process.env.OWNER_STEAM_ID);
+
     res.json({
         user: {
             steamId: req.user.id,
             displayName: req.user.displayName,
-            avatar: (req.user.photos && req.user.photos.length > 2) ? req.user.photos[2].value : null
+            avatar: (req.user.photos && req.user.photos.length > 2) ? req.user.photos[2].value : null,
+            isLinkedFCM: !!(user && user.fcm_credentials),
+            isAdmin: isAdmin
         },
-        bot: {
-            status: tenant ? tenant.bot_status : 0,
-            hasToken: !!(tenant && tenant.discord_token),
-            rustConfig: tenant ? {
-                ip: tenant.rust_ip,
-                port: tenant.rust_port,
-                steamId: tenant.rust_steam_id,
-                hasToken: !!tenant.rust_token
-            } : null
-        }
+        servers: servers,
+        guilds: guilds
     });
 });
 
-// Guardar/Actualizar Token de Discord
-router.post('/api/bot/token', ensureAuthenticated, (req, res) => {
-    const { token } = req.body;
-    if (!token) return res.status(400).json({ error: 'Token requerido' });
-
-    db.upsertTenant(req.user.id, req.user.displayName, token);
-    res.json({ message: 'Token guardado exitosamente' });
+// Configurar canales de Discord
+router.post('/api/discord/guild/config', ensureAuthenticated, express.json(), (req, res) => {
+    const { guild_id, alert_channel_id, chat_channel_id } = req.body;
+    db.upsertGuildConfig(guild_id, req.user.id, alert_channel_id, chat_channel_id);
+    res.json({ success: true });
 });
 
-// Guardar/Actualizar Configuración de Rust+
-router.post('/api/bot/rust-config', ensureAuthenticated, (req, res) => {
-    const { ip, port, steamId, token } = req.body;
-    if (!ip || !port || !steamId || !token) {
-        return res.status(400).json({ error: 'Todos los campos de Rust+ son requeridos (IP, Puerto, SteamID, Token)' });
+// Admin Stats
+router.get('/api/admin/stats', ensureAuthenticated, (req, res) => {
+    if(req.user.id !== process.env.OWNER_STEAM_ID) {
+       return res.status(403).json({ error: 'Superadmin only.' });
     }
 
-    db.updateRustConfig(req.user.id, { ip, port, steamId, token });
-    res.json({ message: 'Configuración de Rust+ guardada exitosamente' });
+    const memoryInfo = process.memoryUsage();
+    let wsCount = 0;
+    if(global.hkBot && global.hkBot.rustplusInstances) {
+        wsCount = Object.keys(global.hkBot.rustplusInstances).length;
+    }
+
+    res.json({
+        memory: Math.round(memoryInfo.rss / 1024 / 1024) + ' MB',
+        rustPlusSockets: wsCount,
+        registeredUsers: db.db.prepare('SELECT count(*) as c FROM users').get().c,
+        registeredServers: db.db.prepare('SELECT count(*) as c FROM rust_servers').get().c
+    });
 });
 
-// Iniciar Bot dinámicamente
-router.post('/api/bot/start', ensureAuthenticated, async (req, res) => {
-    const tenant = db.getTenant(req.user.id);
-    if (!tenant || !tenant.discord_token) {
-        return res.status(400).json({ error: 'Primero debes guardar un token de Discord' });
-    }
-
+// Generar una solicitud de emparejamiento (Zero-Friction FCM)
+router.post('/api/pair/init', ensureAuthenticated, async (req, res) => {
     try {
-        await req.botManager.startBot(req.user.id, tenant.discord_token);
-        res.json({ message: 'Bot iniciado correctamente' });
-    } catch (error) {
-        res.status(500).json({ error: 'Error al iniciar el bot', details: error.message });
+        const user = db.getUser(req.user.id);
+        if(!user || !user.fcm_credentials) {
+            await global.fcmManager.registerNewDevice(req.user.id);
+        } else {
+            // Asegurar que esté corriendo
+            global.fcmManager.startListenerForUser(req.user.id, JSON.parse(user.fcm_credentials));
+        }
+        res.json({ message: 'Listening for Rust+ pairing...', status: 'waiting' });
+    } catch(err) {
+        res.status(500).json({ error: 'Error on FCM registration', message: err.toString() });
     }
 });
 
-// Detener Bot dinámicamente
-router.post('/api/bot/stop', ensureAuthenticated, async (req, res) => {
-    try {
-        await req.botManager.stopBot(req.user.id);
-        res.json({ message: 'Bot detenido' });
-    } catch (error) {
-        res.status(500).json({ error: 'Error al detener el bot' });
-    }
+// ============================================
+// SERVER-SENT EVENTS (SSE) - LIVE COMBAT LOG
+// ============================================
+
+// Mapa global para guardar clientes del navegador conectados (SteamID -> res obj)
+const sseClients = new Map();
+global.sseClients = sseClients;
+
+// Ruta para subscribir el navegador web al feed en tiempo real de asesinatos
+router.get('/api/events/combatlog', ensureAuthenticated, (req, res) => {
+    // Mantener la conexión abierta con Headers HTTP de SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    // Enviar primer evento conectivo
+    res.write(`data: ${JSON.stringify({ type: 'connected', msg: 'Conexión a Rust+ Killfeed establecida.' })}\n\n`);
+
+    // Añadir el objeto de respuesta del usuario a la lista global para inyectar datos
+    sseClients.set(req.user.id, res);
+
+    // Cuando el usuario cierre el navegador, borrarlo de la lista
+    req.on('close', () => {
+        sseClients.delete(req.user.id);
+    });
 });
 
-// Ruta base / Landing
+// ============================================
+// RUTAS FRONTEND
+// ============================================
+
 router.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '../../public/index.html'));
 });
 
-// Panel Simple (Placeholder HTML)
+// Sirve la nueva versión moderna del dashboard
 router.get('/panel', ensureAuthenticated, (req, res) => {
-    res.send(`
-        <h1>Panel de Control Multi-Tenant</h1>
-        <div id="status">Cargando estado...</div>
-        <hr>
-        <h3>Configuración Discord</h3>
-        <input type="text" id="token" placeholder="Discord Bot Token">
-        <button onclick="saveToken()">Guardar Token Discord</button>
-        
-        <hr>
-        <h3>Configuración Rust+</h3>
-        <input type="text" id="rust_ip" placeholder="Server IP">
-        <input type="text" id="rust_port" placeholder="App Port (5678)">
-        <input type="text" id="rust_steamid" placeholder="Tu Steam ID 64">
-        <input type="text" id="rust_token" placeholder="Player Token">
-        <button onclick="saveRust()">Guardar Config Rust+</button>
-        
-        <hr>
-        <button onclick="startBot()">Iniciar Bot (Discord + Rust)</button>
-        <button onclick="stopBot()">Detener Bot</button>
-        <br><br>
-        <a href="/auth/logout">Cerrar Sesión</a>
-
-        <script>
-            async function refresh() {
-                const res = await fetch('/api/me');
-                const data = await res.json();
-                document.getElementById('status').innerText = 'Bot: ' + (data.bot.status ? 'ONLINE 🟢' : 'OFFLINE 🔴');
-                
-                if(data.bot.rustConfig) {
-                    document.getElementById('rust_ip').value = data.bot.rustConfig.ip || '';
-                    document.getElementById('rust_port').value = data.bot.rustConfig.port || '';
-                    document.getElementById('rust_steamid').value = data.bot.rustConfig.steamId || '';
-                }
-            }
-            async function saveToken() {
-                const token = document.getElementById('token').value;
-                const res = await fetch('/api/bot/token', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({token})
-                });
-                const data = await res.json();
-                alert(data.message || data.error);
-            }
-            async function saveRust() {
-                const config = {
-                    ip: document.getElementById('rust_ip').value,
-                    port: document.getElementById('rust_port').value,
-                    steamId: document.getElementById('rust_steamid').value,
-                    token: document.getElementById('rust_token').value
-                };
-                const res = await fetch('/api/bot/rust-config', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(config)
-                });
-                const data = await res.json();
-                alert(data.message || data.error);
-            }
-            async function startBot() {
-                const res = await fetch('/api/bot/start', {method: 'POST'});
-                const data = await res.json();
-                if(data.error) alert(data.error);
-                refresh();
-            }
-            async function stopBot() {
-                await fetch('/api/bot/stop', {method: 'POST'});
-                refresh();
-            }
-            refresh();
-        </script>
-    `);
+    res.sendFile(path.join(__dirname, '../../public/panel.html'));
 });
 
 module.exports = router;

@@ -27,19 +27,8 @@ module.exports = {
     async execute(client, interaction) {
         const instance = client.getInstance(interaction.guildId);
 
-        /* Check so that the interaction comes from valid channels */
-        if (!Object.values(instance.channelId).includes(interaction.channelId) && !interaction.isCommand) {
-            client.log(client.intlGet(null, 'warningCap'), client.intlGet(null, 'interactionInvalidChannel'))
-            if (interaction.isButton()) {
-                try {
-                    interaction.deferUpdate();
-                }
-                catch (e) {
-                    client.log(client.intlGet(null, 'errorCap'),
-                        client.intlGet(null, 'couldNotDeferInteraction'), 'error');
-                }
-            }
-        }
+        /* La validación de canal/rol ahora se maneja nativamente por discord v14 integration settings */
+
 
         if (interaction.isButton()) {
             require('../handlers/buttonHandler')(client, interaction);

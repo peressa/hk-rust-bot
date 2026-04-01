@@ -31,7 +31,11 @@ module.exports = async (client, guild) => {
 
     for (const file of commandFiles) {
         const command = require(`../commands/${file}`);
-        commands.push(command.getData(client, guild.id).toJSON());
+        const builder = command.getData(client, guild.id);
+        // Deshabilitar por defecto todos los slash commands a los recruits/everyone.
+        // El Superadmin(Owner) podrá habilitarlo para roles de "Confiables" desde Integraciones en Discord nativo.
+        builder.setDefaultMemberPermissions("0");
+        commands.push(builder.toJSON());
     }
 
     const rest = new Rest.REST({ version: '9' }).setToken(Config.discord.token);

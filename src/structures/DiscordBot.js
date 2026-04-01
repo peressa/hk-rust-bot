@@ -22,6 +22,7 @@ const FormatJS = require('@formatjs/intl');
 const Discord = require('discord.js');
 const Fs = require('fs');
 const Path = require('path');
+const db = require('./database');
 
 const Battlemetrics = require('../structures/Battlemetrics');
 const Cctv = require('./Cctv');
@@ -172,13 +173,25 @@ class DiscordBot extends Discord.Client {
     async build(token = Config.discord.token, rustConfig = null) {
         try {
             await this.login(token);
-            
-            if (rustConfig) {
-                const virtualGuildId = 'default'; // O usar un ID específico del tenant
-                
-                // Asegurar que exista una instancia mínima en memoria para que RustPlus no falle al leer settings
-                if (!this.instances[virtualGuildId]) {
-                    this.instances[virtualGuildId] = {
+        } catch (error) {
+            this.log(this.intlGet(null, 'errorCap'), `Fallo en build/login: ${JSON.stringify(error)}`, 'error');
+            throw error;
+        }
+    }
+
+    loadAllRustServersFromDB() {
+        const activeGuilds = db.db.prepare('SELECT * FROM discord_guilds').all();
+        console.log(`[CentralBot] Verificando ${activeGuilds.length} servidores de Discord en DB...`);
+        
+        let loaded = 0;
+        for (const guildData of activeGuilds) {
+            const servers = db.getRustServersByOwner(guildData.steam_id_owner);
+            // Por simplicidad, tomamos el primer servidor activo
+            const activeServer = servers.find(s => s.is_active === 1);
+            if (activeServer) {
+                // Instanciar dummy guild data para compatibilidad
+                if (!this.instances[guildData.guild_id]) {
+                     this.instances[guildData.guild_id] = {
                         firstTime: false,
                         activeServer: 'main',
                         role: null,
@@ -186,11 +199,11 @@ class DiscordBot extends Discord.Client {
                         trackers: {},
                         serverList: {
                             'main': {
-                                title: 'Server Principal',
-                                serverIp: rustConfig.ip,
-                                appPort: rustConfig.port,
-                                steamId: rustConfig.steamId,
-                                playerToken: rustConfig.token,
+                                title: 'Server de ' + guildData.steam_id_owner,
+                                serverIp: activeServer.rust_ip,
+                                appPort: activeServer.rust_port,
+                                steamId: activeServer.rust_steam_id,
+                                playerToken: activeServer.player_token,
                                 battlemetricsId: null,
                                 markers: {},
                                 switches: {},
@@ -202,14 +215,13 @@ class DiscordBot extends Discord.Client {
                         notificationSettings: this.readNotificationSettingsTemplate()
                     };
                 }
-
-                console.log(`[DiscordBot] Conectando a Rust+ (${rustConfig.ip}:${rustConfig.port})...`);
-                this.createRustplusInstance(virtualGuildId, rustConfig.ip, rustConfig.port, rustConfig.steamId, rustConfig.token);
+                
+                console.log(`[CentralBot] Conectando Rust+ para Guild ${guildData.guild_id} (Propietario: ${guildData.steam_id_owner}) -> ${activeServer.rust_ip}`);
+                this.createRustplusInstance(guildData.guild_id, activeServer.rust_ip, activeServer.rust_port, activeServer.rust_steam_id, activeServer.player_token);
+                loaded++;
             }
-        } catch (error) {
-            this.log(this.intlGet(null, 'errorCap'), `Fallo en build/login: ${JSON.stringify(error)}`, 'error');
-            throw error;
         }
+        console.log(`[CentralBot] Enrutados ${loaded} servidores de Rust+ a Guilds de Discord.`);
     }
 
     log(title, text, level = 'info') {

@@ -86,6 +86,10 @@ module.exports = {
 
         if (client.rustplusReconnecting[guildId]) {
             client.rustplusReconnecting[guildId] = false;
+            
+            if(client.rustplusRetryCounters) {
+                client.rustplusRetryCounters[guildId] = 0;
+            }
 
             if (client.rustplusReconnectTimers[guildId]) {
                 clearTimeout(client.rustplusReconnectTimers[guildId]);

@@ -3,7 +3,6 @@ const session = require('express-session');
 const passport = require('passport');
 const SteamStrategy = require('passport-steam').Strategy;
 const routes = require('./routes');
-const BotManager = require('../structures/BotManager');
 const db = require('../structures/database');
 
 class WebDashboard {
@@ -37,7 +36,7 @@ class WebDashboard {
                 apiKey: apiKey
             }, (identifier, profile, done) => {
                 // Sincronizar usuario con la base de datos local
-                db.upsertTenant(profile.id, profile.displayName, null);
+                db.upsertUser(profile.id, profile.displayName, null);
                 profile.identifier = identifier;
                 return done(null, profile);
             }));
@@ -69,9 +68,9 @@ class WebDashboard {
         this.app.use(passport.initialize());
         this.app.use(passport.session());
 
-        // Inyectar BotManager y estado de estrategia en los requests
+        // Inyectar estado de estrategia de Steam
         this.app.use((req, res, next) => {
-            req.botManager = BotManager;
+            req.centralBot = global.hkBot;
             req.steamStrategyActive = this.steamStrategyActive;
             next();
         });

@@ -1,41 +1,54 @@
-/*
-    Copyright (C) 2022 Alexander Emanuelsson (alexemanuelol)
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-    https://github.com/alexemanuelol/rustplusplus
-
-*/
-
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
-const Discord = require('discord.js');
 const Fs = require('fs');
 const Path = require('path');
+const db = require('./src/structures/database');
+const FcmManager = require('./src/structures/SaaS_FcmManager');
 
-const DiscordBot = require('./src/structures/DiscordBot');
-
+// Crear directorios necesarios
 createMissingDirectories();
 
-const BotManager = require('./src/structures/BotManager');
+const CentralBot = require('./src/structures/DiscordBot');
 const WebDashboard = require('./src/web/server');
 
 // Iniciar servidor de Panel de Control Web
 const dashboard = new WebDashboard();
 dashboard.start();
 
-// Reactivar bots que estaban encendidos (opcional, según preferencia del usuario)
-BotManager.bootAllActive();
+// Iniciar Bot Central (SaaS Model)
+const bot = new CentralBot({
+    intents: [
+        require('discord.js').GatewayIntentBits.Guilds,
+        require('discord.js').GatewayIntentBits.GuildMessages,
+        require('discord.js').GatewayIntentBits.MessageContent,
+        require('discord.js').GatewayIntentBits.GuildMembers,
+        require('discord.js').GatewayIntentBits.GuildVoiceStates
+    ],
+    retryLimit: 2,
+    restRequestTimeout: 60000,
+    disableEveryone: false
+});
+
+// Guardamos referencia global al bot central
+(global as any).hkBot = bot;
+
+// Guardamos referencia global al FcmManager
+const fcm = new FcmManager(bot);
+(global as any).fcmManager = fcm;
+
+if (process.env.RPP_DISCORD_TOKEN) {
+    bot.build(process.env.RPP_DISCORD_TOKEN).then(() => {
+        console.log('[Sistema] Bot oficial encendido.');
+        // Cargar todos los servidores RUST de todos los usuarios
+        bot.loadAllRustServersFromDB();
+        
+        // Arrancar todos los listeners Push guardados en DB
+        fcm.startAllListeners();
+    }).catch((err: any) => {
+        console.error('[Sistema] Error al encender bot oficial:', err);
+    });
+} else {
+    console.warn('[Sistema] ADVERTENCIA: RPP_DISCORD_TOKEN no existe en .env. El bot de Discord no arrancará.');
+}
 
 function createMissingDirectories() {
     if (!Fs.existsSync(Path.join(__dirname, 'logs'))) {

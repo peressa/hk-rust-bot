@@ -75,15 +75,36 @@ module.exports = {
                 client.rustplusReconnectTimers[guildId] = null;
             }
 
-            client.rustplusReconnectTimers[guildId] = setTimeout(
-                client.createRustplusInstance.bind(client),
-                Config.general.reconnectIntervalMs,
-                guildId,
-                rustplus.server,
-                rustplus.port,
-                rustplus.playerId,
-                rustplus.playerToken
-            );
+            // --- EXPONENTIAL BACKOFF LOGIC ---
+            if(!client.rustplusRetryCounters) client.rustplusRetryCounters = {};
+            client.rustplusRetryCounters[guildId] = (client.rustplusRetryCounters[guildId] || 0) + 1;
+            
+            const attempt = client.rustplusRetryCounters[guildId];
+            let nextDelayMs = 0;
+            if(attempt === 1) nextDelayMs = 10000;       // 10s
+            else if (attempt === 2) nextDelayMs = 30000; // 30s
+            else if (attempt === 3) nextDelayMs = 60000; // 1m
+            else nextDelayMs = 300000;                   // 5m
+
+            rustplus.log('BACKOFF', `Reintento de conexión #${attempt} en ${nextDelayMs/1000}s`);
+
+            if (attempt === 5) {
+               // Enviar alerta una sola vez al 5to intento
+               try {
+                  const db = require('../structures/database');
+                  const guildData = db.getGuildConfig(guildId);
+                  
+                  if(guildData && guildData.steam_id_owner && global.fcmManager) {
+                      global.fcmManager.routeAlertToDiscord(guildData.steam_id_owner, '⚠️ Servidor Desconectado', `Conexión Rust+ perdida tras múltiples intentos de reconexión. El servidor podría estar reiniciándose apagado o cambiando de mapa.`);
+                  }
+               } catch(ex){
+                  console.error(ex);
+               }
+            }
+
+            client.rustplusReconnectTimers[guildId] = setTimeout(() => {
+                client.createRustplusInstance(guildId, rustplus.server, rustplus.port, rustplus.playerId, rustplus.playerToken);
+            }, nextDelayMs);
         }
     },
 };
