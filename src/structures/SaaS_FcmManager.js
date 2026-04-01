@@ -1,8 +1,8 @@
-const PushReceiverClient = require('@liamcottle/push-receiver/src/client');
-const { register: registerGCM } = require('@liamcottle/push-receiver/src/gcm');
+const { checkIn: gcmCheckIn } = require('@liamcottle/push-receiver/src/gcm');
 const db = require('./database');
 const crypto = require('crypto');
 const axios = require('axios');
+const querystring = require('querystring');
 
 class FcmManager {
     constructor(discordBot) {
@@ -11,23 +11,44 @@ class FcmManager {
     }
 
     // Registra un nuevo dispositivo "virtual" GCM para el usuario que recién vincula su cuenta
-    // Omitimos FCM (404) porque no es necesario para el socket MCS del bot.
     async registerNewDevice(steamId) {
         try {
             console.log(`[FCM] Generando credenciales Push-Receiver para usuario ${steamId}...`);
             
             // 1. Generar credenciales GCM
-            // Usamos un appId más estándar para evitar PHONE_REGISTRATION_ERROR
-            const appId = `org.facepunch.rust.companion`;
+            const appId = `com.facepunch.rust.companion`;
             
             console.log(`[FCM] Solicitando nuevo AndroidID a Google (Check-In)...`);
             
-            // Para un registro NUEVO, androidId y securityToken DEBEN ser undefined
-            // Esto evita el Error 401 (bad security token)
-            const subscription = await registerGCM(undefined, undefined, appId);
-            
-            const androidId = subscription.androidId.toString();
-            const securityToken = subscription.securityToken.toString();
+            // Paso 1: Check-In (Obtener AndroidID y SecurityToken)
+            const checkinResponse = await gcmCheckIn(undefined, undefined);
+            const androidId = checkinResponse.androidId.toString();
+            const securityToken = checkinResponse.securityToken.toString();
+
+            console.log(`[FCM] Check-In exitoso. AndroidID: ${androidId}. Registrando con Rust+ SenderID...`);
+
+            // Paso 2: Register con GCM usando el SenderID oficial de Rust+ (976529667804)
+            // Esto evita PHONE_REGISTRATION_ERROR al ser una petición válida para el proyecto.
+            const rustSenderId = '976529667804';
+            const registerResponse = await axios.post('https://android.clients.google.com/c2dm/register3', 
+                querystring.stringify({
+                    app: 'org.chromium.linux',
+                    'X-subtype': appId,
+                    device: androidId,
+                    sender: rustSenderId,
+                }), 
+                {
+                    headers: {
+                        Authorization: `AidLogin ${androidId}:${securityToken}`,
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    }
+                }
+            );
+
+            const pushToken = registerResponse.data.split('=')[1];
+            if (!pushToken || registerResponse.data.includes('Error')) {
+                throw new Error(`Google denegó el registro GCM: ${registerResponse.data}`);
+            }
 
             const credentials = {
                 gcm: {
@@ -37,7 +58,7 @@ class FcmManager {
             };
             
             // 3. Vincular el dispositivo virtual con Facepunch (Rust+ API)
-            await this.registerDeviceWithFacepunch(steamId, androidId, subscription.token);
+            await this.registerDeviceWithFacepunch(steamId, androidId, pushToken);
 
             // Guardar en base de datos
             db.updateUserFCM(steamId, credentials);
@@ -47,7 +68,8 @@ class FcmManager {
             
             return credentials;
         } catch (error) {
-            console.error(`[FCM] Error al registrar dispositivo para ${steamId}:`, error);
+            console.error(`[FCM] Error crítico al registrar dispositivo para ${steamId}:`, error.message);
+            if (error.response) console.error(`[FCM] Detalle error Google:`, error.response.data);
             throw error;
         }
     }

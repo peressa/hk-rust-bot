@@ -39,7 +39,7 @@ module.exports = async (client, guild, forced = false) => {
     };
 
     const instance = client.getInstance(guild.id);
-    const channel = DiscordTools.getTextChannelById(guild.id, instance.channelId.settings);
+    const channel = DiscordTools.getTextChannelById(client, guild.id, instance.channelId.settings);
 
     if (!channel) {
         _log(_intlGet(null, 'errorCap'), 'SetupSettingsMenu: ' +
@@ -48,7 +48,7 @@ module.exports = async (client, guild, forced = false) => {
     }
 
     if (instance.firstTime || forced) {
-        await DiscordTools.clearTextChannel(guild.id, instance.channelId.settings, 100);
+        await DiscordTools.clearTextChannel(client, guild.id, instance.channelId.settings, 100);
 
         await setupGeneralSettings(client, guild.id, channel);
         await setupNotificationSettings(client, guild.id, channel);
