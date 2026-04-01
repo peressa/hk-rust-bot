@@ -21,19 +21,35 @@ class FcmManager {
 
         try {
             this.inProgressRegistrations.add(steamId);
-            console.log(`[FCM] Generando credenciales Push-Receiver para usuario ${steamId}...`);
             
-            // 1. Generar credenciales GCM
-            const appId = `com.facepunch.rust.companion`;
-            
-            console.log(`[FCM] Solicitando nuevo AndroidID a Google (Check-In)...`);
-            
-            // Paso 1: Check-In (Obtener AndroidID y SecurityToken)
-            const checkinResponse = await gcmCheckIn(undefined, undefined);
-            const androidId = checkinResponse.androidId.toString();
-            const securityToken = checkinResponse.securityToken.toString();
+            // Ver si ya tenemos identidad GCM guardada para este usuario
+            const user = db.getUser(steamId);
+            let androidId, securityToken;
 
-            console.log(`[FCM] Check-In exitoso. AndroidID: ${androidId}. Registrando con Rust+ SenderID...`);
+            if (user && user.fcm_credentials) {
+                try {
+                    const creds = JSON.parse(user.fcm_credentials);
+                    if (creds.gcm && creds.gcm.androidId && creds.gcm.securityToken) {
+                        androidId = creds.gcm.androidId;
+                        securityToken = creds.gcm.securityToken;
+                        console.log(`[FCM] Reutilizando identidad Android GCM guardada para ${steamId}: ${androidId}`);
+                    }
+                } catch(e) { console.warn(`[FCM] Error parseando credenciales para ${steamId}, se generarán nuevas.`); }
+            }
+
+            const appId = `com.facepunch.rust.companion`;
+
+            if (!androidId || !securityToken) {
+                console.log(`[FCM] Generando NUEVA identidad Push-Receiver para usuario ${steamId}...`);
+                // 1. Generar credenciales GCM (Check-In)
+                console.log(`[FCM] Solicitando nuevo AndroidID a Google (Check-In)...`);
+                const checkinResponse = await gcmCheckIn(undefined, undefined);
+                androidId = checkinResponse.androidId.toString();
+                securityToken = checkinResponse.securityToken.toString();
+                console.log(`[FCM] Check-In exitoso. AndroidID: ${androidId}.`);
+            }
+
+            console.log(`[FCM] Registrando con Rust+ SenderID usando identidad: ${androidId}...`);
 
             // Paso 2: Register con GCM usando el SenderID oficial de Rust+ (976529667804)
             const rustSenderId = '976529667804';
@@ -105,7 +121,6 @@ class FcmManager {
             };
             
             // 3. Vincular el dispositivo virtual con Facepunch (Rust+ API)
-            const user = db.getUser(steamId);
             const authToken = user ? user.auth_token : null;
             await this.registerDeviceWithFacepunch(steamId, androidId, pushToken, authToken);
 
@@ -138,12 +153,29 @@ class FcmManager {
         onProgress('init', 'Iniciando diagnóstico de vinculación...', 'loading');
 
         try {
-            // Paso 1: Google Check-In
-            onProgress('gcm_checkin', 'Solicitando nuevo AndroidID a Google...', 'loading');
-            const checkinResponse = await gcmCheckIn(undefined, undefined);
-            const androidId = checkinResponse.androidId.toString();
-            const securityToken = checkinResponse.securityToken.toString();
-            onProgress('gcm_checkin', `Check-In exitoso. ID: ${androidId}`, 'success');
+            const user = db.getUser(steamId);
+            let androidId, securityToken;
+
+            if (user && user.fcm_credentials) {
+                try {
+                    const creds = JSON.parse(user.fcm_credentials);
+                    if (creds.gcm && creds.gcm.androidId && creds.gcm.securityToken) {
+                        androidId = creds.gcm.androidId;
+                        securityToken = creds.gcm.securityToken;
+                    }
+                } catch(e) {}
+            }
+
+            // Paso 1: Google Check-In (Solo si no hay guardado)
+            if (!androidId || !securityToken) {
+                onProgress('gcm_checkin', 'Solicitando nuevo AndroidID a Google...', 'loading');
+                const checkinResponse = await gcmCheckIn(undefined, undefined);
+                androidId = checkinResponse.androidId.toString();
+                securityToken = checkinResponse.securityToken.toString();
+                onProgress('gcm_checkin', `Check-In exitoso. ID: ${androidId}`, 'success');
+            } else {
+                onProgress('gcm_checkin', `Reutilizando identidad GCM: ${androidId}`, 'done');
+            }
 
             // Paso 2: Google Register (FCM Token)
             onProgress('gcm_register', 'Obteniendo Token FCM de Google...', 'loading');
@@ -204,9 +236,10 @@ class FcmManager {
 
                 if (fpResponse.status === 200) {
                     // Guardar en DB
-                    db.updateFcmCredentials(steamId, JSON.stringify({
-                        gcm: { androidId, securityToken }
-                    }), pushToken);
+                    db.updateUserFCM(steamId, {
+                        gcm: { androidId, securityToken },
+                        pushToken: pushToken
+                    });
                     
                     onProgress('fp_link', '¡Vinculación EXITOSA con Facepunch!', 'success');
                     onProgress('final', 'Tu sistema de notificaciones de Rust+ está listo y verificado.', 'success');
