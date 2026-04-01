@@ -70,8 +70,14 @@ class WebDashboard {
 
         // Inyectar estado de estrategia de Steam
         this.app.use((req, res, next) => {
-            req.centralBot = global.hkBot;
+            req.centralBot = global.hkBot || null;
             req.steamStrategyActive = this.steamStrategyActive;
+            
+            // Inyectar logger de emergencia si el bot no está listo
+            if (req.centralBot && !req.centralBot.log) {
+                req.centralBot.log = (t, m, l) => console.log(`[WS-EMERGENCY] ${t}: ${m}`);
+            }
+            
             next();
         });
     }

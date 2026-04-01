@@ -30,4 +30,14 @@ function get(id, variables = {}) {
     return message;
 }
 
-module.exports = { get };
+/**
+ * Función de log universal de respaldo.
+ */
+function log(title, text, level = 'info') {
+    const t = title || 'Info';
+    const msg = text || '';
+    const l = level.toUpperCase();
+    console.log(`[${l}] ${t}: ${msg}`);
+}
+
+module.exports = { get, log };

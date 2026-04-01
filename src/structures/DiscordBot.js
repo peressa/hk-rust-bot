@@ -152,18 +152,16 @@ class DiscordBot extends Discord.Client {
 
     intlGet(guildId, id, variables = {}) {
         try {
-            const intl = this.guildIntl[guildId] || this.botIntl || this.enIntl;
+            const intl = (this.guildIntl && this.guildIntl[guildId]) || this.botIntl || this.enIntl;
             if (intl) {
                 return intl.formatMessage({
                     id: id,
                     defaultMessage: this.enMessages ? this.enMessages[id] : id
                 }, variables);
             }
-            // Fallback al Helper Global (Resiliencia SaaS)
             return require('../util/intl').get(id, variables);
         } catch (e) {
-            // Última instancia de seguridad
-            return id;
+            return require('../util/intl').get(id, variables);
         }
     }
 
@@ -231,9 +229,15 @@ class DiscordBot extends Discord.Client {
     }
 
     log(title, text, level = 'info') {
-        const t = title || 'Info';
-        const msg = text || '';
-        this.logger.log(t, msg, level);
+        try {
+            if (this.logger && typeof this.logger.log === 'function') {
+                this.logger.log(title || 'Info', text || '', level);
+            } else {
+                require('../util/intl').log(title, text, level);
+            }
+        } catch (e) {
+            require('../util/intl').log(title, text, level);
+        }
     }
 
     logInteraction(interaction, verifyId, type) {
