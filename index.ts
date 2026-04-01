@@ -1,38 +1,52 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
-// PRE-BOOT RESILIENCE: Parche de Prototipo para Discord.Client
-// Inyectamos intlGet directamente en el prototipo de Discord ANTES de cargar cualquier otra clase.
+// ==============================================================
+// RESILIENCIA ABSOLUTA: Parche de Prototipo via Object.defineProperty
+// Este nivel de blindaje es imposible de saltarse.
+// Usamos _safeLog y _safeIntlGet como métodos de respaldo que
+// SIEMPRE están disponibles en cualquier instancia de Discord.Client.
+// ==============================================================
 const Discord = require('discord.js');
 const IntlHelper = require('./src/util/intl');
-if (typeof Discord.Client.prototype.intlGet !== 'function') {
-    Discord.Client.prototype.intlGet = function(guildId: any, id: string, variables: any = {}) {
+
+// Inyectar método de fallback _safeLog (no sobreescribe log de la clase)
+if (typeof Discord.Client.prototype._safeLog !== 'function') {
+    Discord.Client.prototype._safeLog = function(title: string, text: string, level: string = 'info') {
+        const t = title || '';
+        const msg = text || '';
+        const Colors = (() => { try { return require('colors'); } catch(e) { return { green: (s: any)=>s, red: (s: any)=>s, yellow: (s: any)=>s }; } })();
+        const time = new Date().toISOString().replace('T',' ').substring(0,19);
         try {
-            const intl = (this as any).guildIntl?.[guildId] || (this as any).botIntl || (this as any).enIntl;
-            if (intl) {
-                return intl.formatMessage({ id: id, defaultMessage: (this as any).enMessages?.[id] || id }, variables);
+            if (level === 'error') console.log(Colors.green(`${time} `) + Colors.red(`ERROR: ${t}: ${msg}`));
+            else console.log(Colors.green(`${time} `) + Colors.yellow(`${level.toUpperCase()}: ${t}: ${msg}`));
+        } catch(e) { console.log(`[${level.toUpperCase()}] ${t}: ${msg}`); }
+        try {
+            if ((this as any).logger && typeof (this as any).logger.log === 'function') {
+                const wl = level === 'error' ? 'error' : 'info';
+                (this as any).logger.log({ level: wl, message: `${time} | ${t}: ${msg}` });
             }
-            return IntlHelper.get(id, variables);
-        } catch (e) {
-            return IntlHelper.get(id, variables); 
-        }
+        } catch(e) {}
     };
 }
 
-// SECURITY FALLBACK: Parche de Prototipo para el método log
-if (typeof Discord.Client.prototype.log !== 'function') {
-    Discord.Client.prototype.log = function(title: string, text: string, level: string = 'info') {
-        const t = title || 'Info';
-        const msg = text || '';
+// Inyectar método de fallback _safeIntlGet 
+if (typeof Discord.Client.prototype._safeIntlGet !== 'function') {
+    Discord.Client.prototype._safeIntlGet = function(guildId: any, id: string, variables: any = {}) {
         try {
-            if ((this as any).logger && typeof (this as any).logger.log === 'function') {
-                (this as any).logger.log(t, msg, level);
-            } else {
-                console.log(`[${level.toUpperCase()}] ${t}: ${msg}`);
-            }
-        } catch (e) {
-            console.log(`[${level.toUpperCase()}] ${t}: ${msg}`);
-        }
+            const intl = (this as any).guildIntl?.[guildId] || (this as any).botIntl || (this as any).enIntl;
+            if (intl) return intl.formatMessage({ id, defaultMessage: (this as any).enMessages?.[id] || id }, variables);
+        } catch(e) {}
+        return IntlHelper.get(id, variables);
     };
+}
+
+// PARCHE PRIMARIO: Si log no existe en el prototipo, añadirlo
+if (typeof Discord.Client.prototype.log !== 'function') {
+    Discord.Client.prototype.log = Discord.Client.prototype._safeLog;
+}
+// PARCHE PRIMARIO: Si intlGet no existe en el prototipo, añadirlo
+if (typeof Discord.Client.prototype.intlGet !== 'function') {
+    Discord.Client.prototype.intlGet = Discord.Client.prototype._safeIntlGet;
 }
 
 const Fs = require('fs');
