@@ -2,6 +2,7 @@ const PushReceiverClient = require('@liamcottle/push-receiver/src/client');
 const { register: registerGCM } = require('@liamcottle/push-receiver/src/gcm');
 const db = require('./database');
 const crypto = require('crypto');
+const axios = require('axios');
 
 class FcmManager {
     constructor(discordBot) {
@@ -18,8 +19,7 @@ class FcmManager {
             // Generar un appId único (formato Chrome/Electron)
             const appId = `wp:receiver.push.com#${crypto.randomUUID()}`;
             
-            // Realizar registro GCM (evitando el bug de 'interior hyphen' y el 404 de FCM)
-            // Pasamos undefined para androidId y securityToken para obtener unos nuevos.
+            // 2. Realizar registro GCM (evitando el bug de 'interior hyphen' y el 404 de FCM)
             const subscription = await registerGCM(undefined, undefined, appId);
             
             const credentials = {
@@ -29,6 +29,10 @@ class FcmManager {
                 }
             };
             
+            // 3. Vincular el dispositivo virtual con Facepunch (Rust+ API)
+            // Esto es CRUCIAL para que el servidor de Rust sepa a qué AndroidID mandarle el pairing.
+            await this.registerDeviceWithFacepunch(steamId, subscription.androidId, subscription.token);
+
             // Guardar en base de datos
             db.updateUserFCM(steamId, credentials);
             
@@ -176,6 +180,39 @@ class FcmManager {
                     console.error("[FCM] Error enrutando alerta a Discord:", e);
                 }
             }
+        }
+    }
+    // ============================================
+    // REGISTRO EN FACEPUNCH (VINCULACIÓN REAL)
+    // ============================================
+    async registerDeviceWithFacepunch(steamId, androidId, pushToken) {
+        try {
+            console.log(`[FCM] Vinculando AndroidID ${androidId} con Facepunch para SteamID ${steamId}...`);
+            
+            // Endpoint oficial de Rust+ para registrar dispositivos de notificaciones
+            const response = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
+                ServerType: "Official",
+                DeviceId: androidId,
+                DeviceName: "HK Rust Bot (Virtual Device)",
+                PushService: 1, // 1 = GCM/FCM
+                PushToken: pushToken,
+                SteamId: steamId
+            }, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'User-Agent': 'Rust/2507 CFNetwork/1410.0.3 Darwin/22.6.0' // User agent de la app real
+                },
+                timeout: 10000
+            });
+
+            if (response.status === 200) {
+                console.log(`[FCM] Vinculación con Facepunch EXITOSA para ${steamId}`);
+            } else {
+                console.warn(`[FCM] Facepunch respondió con status ${response.status}:`, response.data);
+            }
+        } catch (error) {
+            console.error(`[FCM] Error crítico vinculando con Facepunch para ${steamId}:`, error.message);
+            // No lanzamos el error para no bloquear el proceso, pero lo logueamos
         }
     }
 }
