@@ -104,6 +104,13 @@ function createMissingDirectories() {
     }
 }
 
-process.on('unhandledRejection', error => {
-    console.error('[Unhandled Rejection]', error);
+process.on('unhandledRejection', (error: any) => {
+    console.error('[Unhandled Rejection] Stack trace:');
+    console.error(error && error.stack ? error.stack : error);
+});
+
+process.on('uncaughtException', (error: any) => {
+    console.error('[UNCAUGHT EXCEPTION] Stack trace completo:');
+    console.error(error && error.stack ? error.stack : error);
+    // NO terminar el proceso - mantener el servidor web vivo
 });

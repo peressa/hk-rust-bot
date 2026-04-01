@@ -237,14 +237,34 @@ class DiscordBot extends Discord.Client {
     }
 
     log(title, text, level = 'info') {
+        const Colors = (() => {
+            try { return require('colors'); } catch(e) { 
+                return { green: s=>s, red: s=>s, yellow: s=>s };
+            }
+        })();
+        const t = title || 'Info';
+        const msg = text || '';
+        const time = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        const levelStr = (level || 'info').toUpperCase();
+
+        // Siempre escribir en consola primero (no depende de archivos)
+        const consoleMsg = `${time} ${levelStr}: ${t}: ${msg}`;
+        if (level === 'error') {
+            try { console.log(Colors.green(`${time} `) + Colors.red(`${t}: ${msg}`)); }
+            catch(e) { console.log(consoleMsg); }
+        } else {
+            try { console.log(Colors.green(`${time} `) + Colors.yellow(`${t}: ${msg}`)); }
+            catch(e) { console.log(consoleMsg); }
+        }
+
+        // Intentar escribir en archivo (opcional, no crítico)
         try {
             if (this.logger && typeof this.logger.log === 'function') {
-                this.logger.log(title || 'Info', text || '', level);
-            } else {
-                require('../util/intl').log(title, text, level);
+                const winstonLevel = (level === 'error') ? 'error' : (level === 'warning') ? 'warn' : 'info';
+                this.logger.log({ level: winstonLevel, message: `${time} | ${t}: ${msg}` });
             }
-        } catch (e) {
-            require('../util/intl').log(title, text, level);
+        } catch(e) {
+            // Silenciosamente ignorar errores de escritura en archivo
         }
     }
 
