@@ -32,13 +32,15 @@ class FcmManager {
             const rustSenderId = '976529667804';
             const registerResponse = await axios.post('https://android.clients.google.com/c2dm/register3', 
                 querystring.stringify({
-                    app: appId, // Ahora usamos el PackageName oficial como 'app'
-                    'X-subtype': appId,
+                    app: 'com.google.android.gms', // Simular GMS Core (Google Play Services)
+                    'X-subtype': appId, // com.facepunch.rust.companion
                     device: androidId,
                     sender: rustSenderId,
-                    cert: '5e8f16062ea3cd2c4a0d547876ba1675e90c5dc2', // Huella SHA-1 de Rust+ original
+                    cert: '5e8f16062ea3cd2c4a0d547876ba1675e90c5dc2', // SHA-1 Rust+
                     app_display_name: 'Rust+',
-                    target_ver: '34' // Android 14
+                    target_ver: '34',
+                    'X-scope': '*', // Requerido para Firebase
+                    'X-cliv': 'fcm-23.1.2' // Identificador de librería Firebase moderna
                 }), 
                 {
                     headers: {

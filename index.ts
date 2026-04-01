@@ -40,14 +40,8 @@ if (typeof Discord.Client.prototype._safeIntlGet !== 'function') {
     };
 }
 
-// PARCHE PRIMARIO: Si log no existe en el prototipo, añadirlo
-if (typeof Discord.Client.prototype.log !== 'function') {
-    Discord.Client.prototype.log = Discord.Client.prototype._safeLog;
-}
-// PARCHE PRIMARIO: Si intlGet no existe en el prototipo, añadirlo
-if (typeof Discord.Client.prototype.intlGet !== 'function') {
-    Discord.Client.prototype.intlGet = Discord.Client.prototype._safeIntlGet;
-}
+// Los métodos log e intlGet ahora se definen directamente en la clase DiscordBot
+// para asegurar que siempre estén disponibles y correctamente vinculados.
 
 const Fs = require('fs');
 const Path = require('path');
