@@ -22,9 +22,16 @@ const Discord = require('discord.js');
 
 const DiscordEmbeds = require('../discordTools/discordEmbeds');
 
+const Intl = require('../util/intl');
+
 module.exports = {
     name: 'interactionCreate',
     async execute(client, interaction) {
+        const _intlGet = (guildId, id, vars = {}) => {
+            if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+            return Intl.get(id, vars);
+        };
+
         const instance = client.getInstance(interaction.guildId);
 
         /* La validación de canal/rol ahora se maneja nativamente por discord v14 integration settings */
@@ -46,26 +53,26 @@ module.exports = {
                 await command.execute(client, interaction);
             }
             catch (e) {
-                client.log(client.intlGet(null, 'errorCap'), e, 'error');
+                client.log(_intlGet(null, 'errorCap'), e, 'error');
 
-                const str = client.intlGet(interaction.guildId, 'errorExecutingCommand');
+                const str = _intlGet(interaction.guildId, 'errorExecutingCommand');
                 await client.interactionEditReply(interaction, DiscordEmbeds.getActionInfoEmbed(1, str));
-                client.log(client.intlGet(null, 'errorCap'), str, 'error');
+                client.log(_intlGet(null, 'errorCap'), str, 'error');
             }
         }
         else if (interaction.type === Discord.InteractionType.ModalSubmit) {
             require('../handlers/modalHandler')(client, interaction);
         }
         else {
-            client.log(client.intlGet(null, 'errorCap'), client.intlGet(null, 'unknownInteraction'), 'error');
+            client.log(_intlGet(null, 'errorCap'), _intlGet(null, 'unknownInteraction'), 'error');
 
             if (interaction.isButton()) {
                 try {
                     interaction.deferUpdate();
                 }
                 catch (e) {
-                    client.log(client.intlGet(null, 'errorCap'),
-                        client.intlGet(null, 'couldNotDeferInteraction'), 'error');
+                    client.log(_intlGet(null, 'errorCap'),
+                        _intlGet(null, 'couldNotDeferInteraction'), 'error');
                 }
             }
         }

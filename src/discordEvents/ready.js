@@ -21,6 +21,7 @@
 const Discord = require('discord.js');
 const Path = require('path');
 
+const Intl = require('../util/intl');
 const BattlemetricsHandler = require('../handlers/battlemetricsHandler.js');
 const Config = require('../../config');
 
@@ -28,6 +29,12 @@ module.exports = {
     name: 'ready',
     once: true,
     async execute(client) {
+        // FALLBACK: Asegurar que el bot no crashee si intlGet no está disponible
+        const _intlGet = (guildId, id, vars = {}) => {
+            if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+            return Intl.get(id, vars);
+        };
+
         for (const guild of client.guilds.cache) {
             require('../util/CreateInstanceFile')(client, guild[1]);
             require('../util/CreateCredentialsFile')(client, guild[1]);
@@ -35,7 +42,7 @@ module.exports = {
         }
 
         client.loadGuildsIntl();
-        client.log(client.intlGet(null, 'infoCap'), client.intlGet(null, 'loggedInAs', {
+        client.log(_intlGet(null, 'infoCap'), _intlGet(null, 'loggedInAs', {
             name: client.user.tag
         }));
 

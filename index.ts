@@ -1,4 +1,23 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
+
+// PRE-BOOT RESILIENCE: Parche de Prototipo para Discord.Client
+// Inyectamos intlGet directamente en el prototipo de Discord ANTES de cargar cualquier otra clase.
+const Discord = require('discord.js');
+const IntlHelper = require('./src/util/intl');
+if (typeof Discord.Client.prototype.intlGet !== 'function') {
+    Discord.Client.prototype.intlGet = function(guildId: any, id: string, variables: any = {}) {
+        try {
+            const intl = (this as any).guildIntl?.[guildId] || (this as any).botIntl || (this as any).enIntl;
+            if (intl) {
+                return intl.formatMessage({ id: id, defaultMessage: (this as any).enMessages?.[id] || id }, variables);
+            }
+            return IntlHelper.get(id, variables);
+        } catch (e) {
+            return IntlHelper.get(id, variables); 
+        }
+    };
+}
+
 const Fs = require('fs');
 const Path = require('path');
 const db = require('./src/structures/database');
@@ -36,17 +55,6 @@ const fcm = new FcmManager(bot);
 (global as any).fcmManager = fcm;
 
 if (process.env.RPP_DISCORD_TOKEN) {
-    // SECURITY FALLBACK: Asegurar que intlGet existe en la instancia pase lo que pase
-    if (typeof (bot as any).intlGet !== 'function') {
-        (bot as any).intlGet = function(guildId: any, id: string, variables: any = {}) {
-            try {
-                const intl = this.guildIntl?.[guildId] || this.botIntl || this.enIntl;
-                if (!intl) return id;
-                return intl.formatMessage({ id: id, defaultMessage: this.enMessages?.[id] || id }, variables);
-            } catch (e) { return id; }
-        };
-    }
-
     bot.build(process.env.RPP_DISCORD_TOKEN).then(() => {
         console.log('[Sistema] Bot oficial encendido.');
         // Cargar todos los servidores RUST de todos los usuarios

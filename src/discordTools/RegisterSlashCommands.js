@@ -25,6 +25,8 @@ const Types = require('discord-api-types/v9');
 
 const Config = require('../../config');
 
+const Intl = require('../util/intl');
+
 module.exports = async (client, guild) => {
     const commands = [];
     const commandFiles = Fs.readdirSync(Path.join(__dirname, '..', 'commands')).filter(file => file.endsWith('.js'));
@@ -38,24 +40,29 @@ module.exports = async (client, guild) => {
         commands.push(builder.toJSON());
     }
 
+    const _intlGet = (guildId, id, vars = {}) => {
+        if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+        return Intl.get(id, vars);
+    };
+
     const appId = client.application?.id || client.user?.id;
     const rest = new Rest.REST({ version: '9' }).setToken(Config.discord.token);
 
     if (!appId) {
-        client.log(client.intlGet(null, 'errorCap'), 'No se pudo obtener el ID de la aplicacion de Discord.', 'error');
+        client.log(_intlGet(null, 'errorCap'), 'No se pudo obtener el ID de la aplicacion de Discord.', 'error');
         return;
     }
 
     try {
         await rest.put(Types.Routes.applicationGuildCommands(appId, guild.id), { body: commands });
-        client.log(client.intlGet(null, 'infoCap'),
-            client.intlGet(null, 'slashCommandsSuccessRegister', { guildId: guild.id }));
+        client.log(_intlGet(null, 'infoCap'),
+            _intlGet(null, 'slashCommandsSuccessRegister', { guildId: guild.id }));
     }
     catch (e) {
         client.log(
-            client.intlGet(null, 'errorCap'),
-            client.intlGet(null, 'couldNotRegisterSlashCommands', { guildId: guild.id }) +
-            client.intlGet(null, 'makeSureApplicationsCommandsEnabled'),
+            _intlGet(null, 'errorCap'),
+            _intlGet(null, 'couldNotRegisterSlashCommands', { guildId: guild.id }) +
+            _intlGet(null, 'makeSureApplicationsCommandsEnabled'),
             'error'
         );
         console.error('[SlashCommands] API Error:', e);

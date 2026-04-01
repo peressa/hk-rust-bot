@@ -151,25 +151,19 @@ class DiscordBot extends Discord.Client {
     }
 
     intlGet(guildId, id, variables = {}) {
-        let intl = null;
         try {
-            if (guildId && guildId !== 'en' && this.guildIntl[guildId]) {
-                intl = this.guildIntl[guildId];
-            } else if (guildId === 'en' && this.enIntl) {
-                intl = this.enIntl;
-            } else {
-                intl = this.botIntl || this.enIntl;
+            const intl = this.guildIntl[guildId] || this.botIntl || this.enIntl;
+            if (intl) {
+                return intl.formatMessage({
+                    id: id,
+                    defaultMessage: this.enMessages ? this.enMessages[id] : id
+                }, variables);
             }
-
-            if (!intl) return id; // Fallback extremo: devolver el ID del mensaje
-
-            return intl.formatMessage({
-                id: id,
-                defaultMessage: this.enMessages ? this.enMessages[id] : id
-            }, variables);
+            // Fallback al Helper Global (Resiliencia SaaS)
+            return require('../util/intl').get(id, variables);
         } catch (e) {
-            console.error('[intlGet Error]', e);
-            return id; 
+            // Última instancia de seguridad
+            return id;
         }
     }
 
