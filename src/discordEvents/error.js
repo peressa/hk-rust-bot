@@ -18,10 +18,22 @@
 
 */
 
+const Intl = require('../util/intl');
+
 module.exports = {
     name: 'error',
     async execute(client, error) {
-        client.log(client.intlGet(null, 'errorCap'), error, 'error');
-        process.exit(1);
+        const _intlGet = (guildId, id, vars = {}) => {
+            if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+            return Intl.get(id, vars);
+        };
+        const _log = (title, msg, level = 'error') => {
+            if (typeof client.log === 'function') return client.log(title, msg, level);
+            console.error(`[ERROR] ${title}: ${msg}`);
+        };
+
+        _log(_intlGet(null, 'errorCap'), error, 'error');
+        // NOTA: No llamamos process.exit(1) para evitar reinicios en loop.
+        // El proceso se mantiene vivo y Discord.js intentará reconectar automáticamente.
     },
 }

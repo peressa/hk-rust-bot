@@ -31,6 +31,10 @@ module.exports = {
             if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
             return Intl.get(id, vars);
         };
+        const _log = (title, msg, level = 'info') => {
+            if (typeof client.log === 'function') return client.log(title, msg, level);
+            console.log(`[${(level || 'info').toUpperCase()}] ${title}: ${msg}`);
+        };
 
         const instance = client.getInstance(interaction.guildId);
 
@@ -53,25 +57,25 @@ module.exports = {
                 await command.execute(client, interaction);
             }
             catch (e) {
-                client.log(_intlGet(null, 'errorCap'), e, 'error');
+                _log(_intlGet(null, 'errorCap'), e, 'error');
 
                 const str = _intlGet(interaction.guildId, 'errorExecutingCommand');
                 await client.interactionEditReply(interaction, DiscordEmbeds.getActionInfoEmbed(1, str));
-                client.log(_intlGet(null, 'errorCap'), str, 'error');
+                _log(_intlGet(null, 'errorCap'), str, 'error');
             }
         }
         else if (interaction.type === Discord.InteractionType.ModalSubmit) {
             require('../handlers/modalHandler')(client, interaction);
         }
         else {
-            client.log(_intlGet(null, 'errorCap'), _intlGet(null, 'unknownInteraction'), 'error');
+            _log(_intlGet(null, 'errorCap'), _intlGet(null, 'unknownInteraction'), 'error');
 
             if (interaction.isButton()) {
                 try {
                     interaction.deferUpdate();
                 }
                 catch (e) {
-                    client.log(_intlGet(null, 'errorCap'),
+                    _log(_intlGet(null, 'errorCap'),
                         _intlGet(null, 'couldNotDeferInteraction'), 'error');
                 }
             }
