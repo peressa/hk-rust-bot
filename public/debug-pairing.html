@@ -141,42 +141,26 @@
         <header class="header">
             <h1>Diagnóstico Rust+ FCM</h1>
             <p>Monitoreo visual del proceso de vinculación avanzada paso a paso.</p>
+            <div style="background: rgba(245, 158, 11, 0.1); border: 1px solid #f59e0b; color: #f59e0b; padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-top: 15px; display: inline-block;">
+                ⚠️ <b>Nota:</b> Tu cuenta de Steam NO debe ser "limitada" (debes haber gastado al menos $5 USD en Steam) y debe tener Steam Guard móvil activo.
+            </div>
         </header>
 
         <div class="timeline" id="timeline">
-            <!-- Step 1 -->
-            <div class="step-card" id="step-init">
-                <div class="step-icon">🏁</div>
-                <div class="step-content">
-                    <div class="step-title">Inicialización</div>
-                    <div class="step-desc">Preparando entorno y autenticación Steam...</div>
-                </div>
-            </div>
+            <!-- Pasos resumidos arriba... -->
+        </div>
 
-            <!-- Step 2 -->
-            <div class="step-card" id="step-gcm_checkin">
-                <div class="step-icon">📶</div>
-                <div class="step-content">
-                    <div class="step-title">Google GCM Check-In</div>
-                    <div class="step-desc">Generando identidad de dispositivo Android virtual...</div>
-                </div>
-            </div>
-
-            <!-- Step 3 -->
-            <div class="step-card" id="step-gcm_register">
-                <div class="step-icon">🔑</div>
-                <div class="step-content">
-                    <div class="step-title">Registro FCM</div>
-                    <div class="step-desc">Obteniendo credenciales de notificaciones push de Google...</div>
-                </div>
-            </div>
-
-            <!-- Step 4 -->
-            <div class="step-card" id="step-fp_link">
-                <div class="step-icon">🔗</div>
-                <div class="step-content">
-                    <div class="step-title">Vinculación Facepunch</div>
-                    <div class="step-desc">Sincronizando dispositivos con la API oficial de Facepunch...</div>
+        <div id="checklist-section" style="margin-bottom: 30px; display: none;">
+            <div style="background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px;">
+                <h3 style="margin-top: 0; font-size: 1rem; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+                    📋 Checklist de Requisitos Deep Scan
+                </h3>
+                <div id="checklist-items" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.85rem;">
+                    <div class="check-item" id="chk-gcm"><span class="bullet">⚪</span> Google GCM</div>
+                    <div class="check-item" id="chk-rust"><span class="bullet">⚪</span> Propiedad de Rust</div>
+                    <div class="check-item" id="chk-guard"><span class="bullet">⚪</span> Steam Guard</div>
+                    <div class="check-item" id="chk-limited"><span class="bullet">⚪</span> Cuenta Comercio ($5)</div>
+                    <div class="check-item" id="chk-token"><span class="bullet">⚪</span> AuthToken Match</div>
                 </div>
             </div>
         </div>
@@ -224,6 +208,15 @@
             if (status === 'loading') icon.textContent = '⏳';
         }
 
+        function updateChecklist(id, status) {
+            const item = document.getElementById(`chk-${id}`);
+            if (!item) return;
+            const bullet = item.querySelector('.bullet');
+            if (status === 'done') { bullet.textContent = '✅'; item.style.color = 'var(--success)'; }
+            if (status === 'fail') { bullet.textContent = '❌'; item.style.color = 'var(--error)'; }
+            if (status === 'loading') { bullet.textContent = '⏳'; item.style.color = 'var(--accent)'; }
+        }
+
         btnStart.addEventListener('click', () => {
             btnStart.disabled = true;
             btnStart.textContent = 'Diagnosticando...';
@@ -232,8 +225,10 @@
             const sseUrl = customToken ? `/api/debug/pair/stream?token=${encodeURIComponent(customToken)}` : '/api/debug/pair/stream';
 
             // Reset UI
-            steps.forEach(s => updateStep(s, '', ''));
-            terminal.innerHTML = '<div class="terminal-line info">> Iniciando flujo de diagnóstico SSE...</div>';
+            document.getElementById('checklist-section').style.display = 'block';
+            ['gcm', 'rust', 'guard', 'limited', 'token'].forEach(c => updateChecklist(c, 'loading'));
+            
+            terminal.innerHTML = '<div class="terminal-line info">> Iniciando flujo de diagnóstico Deep Scan...</div>';
 
             const events = new EventSource(sseUrl);
 
@@ -245,12 +240,28 @@
                     log(data.msg, data.status === 'success' ? 'info' : 'error');
                     btnStart.disabled = false;
                     btnStart.textContent = 'Reiniciar Diagnóstico';
+                    
+                    // Si falló con código específico, marcar checklist
+                    if (data.msg.includes('LIMITED')) updateChecklist('limited', 'fail');
+                    if (data.msg.includes('OWNED')) updateChecklist('rust', 'fail');
+                    if (data.msg.includes('REQUIRED')) updateChecklist('guard', 'fail');
+                    if (data.msg.includes('INVALID')) updateChecklist('token', 'fail');
+                    
+                    if (data.status === 'success') {
+                        ['gcm', 'rust', 'guard', 'limited', 'token'].forEach(c => updateChecklist(c, 'done'));
+                    }
+
                     events.close();
                     return;
                 }
 
                 log(data.msg, data.status === 'error' ? 'error' : 'info');
-                updateStep(data.step, data.status === 'loading' ? 'active' : (data.status === 'error' ? 'fail' : 'done'), data.msg);
+                
+                // Mapear pasos SSE a checklist
+                if (data.step === 'gcm_checkin' || data.step === 'gcm_register') {
+                    if (data.status === 'success') updateChecklist('gcm', 'done');
+                    if (data.status === 'error') updateChecklist('gcm', 'fail');
+                }
             };
 
             events.onerror = (err) => {

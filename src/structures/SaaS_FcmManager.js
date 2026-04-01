@@ -69,10 +69,10 @@ class FcmManager {
                             device: androidId,
                             sender: rustSenderId,
                             'X-scope': '*',
-                            'X-app_ver': '2516',
+                            'X-app_ver': '2555',
                             'X-os_ver': '30',
-                            'X-cliv': 'fcm-23.3.4',
-                            'X-messenger_ver': '2516'
+                            'X-cliv': 'fcm-23.4.0',
+                            'X-messenger_ver': '2555'
                         }), 
                         {
                             headers: {
@@ -198,10 +198,10 @@ class FcmManager {
                     device: androidId,
                     sender: rustSenderId,
                     'X-scope': '*',
-                    'X-app_ver': '2516',
+                    'X-app_ver': '2555',
                     'X-os_ver': '30',
-                    'X-cliv': 'fcm-23.3.4',
-                    'X-messenger_ver': '2516'
+                    'X-cliv': 'fcm-23.4.0',
+                    'X-messenger_ver': '2555'
                 }), 
                 {
                     headers: {
@@ -238,9 +238,10 @@ class FcmManager {
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': authToken,
-                        'User-Agent': 'Rust/2516 (Android; 11; Google Pixel 4) CFNetwork/1410.0.3'
+                        'X-Rust-Companion-App-Version': '2555',
+                        'User-Agent': 'Rust/2555 (Android; 11; Google Pixel 4) CFNetwork/1410.0.3'
                     },
-                    timeout: 10000
+                    timeout: 15000 // Aumentar timeout para diagnósticos profundos
                 });
 
                 if (fpResponse.status === 200) {
@@ -255,21 +256,45 @@ class FcmManager {
                 }
             } catch (err) {
                 let errorMsg = err.message;
+                let diagnosticCode = 'UNKNOWN';
+
                 if (err.response && err.response.data) {
-                    // Facepunch suele enviar un objeto con { message: "..." }
                     const fpData = err.response.data;
-                    if (typeof fpData === 'object' && fpData.message) {
-                        errorMsg = fpData.message;
-                    } else if (typeof fpData === 'string' && fpData.includes('Steam Guard')) {
-                        errorMsg = 'Steam Guard móvil requerido';
+                    console.log(`[FCM-DEBUG] Facepunch Response Data:`, fpData);
+                    
+                    if (typeof fpData === 'object') {
+                        errorMsg = fpData.message || JSON.stringify(fpData);
+                        // Mapeo detallado de errores conocidos de Facepunch
+                        if (errorMsg.includes('Limited')) diagnosticCode = 'STEAM_ACCOUNT_LIMITED';
+                        if (errorMsg.includes('Rust')) diagnosticCode = 'NO_RUST_OWNED';
+                        if (errorMsg.includes('Guard')) diagnosticCode = 'STEAM_GUARD_REQUIRED';
+                        if (errorMsg.includes('Token')) diagnosticCode = 'AUTH_TOKEN_INVALID';
+                        if (errorMsg.includes('mismatch')) diagnosticCode = 'STEAM_ID_MISMATCH';
                     }
                 }
 
-                if (err.response?.status === 500 || errorMsg.includes('Steam Guard')) {
-                    onProgress('fp_link', `Error Facepunch: ${errorMsg}. Verifica Steam Guard y que tu cuenta no sea limitada.`, 'error');
-                } else {
-                    onProgress('fp_link', `Error Facepunch: ${errorMsg}`, 'error');
+                // Generar mensaje amigable basado en el diagnóstico profundo
+                let humanMsg = `Error Facepunch: ${errorMsg}`;
+                switch(diagnosticCode) {
+                    case 'STEAM_ACCOUNT_LIMITED':
+                        humanMsg = "❌ CUENTA LIMITADA: Debes gastar al menos $5 USD en Steam para usar Rust+.";
+                        break;
+                    case 'NO_RUST_OWNED':
+                        humanMsg = "❌ JUEGO NO ENCONTRADO: Esta cuenta de Steam no posee el juego Rust.";
+                        break;
+                    case 'STEAM_GUARD_REQUIRED':
+                        humanMsg = "❌ SEGURIDAD: Debes activar Steam Guard (autenticador móvil) en tu cuenta.";
+                        break;
+                    case 'AUTH_TOKEN_INVALID':
+                        humanMsg = "❌ TOKEN INVÁLIDO: El token proporcionado ha expirado o es incorrecto.";
+                        break;
+                    case 'STEAM_ID_MISMATCH':
+                        humanMsg = "❌ CONFLICTO: El token no pertenece a la cuenta de Steam actual.";
+                        break;
                 }
+
+                onProgress('fp_link', humanMsg, 'error');
+                onProgress('final', `Diagnóstico concluido con código: ${diagnosticCode}`, 'error');
                 throw err;
             }
 
