@@ -185,6 +185,13 @@
             <div class="terminal-line info">> Sistema listo. Haz clic en "Iniciar Diagnóstico" para comenzar el rastreo.</div>
         </div>
 
+        <div class="token-input-section" style="margin-top: 30px; background: var(--card-bg); padding: 20px; border-radius: 12px; border: 1px solid var(--border);">
+            <div style="font-weight: 600; margin-bottom: 10px; color: var(--accent);">Facepunch AuthToken (Opcional/Forzado)</div>
+            <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px;">Pega tu token aquí si deseas forzar una re-vinculación con un token nuevo.</p>
+            <input type="text" id="auth-token-input" placeholder="Ej: 12345678-abcd-efgh-ijkl-1234567890ab" 
+                   style="width: 100%; padding: 12px; border-radius: 6px; border: 1px solid var(--border); background: rgba(0,0,0,0.2); color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; box-sizing: border-box;">
+        </div>
+
         <div class="actions">
             <a href="/panel" class="btn btn-outline">Volver al Panel</a>
             <button class="btn btn-primary" id="btn-start">Iniciar Diagnóstico</button>
@@ -221,11 +228,14 @@
             btnStart.disabled = true;
             btnStart.textContent = 'Diagnosticando...';
             
+            const customToken = document.getElementById('auth-token-input').value.trim();
+            const sseUrl = customToken ? `/api/debug/pair/stream?token=${encodeURIComponent(customToken)}` : '/api/debug/pair/stream';
+
             // Reset UI
             steps.forEach(s => updateStep(s, '', ''));
             terminal.innerHTML = '<div class="terminal-line info">> Iniciando flujo de diagnóstico SSE...</div>';
 
-            const events = new EventSource('/api/debug/pair/stream');
+            const events = new EventSource(sseUrl);
 
             events.onmessage = (event) => {
                 const data = JSON.parse(event.data);

@@ -238,7 +238,7 @@ class FcmManager {
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': authToken,
-                        'User-Agent': 'Rust/2507 (Android; 11; Google Pixel 4) CFNetwork/1410.0.3'
+                        'User-Agent': 'Rust/2516 (Android; 11; Google Pixel 4) CFNetwork/1410.0.3'
                     },
                     timeout: 10000
                 });
@@ -254,10 +254,21 @@ class FcmManager {
                     onProgress('final', 'Tu sistema de notificaciones de Rust+ está listo y verificado.', 'success');
                 }
             } catch (err) {
-                if (err.response?.status === 500) {
-                    onProgress('fp_link', 'Error 500 de Facepunch. Asegúrate de tener Steam Guard móvil activo.', 'error');
+                let errorMsg = err.message;
+                if (err.response && err.response.data) {
+                    // Facepunch suele enviar un objeto con { message: "..." }
+                    const fpData = err.response.data;
+                    if (typeof fpData === 'object' && fpData.message) {
+                        errorMsg = fpData.message;
+                    } else if (typeof fpData === 'string' && fpData.includes('Steam Guard')) {
+                        errorMsg = 'Steam Guard móvil requerido';
+                    }
+                }
+
+                if (err.response?.status === 500 || errorMsg.includes('Steam Guard')) {
+                    onProgress('fp_link', `Error Facepunch: ${errorMsg}. Verifica Steam Guard y que tu cuenta no sea limitada.`, 'error');
                 } else {
-                    onProgress('fp_link', `Error Facepunch: ${err.message}`, 'error');
+                    onProgress('fp_link', `Error Facepunch: ${errorMsg}`, 'error');
                 }
                 throw err;
             }
