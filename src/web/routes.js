@@ -187,6 +187,15 @@ router.get('/api/fcm/stream', ensureAuthenticated, (req, res) => {
     req.on('close', () => {});
 });
 
+router.post('/api/fcm/reset', ensureAuthenticated, (req, res) => {
+    try {
+        db.updateUserFCM(req.user.id, { gcm: { androidId: null, securityToken: null } });
+        res.json({ success: true, msg: 'Identidad GCM eliminada con éxito.' });
+    } catch (e) {
+        res.status(500).json({ success: false, msg: e.message });
+    }
+});
+
 // ============================================
 // RUTAS FRONTEND
 // ============================================

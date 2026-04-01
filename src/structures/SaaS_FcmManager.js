@@ -153,10 +153,8 @@ class FcmManager {
             return;
         }
 
-        this.inProgressRegistrations.add(steamId);
-        onProgress('init', 'Iniciando diagnóstico de vinculación...', 'loading');
-
         try {
+            console.log(`[FCM-V3004] Iniciando diagnóstico para SteamID: ${steamId}`);
             const user = db.getUser(steamId);
             let androidId, securityToken;
 
@@ -178,12 +176,12 @@ class FcmManager {
                 securityToken = checkinResponse.securityToken.toString();
                 onProgress('gcm_checkin', `Check-In exitoso. ID: ${androidId}`, 'success');
 
-                // PERSISTENCIA INMEDIATA: Guardar identidad GCM aunque falle el registro posterior (importante para reintentos)
+                // PERSISTENCIA INMEDIATA
                 db.updateUserFCM(steamId, {
                     gcm: { androidId, securityToken }
                 });
             } else {
-                onProgress('gcm_checkin', `Reutilizando identidad GCM: ${androidId}`, 'done');
+                onProgress('gcm_checkin', `Reutilizando identidad GCM (V3004): ${androidId}`, 'done');
             }
 
             // Paso 2: Google Register (FCM Token)
@@ -223,14 +221,17 @@ class FcmManager {
 
             // Paso 3: Facepunch Link
             onProgress('fp_link', 'Sincronizando con los servidores de Facepunch...', 'loading');
-            const hexDeviceId = BigInt(androidId).toString(16).padStart(16, '0').toLowerCase();
+            
+            // RESET DE IDENTIDAD: Usar un UUID fresco para evitar registros fantasmas
+            const crypto = require('crypto');
+            const hexDeviceId = crypto.randomUUID(); 
             
             try {
                 const fpResponse = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                     serverType: "Official",
                     deviceId: hexDeviceId,
-                    deviceName: "HK-RUST Mobile",
-                    pushService: 1,
+                    deviceName: "HK-RUST Pro",
+                    pushService: "fcm", // Usar string "fcm" en lugar de 1 por compatibilidad v3004
                     pushToken: pushToken,
                     steamId: steamId,
                     authToken: authToken
@@ -238,13 +239,14 @@ class FcmManager {
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': authToken,
-                        'X-Rust-Companion-App-Version': '2555',
-                        'User-Agent': 'Rust/2555 (Android; 11; Google Pixel 4) CFNetwork/1410.0.3'
+                        'X-Rust-Companion-App-Version': '3004',
+                        'User-Agent': 'Rust/3004 (Android; 13; Pixel 7) CFNetwork/1410.0.3'
                     },
-                    timeout: 15000 // Aumentar timeout para diagnósticos profundos
+                    timeout: 20000 // Más tiempo para handshake v3
                 });
 
                 if (fpResponse.status === 200) {
+                    console.log(`[FCM-V3004] Facepunch Sync Successful. Body:`, JSON.stringify(fpResponse.data));
                     const credentials = {
                         gcm: { androidId, securityToken }
                     };

@@ -171,6 +171,25 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     });
 
+    // Reset Identity Handler
+    const resetIdentityBtn = document.getElementById('btn-reset-identity');
+    if (resetIdentityBtn) {
+        resetIdentityBtn.addEventListener('click', async () => {
+            if (!confirm("Esto eliminará tu identidad GCM actual y forzará una nueva. ¿Deseas continuar?")) return;
+            
+            try {
+                const res = await fetch('/api/fcm/reset', { method: 'POST' });
+                const data = await res.json();
+                if (data.success) {
+                    alert("Identidad reiniciada. Por favor, vuelve a vincular tu token.");
+                    window.location.reload();
+                }
+            } catch (e) {
+                console.error("Error resetting identity:", e);
+            }
+        });
+    }
+
     // Load Initial Data
     async function loadData() {
         try {

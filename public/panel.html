@@ -80,9 +80,13 @@
                             <span style="font-size:0.85rem; color:var(--text-secondary);">Requiere Steam Guard Activo y Cuenta de Comercio ($5 USD).</span>
                         </div>
 
-                        <div style="display:flex; flex-direction:column; gap:12px;">
                             <input type="password" id="inp-auth-token" placeholder="Pega el Facepunch Auth Token..." class="form-input">
-                            <button class="btn btn-primary" id="btn-enable-fcm">Activar Conectividad Push</button>
+                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                <button class="btn btn-primary" id="btn-enable-fcm" style="flex:1;">Activar Conectividad Push</button>
+                                <button id="btn-reset-identity" title="Reiniciar Identidad GCM" style="background:transparent; border:none; cursor:pointer; padding:5px; color:var(--text-dim); margin-left:10px;">
+                                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                                </button>
+                            </div>
                         </div>
 
                         <!-- Deep Scan Timeline Integrated -->
