@@ -46,8 +46,15 @@ module.exports = {
             const channel = DiscordTools.getTextChannelById(client, guildId, channelId);
 
             if (!channel) {
-                client.log(client.intlGet(null, 'errorCap'),
-                    client.intlGet(null, 'couldNotGetChannelWithId', { id: channelId }), 'error');
+                if (typeof client.log === 'function') {
+                    client.log(
+                        typeof client.intlGet === 'function' ? client.intlGet(null, 'errorCap') : 'Error',
+                        typeof client.intlGet === 'function' ? client.intlGet(null, 'couldNotGetChannelWithId', { id: channelId }) : `Could not get channel ${channelId}`,
+                        'error'
+                    );
+                } else {
+                    console.error(`[ERROR] Could not get channel with id: ${channelId}`);
+                }
                 return;
             }
 

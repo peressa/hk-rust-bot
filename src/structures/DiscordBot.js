@@ -75,9 +75,9 @@ class DiscordBot extends Discord.Client {
         this.voiceLeaveTimeouts = new Object();
 
         // ===================================================================
-        // RESILIENCIA ATÓMICA: Vincular métodos críticos a la instancia
-        // Esto garantiza que client.log y client.intlGet SIEMPRE existan
-        // sin importar cómo se pase el objeto client a los módulos hijos.
+        // RESILIENCIA ATÓMICA: Vincular métodos críticos a la instancia PRIMERO
+        // DEBE ejecutarse ANTES de loadDiscordEvents() para garantizar que
+        // los métodos estén disponibles cuando los eventos se disparen.
         // ===================================================================
         this.log = this.log.bind(this);
         this.intlGet = this.intlGet.bind(this);

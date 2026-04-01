@@ -28,12 +28,22 @@ const DiscordSelectMenus = require('./discordSelectMenus.js');
 const DiscordTools = require('./discordTools.js');
 
 module.exports = async (client, guild, forced = false) => {
+    // helpers locales de resiliencia - SIEMPRE proteger client.log
+    const _intlGet = (guildId, id, vars = {}) => {
+        if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+        return id;
+    };
+    const _log = (title, msg, level = 'info') => {
+        if (typeof client.log === 'function') return client.log(title, msg, level);
+        console.log(`[${level.toUpperCase()}] ${title}: ${msg}`);
+    };
+
     const instance = client.getInstance(guild.id);
     const channel = DiscordTools.getTextChannelById(guild.id, instance.channelId.settings);
 
     if (!channel) {
-        client.log(client.intlGet(null, 'errorCap'), 'SetupSettingsMenu: ' +
-            client.intlGet(null, 'invalidGuildOrChannel'), 'error');
+        _log(_intlGet(null, 'errorCap'), 'SetupSettingsMenu: ' +
+            _intlGet(null, 'invalidGuildOrChannel'), 'error');
         return;
     }
 
