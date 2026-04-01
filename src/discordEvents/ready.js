@@ -35,6 +35,11 @@ module.exports = {
             return Intl.get(id, vars);
         };
 
+        const _log = (title, msg, level = 'info') => {
+            if (typeof client.log === 'function') return client.log(title, msg, level);
+            console.log(`[${level.toUpperCase()}] ${title}: ${msg}`);
+        };
+
         for (const guild of client.guilds.cache) {
             require('../util/CreateInstanceFile')(client, guild[1]);
             require('../util/CreateCredentialsFile')(client, guild[1]);
@@ -42,7 +47,7 @@ module.exports = {
         }
 
         client.loadGuildsIntl();
-        client.log(_intlGet(null, 'infoCap'), _intlGet(null, 'loggedInAs', {
+        _log(_intlGet(null, 'infoCap'), _intlGet(null, 'loggedInAs', {
             name: client.user.tag
         }));
 

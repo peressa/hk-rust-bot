@@ -45,27 +45,31 @@ module.exports = async (client, guild) => {
         return Intl.get(id, vars);
     };
 
+    const _log = (title, msg, level = 'info') => {
+        if (typeof client.log === 'function') return client.log(title, msg, level);
+        console.log(`[${level.toUpperCase()}] ${title}: ${msg}`);
+    };
+
     const appId = client.application?.id || client.user?.id;
     const rest = new Rest.REST({ version: '9' }).setToken(Config.discord.token);
 
     if (!appId) {
-        client.log(_intlGet(null, 'errorCap'), 'No se pudo obtener el ID de la aplicacion de Discord.', 'error');
+        _log(_intlGet(null, 'errorCap'), 'No se pudo obtener el ID de la aplicacion de Discord.', 'error');
         return;
     }
 
     try {
         await rest.put(Types.Routes.applicationGuildCommands(appId, guild.id), { body: commands });
-        client.log(_intlGet(null, 'infoCap'),
+        _log(_intlGet(null, 'infoCap'),
             _intlGet(null, 'slashCommandsSuccessRegister', { guildId: guild.id }));
     }
     catch (e) {
-        client.log(
+        _log(
             _intlGet(null, 'errorCap'),
             _intlGet(null, 'couldNotRegisterSlashCommands', { guildId: guild.id }) +
             _intlGet(null, 'makeSureApplicationsCommandsEnabled'),
             'error'
         );
         console.error('[SlashCommands] API Error:', e);
-        // SaaS FIX: Nunca matar la plataforma por fallos de red/API con Discord.
     }
 };

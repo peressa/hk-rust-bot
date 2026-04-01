@@ -18,6 +18,23 @@ if (typeof Discord.Client.prototype.intlGet !== 'function') {
     };
 }
 
+// SECURITY FALLBACK: Parche de Prototipo para el método log
+if (typeof Discord.Client.prototype.log !== 'function') {
+    Discord.Client.prototype.log = function(title: string, text: string, level: string = 'info') {
+        const t = title || 'Info';
+        const msg = text || '';
+        try {
+            if ((this as any).logger && typeof (this as any).logger.log === 'function') {
+                (this as any).logger.log(t, msg, level);
+            } else {
+                console.log(`[${level.toUpperCase()}] ${t}: ${msg}`);
+            }
+        } catch (e) {
+            console.log(`[${level.toUpperCase()}] ${t}: ${msg}`);
+        }
+    };
+}
+
 const Fs = require('fs');
 const Path = require('path');
 const db = require('./src/structures/database');
