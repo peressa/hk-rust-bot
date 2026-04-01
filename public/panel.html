@@ -59,6 +59,55 @@
         .kill-killer { font-weight: 600; color: #facc15; }
         .kill-target { font-weight: 600; color: #ef4444; }
         .kill-time { color: var(--text-muted); font-size: 0.75rem;}
+
+        /* Deep Scan UI Integration */
+        .diag-timeline { margin-top: 20px; position: relative; }
+        .diag-step { 
+            background: rgba(255,255,255,0.03); 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            padding: 12px 16px; 
+            margin-bottom: 10px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            transition: all 0.3s;
+            font-size: 0.85rem;
+        }
+        .diag-step.active { border-color: var(--accent); background: rgba(56, 189, 248, 0.05); }
+        .diag-step.done { border-color: var(--success); }
+        .diag-step.fail { border-color: #ef4444; }
+        
+        .diag-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); font-size: 0.8rem; }
+        .diag-step.active .diag-icon { animation: pulse 2s infinite; color: var(--accent); }
+        
+        .diag-check-item { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; transition: color 0.3s; }
+        .diag-check-item .bullet { font-size: 0.9rem; width: 20px; display: inline-block; text-align: center; }
+        
+        .diag-terminal { 
+            margin-top: 20px; 
+            background: #05080f; 
+            border-radius: 10px; 
+            padding: 15px; 
+            height: 140px; 
+            overflow-y: auto; 
+            font-family: 'JetBrains Mono', 'Consolas', monospace; 
+            font-size: 0.75rem; 
+            color: #4ade80; 
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            display: none;
+            scroll-behavior: smooth;
+        }
+        .diag-line { margin-bottom: 6px; border-left: 2px solid transparent; padding-left: 10px; line-height: 1.4; }
+        .diag-line.info { border-color: var(--accent); color: #e2e8f0; }
+        .diag-line.error { border-color: #ef4444; color: #fca5a5; }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4); transform: scale(1); }
+            70% { box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); transform: scale(1.05); }
+            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -139,6 +188,29 @@
                             <p style="font-size:0.75rem; color:#facc15;">* Obtén tu token en <a href="https://companion-rust.facepunch.com/login" target="_blank" style="color:#facc15; text-decoration:underline;">Facepunch Login</a></p>
                             <button class="btn btn-outline" id="btn-enable-fcm">Vincular Steam + Rust+</button>
                         </div>
+
+                        <!-- Deep Scan Integrated UI -->
+                        <div class="diag-timeline" id="diag-timeline" style="display:none;">
+                            <div class="diag-step" id="step-gcm">
+                                <div class="diag-icon">📶</div>
+                                <div class="diag-content">GCM Identidad de Dispositivo</div>
+                            </div>
+                            <div class="diag-step" id="step-fp">
+                                <div class="diag-icon">🔗</div>
+                                <div class="diag-content">Sincronización Facepunch</div>
+                            </div>
+                        </div>
+
+                        <div class="diag-checklist" id="diag-checklist">
+                            <div style="font-weight:600; font-size:0.8rem; color:var(--accent); margin-bottom:10px;">📋 Requisitos de Cuenta</div>
+                            <div class="diag-check-item" id="chk-rust"><span class="bullet">⚪</span> Propiedad de Rust</div>
+                            <div class="diag-check-item" id="chk-guard"><span class="bullet">⚪</span> Steam Guard Activo</div>
+                            <div class="diag-check-item" id="chk-limited"><span class="bullet">⚪</span> Comercio ($5 USD)</div>
+                            <div class="diag-check-item" id="chk-token"><span class="bullet">⚪</span> AuthToken Match</div>
+                        </div>
+
+                        <div class="diag-terminal" id="diag-terminal"></div>
+                    </div>
                     </div>
 
                     <div class="action-card">

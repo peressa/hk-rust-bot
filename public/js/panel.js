@@ -50,61 +50,125 @@ document.addEventListener('DOMContentLoaded', () => {
         pairModal.classList.add('hidden');
     });
 
+    // Helper Functions for Diagnostics
+    function logDiag(msg, type = 'info') {
+        const terminal = document.getElementById('diag-terminal');
+        const line = document.createElement('div');
+        line.className = `diag-line ${type}`;
+        line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+        terminal.appendChild(line);
+        terminal.scrollTop = terminal.scrollHeight;
+    }
+
+    function updateDiagStep(id, status) {
+        const card = document.getElementById(`step-${id}`);
+        if (!card) return;
+        card.className = 'diag-step ' + status;
+        const icon = card.querySelector('.diag-icon');
+        if (status === 'done') icon.textContent = '✅';
+        if (status === 'fail') icon.textContent = '❌';
+        if (status === 'active') icon.textContent = '⏳';
+    }
+
+    function updateDiagChecklist(id, status) {
+        const item = document.getElementById(`chk-${id}`);
+        if (!item) return;
+        const bullet = item.querySelector('.bullet');
+        if (status === 'done') { bullet.textContent = '✅'; item.style.color = 'var(--success)'; }
+        if (status === 'fail') { bullet.textContent = '❌'; item.style.color = 'var(--error)'; }
+        if (status === 'loading') { bullet.textContent = '⏳'; item.style.color = 'var(--accent)'; }
+    }
+
     enableFcmBtn.addEventListener('click', async () => {
         let authToken = document.getElementById('inp-auth-token').value.trim();
         
-        // Smart Token Extraction: Si el usuario pega el JSON o el script de Facepunch
+        // Smart Token Extraction
         if (authToken.includes('Token') || authToken.includes('{')) {
             try {
-                // Intentar extraer de JSON dentro de un string (postMessage pattern)
                 const tokenMatch = authToken.match(/"Token":\s*"([^"]+)"/);
                 if (tokenMatch && tokenMatch[1]) {
                     authToken = tokenMatch[1];
                 } else {
-                    // Intentar extraer si pegó solo el JSON limpio
                     const parsed = JSON.parse(authToken.replace(/\\"/g, '"'));
                     if (parsed.Token) authToken = parsed.Token;
                 }
             } catch (e) {
-                console.warn("No se pudo parsear como JSON, intentando regex crudo...");
                 const rawMatch = authToken.match(/ey[A-Za-z0-9._\-\/\\+=]+/);
                 if (rawMatch) authToken = rawMatch[0];
             }
         }
 
         if (!authToken || authToken.length < 50) {
-            alert("No parece un token válido. Por favor, pega el bloque de código que te dio Facepunch o el token que empieza por 'eyJ...'");
+            alert("No parece un token válido. Por favor, pega el bloque de código que te dio Facepunch.");
             return;
         }
 
-        enableFcmBtn.innerHTML = "Generando Tokens FCM...";
-        enableFcmBtn.disabled = true;
+        // Show UI Elements
+        document.getElementById('diag-timeline').style.display = 'block';
+        document.getElementById('diag-checklist').style.display = 'block';
+        document.getElementById('diag-terminal').style.display = 'block';
         
-        try {
-            const req = await fetch('/api/pair/init', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ authToken })
-            });
-            if (req.status === 200) {
-                enableFcmBtn.innerHTML = "FCM Activo. Listo.";
-                enableFcmBtn.classList.replace('btn-outline', 'btn-primary');
-                
-                document.getElementById('kpi-fcm').innerText = "Activo";
-                document.getElementById('kpi-fcm').classList.remove('warning');
-                document.getElementById('kpi-fcm').classList.add('ok');
+        // Reset states
+        ['gcm', 'fp'].forEach(s => updateDiagStep(s, ''));
+        ['rust', 'guard', 'limited', 'token'].forEach(c => updateDiagChecklist(c, 'loading'));
+        document.getElementById('diag-terminal').innerHTML = '';
 
-                pairBtn.disabled = false;
-                alert("Cuenta vinculada a notificaciones de capa baja. Ahora puedes avanzar al Paso 2: 'Escanear In-Game'.");
-            } else {
-                throw new Error("Failed server interaction");
+        enableFcmBtn.innerHTML = "Vinculando...";
+        enableFcmBtn.disabled = true;
+
+        logDiag("Iniciando handshake seguro con Google y Facepunch...", 'info');
+        
+        const sseUrl = `/api/fcm/stream?token=${encodeURIComponent(authToken)}`;
+        const events = new EventSource(sseUrl);
+
+        events.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.step === 'final') {
+                if (data.status === 'success') {
+                    logDiag("¡Vinculación completada con éxito!", 'info');
+                    ['gcm', 'fp'].forEach(s => updateDiagStep(s, 'done'));
+                    ['rust', 'guard', 'limited', 'token'].forEach(c => updateDiagChecklist(c, 'done'));
+                    
+                    enableFcmBtn.innerHTML = "FCM Activo. Listo.";
+                    enableFcmBtn.classList.replace('btn-outline', 'btn-primary');
+                    
+                    document.getElementById('kpi-fcm').innerText = "Activo";
+                    document.getElementById('kpi-fcm').classList.remove('warning');
+                    document.getElementById('kpi-fcm').classList.add('ok');
+                    pairBtn.disabled = false;
+                } else {
+                    logDiag(`Error Crítico: ${data.msg}`, 'error');
+                    updateDiagStep('fp', 'fail');
+                    
+                    if (data.msg.includes('LIMITED')) updateDiagChecklist('limited', 'fail');
+                    if (data.msg.includes('OWNED')) updateDiagChecklist('rust', 'fail');
+                    if (data.msg.includes('REQUIRED')) updateDiagChecklist('guard', 'fail');
+                    if (data.msg.includes('INVALID')) updateDiagChecklist('token', 'fail');
+
+                    enableFcmBtn.innerHTML = "Error. Reintentar";
+                    enableFcmBtn.disabled = false;
+                }
+                events.close();
+                return;
             }
-        } catch (e) {
-            enableFcmBtn.innerHTML = "Error. Reintentar";
+
+            logDiag(data.msg, data.status === 'error' ? 'error' : 'info');
+
+            // Map SSE steps to UI
+            if (data.step === 'gcm_checkin') updateDiagStep('gcm', 'active');
+            if (data.step === 'gcm_register') {
+                updateDiagStep('gcm', 'done');
+                updateDiagChecklist('gcm', 'done');
+            }
+            if (data.step === 'fp_link') updateDiagStep('fp', 'active');
+        };
+
+        events.onerror = () => {
+            logDiag("Conexión perdida con el servidor de diagnóstico.", 'error');
             enableFcmBtn.disabled = false;
-            console.error(e);
-            alert("No se pudo contactar con los servidores de Rust+ (Google Cloud).");
-        }
+            events.close();
+        };
     });
 
     // Load Initial Data

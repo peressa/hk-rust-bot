@@ -159,10 +159,10 @@ router.get('/api/events/combatlog', ensureAuthenticated, (req, res) => {
 });
 
 // ============================================
-// DIAGNÓSTICO VISUAL DE VINCULACIÓN (SSE)
+// SISTEMA DE VINCULACIÓN EN TIEMPO REAL (SSE)
 // ============================================
 
-router.get('/api/debug/pair/stream', ensureAuthenticated, (req, res) => {
+router.get('/api/fcm/stream', ensureAuthenticated, (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -184,9 +184,7 @@ router.get('/api/debug/pair/stream', ensureAuthenticated, (req, res) => {
         }
     });
 
-    req.on('close', () => {
-        // Nada que abortar por ahora, dejamos que termine el registro
-    });
+    req.on('close', () => {});
 });
 
 // ============================================
@@ -200,11 +198,6 @@ router.get('/', (req, res) => {
 // Sirve la nueva versión moderna del dashboard
 router.get('/panel', ensureAuthenticated, (req, res) => {
     res.sendFile(path.join(__dirname, '../../public/panel.html'));
-});
-
-// Ruta para el diagnóstico visual
-router.get('/debug-pairing', ensureAuthenticated, (req, res) => {
-    res.sendFile(path.join(__dirname, '../../public/debug-pairing.html'));
 });
 
 module.exports = router;

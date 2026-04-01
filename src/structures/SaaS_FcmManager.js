@@ -245,12 +245,19 @@ class FcmManager {
                 });
 
                 if (fpResponse.status === 200) {
+                    const credentials = {
+                        gcm: { androidId, securityToken }
+                    };
+
                     // Guardar en DB
                     db.updateUserFCM(steamId, {
-                        gcm: { androidId, securityToken },
+                        ...credentials,
                         pushToken: pushToken
                     });
                     
+                    // Arrancar el listener inmediatamente
+                    this.startListenerForUser(steamId, credentials);
+
                     onProgress('fp_link', '¡Vinculación EXITOSA con Facepunch!', 'success');
                     onProgress('final', 'Tu sistema de notificaciones de Rust+ está listo y verificado.', 'success');
                 }
