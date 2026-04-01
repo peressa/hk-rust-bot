@@ -1,6 +1,7 @@
 const PushReceiverClient = require('@liamcottle/push-receiver/src/client');
-const register = require('@liamcottle/push-receiver/src/register');
+const { register: registerGCM } = require('@liamcottle/push-receiver/src/gcm');
 const db = require('./database');
+const crypto = require('crypto');
 
 class FcmManager {
     constructor(discordBot) {
@@ -8,11 +9,25 @@ class FcmManager {
         this.fcmListeners = new Map();
     }
 
-    // Registra un nuevo dispositivo "virtual" FCM para el usuario que recién vincula su cuenta
+    // Registra un nuevo dispositivo "virtual" GCM para el usuario que recién vincula su cuenta
+    // Omitimos FCM (404) porque no es necesario para el socket MCS del bot.
     async registerNewDevice(steamId) {
         try {
             console.log(`[FCM] Generando credenciales Push-Receiver para usuario ${steamId}...`);
-            const credentials = await register('976529667804'); // Rust+ Firebase Project ID
+            
+            // Generar un appId único (formato Chrome/Electron)
+            const appId = `wp:receiver.push.com#${crypto.randomUUID()}`;
+            
+            // Realizar registro GCM (evitando el bug de 'interior hyphen' y el 404 de FCM)
+            // Pasamos undefined para androidId y securityToken para obtener unos nuevos.
+            const subscription = await registerGCM(undefined, undefined, appId);
+            
+            const credentials = {
+                gcm: {
+                    androidId: subscription.androidId,
+                    securityToken: subscription.securityToken
+                }
+            };
             
             // Guardar en base de datos
             db.updateUserFCM(steamId, credentials);
