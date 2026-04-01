@@ -31,19 +31,19 @@ const Intl = require('../util/intl');
 const DiscordTools = require('../discordTools/discordTools.js');
 const InstanceUtils = require('../util/instanceUtils.js');
 const Map = require('../util/map.js');
-const Scrape = require('../util/scrape.js');
+const Scrape = require('../util/map.js');
+
+const _intlGet = (guildId, id, vars = {}) => {
+    if (client && typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+    return Intl.get(id, vars);
+};
+
+const _log = (title, msg, level = 'info') => {
+    if (client && typeof client.log === 'function') return client.log(title, msg, level);
+    Intl.log(title, msg, level);
+};
 
 module.exports = async (client, guild) => {
-    // helpers locales de resiliencia
-    const _intlGet = (guildId, id, vars = {}) => {
-        if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
-        return Intl.get(id, vars);
-    };
-
-    const _log = (title, msg, level = 'info') => {
-        if (typeof client.log === 'function') return client.log(title, msg, level);
-        Intl.log(title, msg, level);
-    };
 
     const credentials = InstanceUtils.readCredentialsFile(guild.id);
     const hoster = credentials.hoster;

@@ -1,4 +1,5 @@
 const { checkIn: gcmCheckIn } = require('@liamcottle/push-receiver/src/gcm');
+const { Client: PushReceiverClient } = require('@liamcottle/push-receiver');
 const db = require('./database');
 const crypto = require('crypto');
 const axios = require('axios');
@@ -223,12 +224,14 @@ class FcmManager {
     // ============================================
     async registerDeviceWithFacepunch(steamId, androidId, pushToken) {
         try {
-            console.log(`[FCM] Vinculando AndroidID ${androidId} con Facepunch para SteamID ${steamId}...`);
+            // Facepunch espera el AndroidID en formato Hexadecimal de 16 caracteres.
+            const hexDeviceId = BigInt(androidId).toString(16).padStart(16, '0');
+            console.log(`[FCM] Vinculando DeviceId(Hex) ${hexDeviceId} con Facepunch para SteamID ${steamId}...`);
             
             // Endpoint oficial de Rust+ para registrar dispositivos de notificaciones
             const response = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                 ServerType: "Official",
-                DeviceId: androidId.toString(),
+                DeviceId: hexDeviceId,
                 DeviceName: "HK Rust Bot",
                 PushService: 1, // 1 = GCM/FCM
                 PushToken: pushToken,

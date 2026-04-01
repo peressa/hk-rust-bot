@@ -40,8 +40,19 @@ if (typeof Discord.Client.prototype._safeIntlGet !== 'function') {
     };
 }
 
-// Los métodos log e intlGet ahora se definen directamente en la clase DiscordBot
-// para asegurar que siempre estén disponibles y correctamente vinculados.
+// PARCHE DE RESILIENCIA GLOBAL: Asegurar que log e intlGet siempre existan en el cliente
+if (typeof Discord.Client.prototype.log !== 'function') {
+    Discord.Client.prototype.log = function(title: string, text: string, level: string = 'info') {
+        const Intl = require('./src/util/intl');
+        return Intl.log(title, text, level);
+    };
+}
+if (typeof Discord.Client.prototype.intlGet !== 'function') {
+    Discord.Client.prototype.intlGet = function(guildId: string | null, id: string, vars: any = {}) {
+        const Intl = require('./src/util/intl');
+        return Intl.get(id, vars);
+    };
+}
 
 const Fs = require('fs');
 const Path = require('path');
