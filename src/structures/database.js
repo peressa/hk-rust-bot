@@ -29,9 +29,13 @@ class DB {
             )
         `).run();
 
-        // Migración: Asegurar que existe la columna auth_token
+        // Migración: Asegurar que existe la columna auth_token y stable_device_id
         try {
             this.db.prepare('ALTER TABLE users ADD COLUMN auth_token TEXT').run();
+        } catch(e) { /* Columna ya existe */ }
+        
+        try {
+            this.db.prepare('ALTER TABLE users ADD COLUMN stable_device_id TEXT').run();
         } catch(e) { /* Columna ya existe */ }
 
         // Tabla de Configuración y Enrutamiento de Discord
@@ -175,6 +179,11 @@ class DB {
     updateUserFCM(steamId, fcmCredentials) {
         return this.db.prepare('UPDATE users SET fcm_credentials = ? WHERE steam_id = ?')
             .run(fcmCredentials ? JSON.stringify(fcmCredentials) : null, steamId);
+    }
+
+    updateUserStableDeviceId(steamId, stableDeviceId) {
+        return this.db.prepare('UPDATE users SET stable_device_id = ? WHERE steam_id = ?')
+            .run(stableDeviceId, steamId);
     }
 
     // ============================================

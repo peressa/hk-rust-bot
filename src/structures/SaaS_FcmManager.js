@@ -222,15 +222,21 @@ class FcmManager {
             // Paso 3: Facepunch Link
             onProgress('fp_link', 'Sincronizando con los servidores de Facepunch...', 'loading');
             
-            // RESET DE IDENTIDAD (LEGACY HEX): Facepunch exige 16-char hex para Android
-            const crypto = require('crypto');
-            const hexDeviceId = crypto.randomBytes(8).toString('hex').toLowerCase(); 
+            // GENERACIÓN DE ID ESTABLE (UUID): Facepunch v3004 exige persistencia para no perder la sesión
+            let stableDeviceId = user ? user.stable_device_id : null;
+            if (!stableDeviceId) {
+                const { randomUUID } = require('crypto');
+                stableDeviceId = randomUUID();
+                db.updateUserStableDeviceId(steamId, stableDeviceId);
+                console.log(`[FCM-V3004] Generado nuevo stableDeviceId (UUID) para ${steamId}: ${stableDeviceId}`);
+            } else {
+                console.log(`[FCM-V3004] Usando stableDeviceId persistente: ${stableDeviceId}`);
+            }
             
             try {
-                console.log(`[FCM-V3004] Registering with Legacy Hex ID: ${hexDeviceId}`);
                 const fpResponse = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                     serverType: "Official",
-                    deviceId: hexDeviceId,
+                    deviceId: stableDeviceId,
                     deviceName: "HK-RUST Pro",
                     pushService: 1, // Entero 1 (FCM Android)
                     pushToken: pushToken,
@@ -241,9 +247,10 @@ class FcmManager {
                         'Content-Type': 'application/json',
                         'Authorization': authToken,
                         'X-Rust-Companion-App-Version': '3004',
-                        'User-Agent': 'Rust/3004 (Android; 13; Pixel 7) CFNetwork/1410.0.3'
+                        'X-Rust-Companion-Device-Id': stableDeviceId,
+                        'User-Agent': 'Rust/3004 (Android; 13; Pixel 7)'
                     },
-                    timeout: 20000 // Más tiempo para handshake v3
+                    timeout: 20000 
                 });
 
                 if (fpResponse.status === 200) {
@@ -460,9 +467,16 @@ class FcmManager {
     // ============================================
     async registerDeviceWithFacepunch(steamId, androidId, pushToken, authToken = null) {
         try {
-            // Facepunch espera el AndroidID en formato Hexadecimal de 16 caracteres.
-            const hexDeviceId = BigInt(androidId).toString(16).padStart(16, '0');
-            console.log(`[FCM] Vinculando DeviceId(Hex) ${hexDeviceId} con Facepunch para SteamID ${steamId}...`);
+            const user = db.getUser(steamId);
+            let stableDeviceId = user ? user.stable_device_id : null;
+            
+            if (!stableDeviceId) {
+                const { randomUUID } = require('crypto');
+                stableDeviceId = randomUUID();
+                db.updateUserStableDeviceId(steamId, stableDeviceId);
+            }
+
+            console.log(`[FCM] Vinculando DeviceId(UUID) ${stableDeviceId} con Facepunch para SteamID ${steamId}...`);
             
             if (!authToken) {
                 console.warn(`[FCM] ADVERTENCIA: No se encontró AuthToken para ${steamId}. La vinculación probablemente falle.`);
@@ -471,7 +485,7 @@ class FcmManager {
             // Endpoint oficial de Rust+ para registrar dispositivos de notificaciones
             const response = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                 serverType: "Official",
-                deviceId: hexDeviceId,
+                deviceId: stableDeviceId,
                 deviceName: "HK Rust Bot",
                 pushService: 1, // 1 = GCM/FCM
                 pushToken: pushToken,
@@ -481,7 +495,9 @@ class FcmManager {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': authToken,
-                    'User-Agent': 'Rust/2507 (Android; 11; Google Pixel 4) CFNetwork/1410.0.3' 
+                    'X-Rust-Companion-App-Version': '3004',
+                    'X-Rust-Companion-Device-Id': stableDeviceId,
+                    'User-Agent': 'Rust/3004 (Android; 13; Pixel 7)' 
                 },
                 timeout: 10000
             });
