@@ -222,16 +222,17 @@ class FcmManager {
             // Paso 3: Facepunch Link
             onProgress('fp_link', 'Sincronizando con los servidores de Facepunch...', 'loading');
             
-            // RESET DE IDENTIDAD: Usar un UUID fresco para evitar registros fantasmas
+            // RESET DE IDENTIDAD (LEGACY HEX): Facepunch exige 16-char hex para Android
             const crypto = require('crypto');
-            const hexDeviceId = crypto.randomUUID().toLowerCase(); // Asegurar minúsculas
+            const hexDeviceId = crypto.randomBytes(8).toString('hex').toLowerCase(); 
             
             try {
+                console.log(`[FCM-V3004] Registering with Legacy Hex ID: ${hexDeviceId}`);
                 const fpResponse = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                     serverType: "Official",
                     deviceId: hexDeviceId,
                     deviceName: "HK-RUST Pro",
-                    pushService: 1, // REVERTIR A ENTERO (1) para v3004
+                    pushService: 1, // Entero 1 (FCM Android)
                     pushToken: pushToken,
                     steamId: steamId,
                     authToken: authToken
