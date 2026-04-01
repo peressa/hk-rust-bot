@@ -57,7 +57,10 @@ class FcmManager {
                         }
                     );
 
-                    const pushToken = registerResponse.data.split('=')[1];
+                    // Extraer token de forma segura (Google devuelve token=... seguido opcionalmente de otros campos y saltos de línea)
+                    const parts = registerResponse.data.split('\n');
+                    let pushToken = parts.find(p => p.startsWith('token='))?.split('=')[1]?.trim();
+                    
                     if (pushToken && !registerResponse.data.includes('Error')) {
                         break; // Éxito
                     }
@@ -77,7 +80,8 @@ class FcmManager {
                 }
             }
 
-            const pushToken = registerResponse.data.split('=')[1];
+            const gcmResponseParts = registerResponse.data.split('\n');
+            const pushToken = gcmResponseParts.find(p => p.startsWith('token='))?.split('=')[1]?.trim();
 
 
             const credentials = {
@@ -268,7 +272,7 @@ class FcmManager {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': authToken,
-                    'User-Agent': 'Rust/2507 CFNetwork/1410.0.3 Darwin/22.6.0' 
+                    'User-Agent': 'Rust/2507 (Android; 11; Google Pixel 4) CFNetwork/1410.0.3' 
                 },
                 timeout: 10000
             });
@@ -283,6 +287,12 @@ class FcmManager {
             if (error.response) {
                 console.error(`[FCM] RESPUESTA FACEPUNCH RAW (${error.response.status}):`, error.response.data);
                 console.error(`[FCM] HEADERS RESPUESTA:`, error.response.headers);
+                
+                if (error.response.status === 500) {
+                    console.warn(`[FCM] >>> ADVERTENCIA IMPORTANTE: Error 500 detectado.`);
+                    console.warn(`[FCM] >>> Facepunch suele rechazar vinculaciones de cuentas sin STEAM GUARD activo.`);
+                    console.warn(`[FCM] >>> Por favor, activa Steam Guard (Mobile Authenticator) en la cuenta ${steamId} e intenta de nuevo.`);
+                }
             }
             // No lanzamos el error duro para no romper el proceso de arranque de otros usuarios,
             // pero el usuario verá el fallo en los logs si intenta vincular.
