@@ -75,12 +75,25 @@ class DiscordBot extends Discord.Client {
         this.voiceLeaveTimeouts = new Object();
 
         // ===================================================================
-        // RESILIENCIA ATÓMICA: Vincular métodos críticos a la instancia PRIMERO
-        // DEBE ejecutarse ANTES de loadDiscordEvents() para garantizar que
-        // los métodos estén disponibles cuando los eventos se disparen.
+        // RESILIENCIA ABSOLUTA: Object.defineProperty hace que log e intlGet
+        // sean IMPOSIBLES de ser undefined en esta instancia, sin importar
+        // qué haga Discord.js internally con el objeto.
         // ===================================================================
-        this.log = this.log.bind(this);
-        this.intlGet = this.intlGet.bind(this);
+        const _self = this;
+        const _boundLog = function(title, text, level) { return _self._logImpl(title, text, level); };
+        const _boundIntlGet = function(guildId, id, variables) { return _self._intlGetImpl(guildId, id, variables); };
+
+        Object.defineProperty(this, 'log', {
+            get: () => _boundLog,
+            configurable: true,
+            enumerable: true
+        });
+
+        Object.defineProperty(this, 'intlGet', {
+            get: () => _boundIntlGet,
+            configurable: true,
+            enumerable: true
+        });
 
         this.loadDiscordCommands();
         this.loadDiscordEvents();
@@ -158,7 +171,7 @@ class DiscordBot extends Discord.Client {
         }
     }
 
-    intlGet(guildId, id, variables = {}) {
+    _intlGetImpl(guildId, id, variables = {}) {
         try {
             const intl = (this.guildIntl && this.guildIntl[guildId]) || this.botIntl || this.enIntl;
             if (intl) {
@@ -236,32 +249,31 @@ class DiscordBot extends Discord.Client {
         console.log(`[CentralBot] Enrutados ${loaded} servidores de Rust+ a Guilds de Discord.`);
     }
 
-    log(title, text, level = 'info') {
+    _logImpl(title, text, level = 'info') {
         const Colors = (() => {
             try { return require('colors'); } catch(e) { 
                 return { green: s=>s, red: s=>s, yellow: s=>s };
             }
         })();
         const t = title || 'Info';
-        const msg = text || '';
+        const msg = (text !== undefined && text !== null) ? String(text) : '';
+        const lvl = level || 'info';
         const time = new Date().toISOString().replace('T', ' ').substring(0, 19);
-        const levelStr = (level || 'info').toUpperCase();
 
         // Siempre escribir en consola primero (no depende de archivos)
-        const consoleMsg = `${time} ${levelStr}: ${t}: ${msg}`;
-        if (level === 'error') {
-            try { console.log(Colors.green(`${time} `) + Colors.red(`${t}: ${msg}`)); }
-            catch(e) { console.log(consoleMsg); }
+        if (lvl === 'error') {
+            try { console.log(Colors.green(`${time} `) + Colors.red(`ERROR: ${t}: ${msg}`)); }
+            catch(e) { console.log(`${time} ERROR: ${t}: ${msg}`); }
         } else {
-            try { console.log(Colors.green(`${time} `) + Colors.yellow(`${t}: ${msg}`)); }
-            catch(e) { console.log(consoleMsg); }
+            try { console.log(Colors.green(`${time} `) + Colors.yellow(`${lvl.toUpperCase()}: ${t}: ${msg}`)); }
+            catch(e) { console.log(`${time} ${lvl.toUpperCase()}: ${t}: ${msg}`); }
         }
 
-        // Intentar escribir en archivo (opcional, no crítico)
+        // Escribir en archivo via Logger.js (firma correcta: title, text, level)
         try {
             if (this.logger && typeof this.logger.log === 'function') {
-                const winstonLevel = (level === 'error') ? 'error' : (level === 'warning') ? 'warn' : 'info';
-                this.logger.log({ level: winstonLevel, message: `${time} | ${t}: ${msg}` });
+                const winstonLevel = (lvl === 'error') ? 'error' : (lvl === 'warning' || lvl === 'warn') ? 'warn' : 'info';
+                this.logger.log(t, msg, winstonLevel);
             }
         } catch(e) {
             // Silenciosamente ignorar errores de escritura en archivo
