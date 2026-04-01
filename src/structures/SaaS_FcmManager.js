@@ -223,13 +223,13 @@ class FcmManager {
 
             // Paso 3: Facepunch Link
             onProgress('fp_link', 'Sincronizando con los servidores de Facepunch...', 'loading');
-            const hexDeviceId = BigInt(androidId).toString(16).padStart(16, '0');
+            const hexDeviceId = BigInt(androidId).toString(16).padStart(16, '0').toLowerCase();
             
             try {
                 const fpResponse = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                     serverType: "Official",
                     deviceId: hexDeviceId,
-                    deviceName: "HK Debugger",
+                    deviceName: "HK-RUST Mobile",
                     pushService: 1,
                     pushToken: pushToken,
                     steamId: steamId,
@@ -349,6 +349,7 @@ class FcmManager {
     }
 
     async handlePushData(steamId, data) {
+        console.log(`[FCM-TRAZA] Notificación recibida para SteamID ${steamId}:`, JSON.stringify(data));
         const appData = data.appData;
         if (!appData) return;
 
@@ -357,8 +358,11 @@ class FcmManager {
         const channelId = appData.find(item => item.key === 'channelId')?.value;
         const bodyRaw = appData.find(item => item.key === 'body')?.value;
 
+        console.log(`[FCM-TRAZA] Channel: ${channelId}, Title: ${title}`);
+
         if (!bodyRaw) return;
         const body = JSON.parse(bodyRaw);
+        console.log(`[FCM-TRAZA] Body Type: ${body.type}`);
 
         // ============================================
         // 1. EMPAREJAMIENTO DE SERVIDOR (Zero-Friction)

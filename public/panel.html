@@ -3,304 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard | HK-RUST</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Dashboard — HK RUST</title>
     <link rel="stylesheet" href="/css/panel.css">
     <style>
-        .form-input {
-            background-color: rgba(255,255,255,0.05);
-            border: 1px solid var(--border);
-            color: var(--text-main);
-            padding: 10px 14px;
-            border-radius: 6px;
-            font-family: inherit;
-            font-size: 0.9rem;
-            outline: none;
-            transition: border-color 0.2s;
-        }
-        .killfeed-container {
-            background-color: #0b0f19; /* Darker terminal look */
-            border: 1px solid #1a2333;
-            border-radius: 8px;
-            padding: 16px;
-            height: 250px;
-            overflow-y: hidden;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-end;
-        }
-
-        .kill-entry {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: linear-gradient(90deg, rgba(239, 68, 68, 0.1) 0%, transparent 100%);
-            border-left: 2px solid #ef4444;
-            padding: 8px 12px;
-            margin-top: 8px;
-            border-radius: 0 4px 4px 0;
-            font-family: 'Consolas', monospace; /* Game server console aesthetic */
-            font-size: 0.85rem;
-            animation: slideIn 0.3s ease-out forwards;
-        }
-
-        .kill-entry.connected {
-            background: linear-gradient(90deg, rgba(16, 185, 129, 0.1) 0%, transparent 100%);
-            border-left: 2px solid #10b981;
-            color: #10b981;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .kill-killer { font-weight: 600; color: #facc15; }
-        .kill-target { font-weight: 600; color: #ef4444; }
-        .kill-time { color: var(--text-muted); font-size: 0.75rem;}
-
-        /* Deep Scan UI Integration */
-        .diag-timeline { margin-top: 20px; position: relative; }
-        .diag-step { 
-            background: rgba(255,255,255,0.03); 
-            border: 1px solid var(--border); 
-            border-radius: 8px; 
-            padding: 12px 16px; 
-            margin-bottom: 10px; 
-            display: flex; 
-            align-items: center; 
-            gap: 12px; 
-            transition: all 0.3s;
-            font-size: 0.85rem;
-        }
-        .diag-step.active { border-color: var(--accent); background: rgba(56, 189, 248, 0.05); }
-        .diag-step.done { border-color: var(--success); }
-        .diag-step.fail { border-color: #ef4444; }
-        
-        .diag-icon { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); font-size: 0.8rem; }
-        .diag-step.active .diag-icon { animation: pulse 2s infinite; color: var(--accent); }
-        
-        .diag-check-item { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 10px; transition: color 0.3s; }
-        .diag-check-item .bullet { font-size: 0.9rem; width: 20px; display: inline-block; text-align: center; }
-        
-        .diag-terminal { 
-            margin-top: 20px; 
-            background: #05080f; 
-            border-radius: 10px; 
-            padding: 15px; 
-            height: 140px; 
-            overflow-y: auto; 
-            font-family: 'JetBrains Mono', 'Consolas', monospace; 
-            font-size: 0.75rem; 
-            color: #4ade80; 
-            border: 1px solid rgba(255,255,255,0.05);
-            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
-            display: none;
-            scroll-behavior: smooth;
-        }
-        .diag-line { margin-bottom: 6px; border-left: 2px solid transparent; padding-left: 10px; line-height: 1.4; }
-        .diag-line.info { border-color: var(--accent); color: #e2e8f0; }
-        .diag-line.error { border-color: #ef4444; color: #fca5a5; }
-
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4); transform: scale(1); }
-            70% { box-shadow: 0 0 0 8px rgba(56, 189, 248, 0); transform: scale(1.05); }
-            100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0); transform: scale(1); }
-        }
+        /* Animation utility */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: fadeIn 0.5s ease-out forwards; }
     </style>
 </head>
 <body>
     <div class="app-layout">
-        <!-- Sidebar -->
+        <!-- Sidebar Premium -->
         <aside class="sidebar">
             <div class="brand">
-                <span class="logo-text">HK<span class="dim">-RUST</span></span>
+                <span class="logo-text">HK<span style="color:var(--accent)">RUST</span></span>
                 <div class="badge-pro">PRO</div>
             </div>
 
             <nav class="side-nav">
                 <a href="#" class="nav-item active" id="nav-overview">
-                    <svg viewBox="0 0 24 24" fill="none" class="icon"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path><polyline points="9 22 9 12 15 12 15 22" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></polyline></svg>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
                     Resumen
                 </a>
                 <a href="#" class="nav-item" id="nav-servers">
-                    <svg viewBox="0 0 24 24" fill="none" class="icon"><rect x="2" y="2" width="20" height="8" rx="2" ry="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></rect><line x1="6" y1="6" x2="6.01" y2="6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line><line x1="6" y1="18" x2="6.01" y2="18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></line></svg>
-                    Tus Servidores
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect><rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect><line x1="6" y1="6" x2="6.01" y2="6"></line><line x1="6" y1="18" x2="6.01" y2="18"></line></svg>
+                    Lista de Servidores
                 </a>
                 <a href="#" class="nav-item" id="nav-discord">
-                    <svg viewBox="0 0 24 24" fill="none" class="icon"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.18 15.11s-1.46-.88-2.61-1.28c-.1-.04-.15-.15-.12-.25.04-.13.43-1.15.53-1.42.06-.16-.01-.33-.16-.41-1.39-.73-2.52-2.12-2.83-3.61-.15-.69-.02-1.38.36-1.92.35-.49.88-.79 1.48-.84.22-.02.43-.17.51-.38.16-.41.27-.86.32-1.34.03-.31-.19-.58-.5-.61C12.55 5.01 11.28 5 10 5c-3.86 0-7 3.14-7 7s3.14 7 7 7c1.78 0 3.41-.67 4.65-1.78.11-.1.29-.11.41-.02.6.43 1.35.84 1.35.84.14.07.26-.06.18-.19-.34-.51-.76-1.25-1.04-1.87-.06-.13.01-.29.13-.35.48-.25 1.05-.72 1.49-1.39.09-.14-.07-.29-.21-.19z" fill="currentColor"/></svg>
-                    Integración Discord
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                    Alertas Discord
                 </a>
-                <a href="#" class="nav-item hidden" id="nav-admin" style="margin-top:20px; color:#ef4444;">
-                    <svg viewBox="0 0 24 24" fill="none" class="icon"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    Ajustes de Admin
+                <a href="#" class="nav-item hidden" id="nav-admin" style="margin-top:20px; color:var(--danger);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    Admin Stats
                 </a>
             </nav>
 
             <div class="user-block">
-                <div class="user-info">
-                    <img id="user-avatar" src="" alt="Avatar" class="avatar-img">
-                    <div class="user-details">
-                        <span id="user-name" class="name">Cargando...</span>
-                        <span class="status-indicator"><span class="dot online"></span> Conectado</span>
-                    </div>
+                <img id="user-avatar" src="" alt="" class="avatar-img">
+                <div class="user-details">
+                    <span id="user-name" class="name">Cargando...</span>
+                    <span class="status-indicator"><span class="dot"></span> Online</span>
                 </div>
-                <a href="/auth/logout" class="logout-btn">Salir</a>
             </div>
         </aside>
 
-        <!-- Main Content -->
+        <!-- Main Content Area -->
         <main class="content-area">
-            <header class="topbar">
-                <h1 class="page-title" id="page-title">HK RUST — Clan Companion</h1>
+            <header class="topbar animate-in">
+                <h1 class="page-title" id="page-title">Bienvenido, Superviviente</h1>
             </header>
 
             <div class="content-wrapper" id="view-overview">
-                <!-- Status Row -->
-                <div class="kpi-grid">
-                    <div class="kpi-card">
-                        <div class="kpi-title">ESTADO DEL EQUIPO</div>
-                        <div class="kpi-value" id="kpi-servers">Online</div>
+                <!-- Status Dashboard -->
+                <div class="kpi-grid animate-in" style="animation-delay: 0.1s;">
+                    <div class="glass-card">
+                        <div class="kpi-title">Servidores Activos</div>
+                        <div class="kpi-value" id="kpi-servers">0</div>
                     </div>
-                    <div class="kpi-card">
-                        <div class="kpi-title">ESTADO DE RUST+</div>
+                    <div class="glass-card">
+                        <div class="kpi-title">Sincronización Rust+</div>
                         <div class="kpi-value warning" id="kpi-fcm">Pendiente</div>
                     </div>
                 </div>
 
+                <!-- Main Actions -->
                 <div class="actions-grid">
-                    <div class="action-card">
-                        <div class="action-header">
-                            <h3>1. Vinculación Única</h3>
-                        <p class="text-muted">Conecta tu cuenta de Steam con Rust+ una sola vez. HK Rust se encargará de protegerte en cada wipe automáticamente.</p>
+                    <div class="glass-card animate-in" style="animation-delay: 0.2s;">
+                        <h3 style="margin-bottom:15px; font-weight:600;">Configurar Rust+ (Paso 1)</h3>
+                        <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:20px;">
+                            Vincula tu cuenta única de Steam. Esta operación es permanente y el bot se auto-gestionará en cada wipe.
+                        </p>
                         
-                        <div style="margin-top:15px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 5px;">
-                            <h4 style="color: #ef4444; margin-bottom: 5px; font-size: 0.9rem;">⚠️ Requisito: Steam Guard</h4>
-                            <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
-                                <strong>Steam Guard</strong> debe estar activo. Facepunch rechazará la conexión si la cuenta no tiene protección móvil o por email (Error 500).
-                            </p>
+                        <div style="background: hsla(200, 100%, 55%, 0.05); border: 1px solid var(--accent-glow); padding: 15px; border-radius: 16px; margin-bottom: 20px;">
+                            <span style="color:var(--accent); font-weight:600; font-size:0.8rem; display:block; margin-bottom:5px;">💡 DATO TÉCNICO</span>
+                            <span style="font-size:0.85rem; color:var(--text-secondary);">Requiere Steam Guard Activo y Cuenta de Comercio ($5 USD).</span>
                         </div>
 
-                        <div style="margin-top:10px; display:flex; flex-direction:column; gap:10px;">
-                            <label style="font-size:0.8rem; color:var(--text-muted);">Facepunch Auth Token (Requerido):</label>
-                            <input type="password" id="inp-auth-token" placeholder="Pega tu token aquí..." class="form-input" style="width:100%;">
-                            <p style="font-size:0.75rem; color:#facc15;">* Obtén tu token en <a href="https://companion-rust.facepunch.com/login" target="_blank" style="color:#facc15; text-decoration:underline;">Facepunch Login</a></p>
-                            <button class="btn btn-outline" id="btn-enable-fcm">Vincular Steam + Rust+</button>
+                        <div style="display:flex; flex-direction:column; gap:12px;">
+                            <input type="password" id="inp-auth-token" placeholder="Pega el Facepunch Auth Token..." class="form-input">
+                            <button class="btn btn-primary" id="btn-enable-fcm">Activar Conectividad Push</button>
                         </div>
 
-                        <!-- Deep Scan Integrated UI -->
+                        <!-- Deep Scan Timeline Integrated -->
                         <div class="diag-timeline" id="diag-timeline" style="display:none;">
                             <div class="diag-step" id="step-gcm">
                                 <div class="diag-icon">📶</div>
-                                <div class="diag-content">GCM Identidad de Dispositivo</div>
+                                <div class="diag-content">GCM Device Identity Handshake</div>
                             </div>
                             <div class="diag-step" id="step-fp">
                                 <div class="diag-icon">🔗</div>
-                                <div class="diag-content">Sincronización Facepunch</div>
+                                <div class="diag-content">Facepunch Master Sync</div>
                             </div>
-                        </div>
+                            
+                            <div id="diag-checklist" style="display:none; margin-top:20px; padding:15px; background:rgba(0,0,0,0.2); border-radius:12px;">
+                                <div class="diag-check-item" id="chk-rust"><span class="bullet">⚪</span> Propiedad de Rust</div>
+                                <div class="diag-check-item" id="chk-guard"><span class="bullet">⚪</span> Steam Guard</div>
+                                <div class="diag-check-item" id="chk-limited"><span class="bullet">⚪</span> Status $5 USD</div>
+                                <div class="diag-check-item" id="chk-token"><span class="bullet">⚪</span> Token Integrity</div>
+                            </div>
 
-                        <div class="diag-checklist" id="diag-checklist">
-                            <div style="font-weight:600; font-size:0.8rem; color:var(--accent); margin-bottom:10px;">📋 Requisitos de Cuenta</div>
-                            <div class="diag-check-item" id="chk-rust"><span class="bullet">⚪</span> Propiedad de Rust</div>
-                            <div class="diag-check-item" id="chk-guard"><span class="bullet">⚪</span> Steam Guard Activo</div>
-                            <div class="diag-check-item" id="chk-limited"><span class="bullet">⚪</span> Comercio ($5 USD)</div>
-                            <div class="diag-check-item" id="chk-token"><span class="bullet">⚪</span> AuthToken Match</div>
+                            <div class="diag-terminal" id="diag-terminal" style="display:none;"></div>
                         </div>
-
-                        <div class="diag-terminal" id="diag-terminal"></div>
-                    </div>
                     </div>
 
-                    <div class="action-card">
-                        <div class="action-header">
-                            <h3>2. Vincular In-Game</h3>
-                            <button class="btn btn-primary" id="btn-pair-server" disabled>Escanear Servidor</button>
-                        </div>
-                        <p class="text-muted">Entrá al servidor, abrí el menú de Rust+ (tecla <kbd>ESC</kbd>) y elegí "Emparejar con Servidor".</p>
+                    <div class="glass-card animate-in" style="animation-delay: 0.3s;">
+                        <h3 style="margin-bottom:15px; font-weight:600;">Escanear Servidor (Paso 2)</h3>
+                        <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:20px;">
+                            Una vez activa la conectividad Push, entra a tu servidor favorito y usa el menú de Rust+ (ESC) para emparejar.
+                        </p>
+                        <button class="btn btn-outline" id="btn-pair-server" disabled style="width:100%;">Iniciar Escáner In-Game</button>
                     </div>
                 </div>
 
-                <!-- Live Killfeed / Combat Log -->
-                <div class="action-card mt-4" style="margin-top:24px;">
-                    <h3>Live Combat Log 🔴</h3>
-                    <p class="text-muted">Killfeed y despistes de jugadores en tiempo real interceptados en tu red de Rust+.</p>
-                    
-                    <div class="killfeed-container mt-4" id="killfeed-list">
-                        <!-- Items inyectados via SSE -->
-                        <div class="kill-entry connected" id="kf-status">
-                            <span>[SYSTEM] Esperando conexión de telemetría...</span>
-                        </div>
+                <!-- Live Combat Feed -->
+                <div class="glass-card mt-4 animate-in" style="margin-top:30px; animation-delay: 0.4s;">
+                    <h3 style="margin-bottom:15px; font-weight:600;">Live Combat Telemetry 🔴</h3>
+                    <div id="killfeed-list" style="max-height: 300px; overflow-y: auto;">
+                        <div style="color:var(--text-dim); text-align:center; padding:20px;">Sintonizando con la red de Rust+...</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Server Management View -->
+            <!-- Views: Servers, Discord, Admin -->
             <div class="content-wrapper hidden" id="view-servers">
-                <div class="servers-list" id="servers-container">
-                    <!-- Dynamic servers injected here -->
-                </div>
+                <div id="servers-container" class="animate-in"></div>
             </div>
             
-            <!-- Discord Integration View -->
             <div class="content-wrapper hidden" id="view-discord">
-                <div class="action-card" style="margin-bottom:24px;">
-                    <h3>1. Añadir el Bot a tu Servidor</h3>
-                    <p class="text-muted">Para que las alertas y el chat bidireccional funcionen, debes invitar a nuestro bot oficial a tu servidor de Discord.</p>
-                    <a href="https://discord.com/api/oauth2/authorize?client_id=1327144438318174249&permissions=8&scope=bot" target="_blank" class="btn btn-blurple mt-4">Invitar Bot de HK</a>
-                </div>
-                
-                <div class="action-card">
-                    <h3>2. Enrutar Canales</h3>
-                    <p class="text-muted">Copia los IDs haciendo click derecho en Discord ("Copiar ID de canal"). Necesitas habilitar el Modo Desarrollador en Discord para ver esto.</p>
-                    <div style="margin-top:20px; display:flex; flex-direction:column; gap:12px; max-width:400px;">
-                        <input type="text" id="inp-guild" placeholder="ID del Servidor (Guild ID)" class="form-input">
-                        <input type="text" id="inp-chat" placeholder="ID del Canal de Chat" class="form-input">
-                        <input type="text" id="inp-alert" placeholder="ID del Canal de Alertas" class="form-input">
-                        <button class="btn btn-primary mt-4" id="btn-save-discord">Guardar Configuración</button>
+                <div class="glass-card animate-in">
+                    <h3 style="margin-bottom:20px;">Integración de Canales</h3>
+                    <div style="display:grid; gap:15px; max-width:450px;">
+                        <input type="text" id="inp-guild" placeholder="Server ID" class="form-input">
+                        <input type="text" id="inp-chat" placeholder="Channel Chat ID" class="form-input">
+                        <input type="text" id="inp-alert" placeholder="Channel Alarms ID" class="form-input">
+                        <button class="btn btn-primary" id="btn-save-discord">Guardar Cambios</button>
                     </div>
                 </div>
             </div>
 
-            <!-- Admin View -->
             <div class="content-wrapper hidden" id="view-admin">
-                <div class="action-card" style="margin-bottom:24px;">
-                    <h3>Estadísticas en Vivo</h3>
-                    <p class="text-muted">Métricas de salud del proceso bot SaaS.</p>
-                    <div class="kpi-grid mt-4">
-                        <div class="kpi-card" style="padding:15px;"><div class="kpi-title">USO RAM</div><div class="kpi-value" id="admin-ram">-</div></div>
-                        <div class="kpi-card" style="padding:15px;"><div class="kpi-title">CONEXIONES RUST+</div><div class="kpi-value" id="admin-ws">-</div></div>
-                        <div class="kpi-card" style="padding:15px;"><div class="kpi-title">USUARIOS</div><div class="kpi-value" id="admin-users">-</div></div>
-                        <div class="kpi-card" style="padding:15px;"><div class="kpi-title">SERVIDORES</div><div class="kpi-value" id="admin-servers">-</div></div>
-                    </div>
-                    <button class="btn btn-outline mt-4" id="btn-refresh-admin">Refrescar Informacion</button>
-                </div>
+                <div class="kpi-grid" id="admin-stats-grid"></div>
             </div>
         </main>
     </div>
 
-    <!-- UI Modal -->
+    <!-- Modal Scan In-Game -->
     <div id="pairing-modal" class="modal-overlay hidden">
-        <div class="modal" style="text-align: left; min-width: 400px;">
-            <div style="display:flex; justify-content:center; margin-bottom: 20px;">
-                <div class="radar-spinner"></div>
-            </div>
-            <h3 style="text-align:center;">Esperando ping de Rust+...</h3>
-            <p class="text-muted" style="text-align:center; margin-bottom: 20px;">El sistema está escuchando. Sigue estos pasos dentro del juego:</p>
-            
-            <ol style="color: var(--text-main); line-height: 1.8; margin-left: 20px; font-size: 0.95rem;">
-                <li>Entra al servidor de Rust que deseas vincular.</li>
-                <li>Presiona la tecla <strong>ESC</strong>.</li>
-                <li>Haz clic en la pestaña <strong>Rust+</strong> en el menú.</li>
-                <li>Haz clic en el botón verde <strong>"Emparejar con Servidor"</strong>.</li>
-            </ol>
-            
-            <p class="text-muted" style="text-align:center; font-size: 0.85rem; margin-top: 20px;">Esta ventana se cerrará automáticamente al detectar tu servidor.</p>
-            
-            <div style="text-align:center;">
-                <button class="btn btn-outline mt-4" id="btn-cancel-pair">Cancelar</button>
-            </div>
+        <div class="glass-card" style="text-align: center; max-width: 450px;">
+            <div class="radar-spinner"></div>
+            <h3 style="margin-bottom:10px;">Buscando Señal del Servidor...</h3>
+            <p style="color:var(--text-secondary); font-size:0.9rem; margin-bottom:20px;">
+                Elegí "Emparejar con Servidor" en el menú de Rust+ dentro del juego.
+            </p>
+            <button class="btn btn-outline" id="btn-cancel-pair">Cancelar</button>
         </div>
     </div>
 
