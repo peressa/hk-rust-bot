@@ -276,9 +276,11 @@ class FcmManager {
         } catch (error) {
             console.error(`[FCM] Error crítico vinculando con Facepunch para ${steamId}:`, error.message);
             if (error.response) {
-                console.error(`[FCM] Detalle error Facepunch:`, JSON.stringify(error.response.data));
+                console.error(`[FCM] RESPUESTA FACEPUNCH RAW (${error.response.status}):`, error.response.data);
+                console.error(`[FCM] HEADERS RESPUESTA:`, error.response.headers);
             }
-            // No lanzamos el error para no bloquear el proceso, pero lo logueamos
+            // No lanzamos el error duro para no romper el proceso de arranque de otros usuarios,
+            // pero el usuario verá el fallo en los logs si intenta vincular.
         }
     }
 }

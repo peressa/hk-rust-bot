@@ -126,7 +126,14 @@
                             <h3>1. Habilitar Emparejamiento</h3>
                         <p class="text-muted">Autoriza a la plataforma a escuchar las notificaciones enviadas desde el juego para vincular servidores de forma transparente (Zero-Friction).</p>
                         
-                        <div style="margin-top:15px; display:flex; flex-direction:column; gap:10px;">
+                        <div style="margin-top:15px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 5px;">
+                            <h4 style="color: #ef4444; margin-bottom: 5px; font-size: 0.9rem;">⚠️ Requisito: Steam Guard</h4>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4;">
+                                <strong>Steam Guard</strong> debe estar activo. Facepunch rechazará la conexión si la cuenta no tiene protección móvil o por email (Error 500).
+                            </p>
+                        </div>
+
+                        <div style="margin-top:10px; display:flex; flex-direction:column; gap:10px;">
                             <label style="font-size:0.8rem; color:var(--text-muted);">Facepunch Auth Token (Requerido):</label>
                             <input type="password" id="inp-auth-token" placeholder="Pega tu token aquí..." class="form-input" style="width:100%;">
                             <p style="font-size:0.75rem; color:#facc15;">* Obtén tu token en <a href="https://companion-rust.facepunch.com/login" target="_blank" style="color:#facc15; text-decoration:underline;">Facepunch Login</a></p>

@@ -40,23 +40,30 @@ if (typeof Discord.Client.prototype._safeIntlGet !== 'function') {
     };
 }
 
-// PARCHE DE RESILIENCIA GLOBAL: Asegurar que log e intlGet siempre existan en el cliente
+// CARCHE DE SEGURIDAD ABSOLUTO: Exponer helpers globales
+(global as any).intlGet = (guildId: string | null, id: string, vars: any = {}) => {
+    return IntlHelper.get(id, vars);
+};
+(global as any)._log = (title: string, msg: string, level: string = 'info') => {
+    return IntlHelper.log(title, msg, level);
+};
+
 if (typeof Discord.Client.prototype.log !== 'function' || true) {
-    Object.defineProperty(Discord.Client.prototype, 'log', {
-        value: function(title: string, text: string, level: string = 'info') {
-            const Intl = require('./src/util/intl');
-            return Intl.log(title, text, level);
-        },
-        writable: true,
-        configurable: true
-    });
+    try {
+        Object.defineProperty(Discord.Client.prototype, 'log', {
+            value: function(title: string, text: string, level: string = 'info') {
+                return IntlHelper.log(title, text, level);
+            },
+            writable: false,
+            configurable: false
+        });
+    } catch(e) {}
 }
 if (typeof Discord.Client.prototype.intlGet !== 'function' || true) {
     try {
         Object.defineProperty(Discord.Client.prototype, 'intlGet', {
             value: function(guildId: string | null, id: string, vars: any = {}) {
-                const Intl = require('./src/util/intl');
-                return Intl.get(id, vars);
+                return IntlHelper.get(id, vars);
             },
             writable: false,
             configurable: false
