@@ -2,6 +2,8 @@ const express = require('express');
 const session = require('express-session');
 const passport = require('passport');
 const SteamStrategy = require('passport-steam').Strategy;
+const SQLiteStore = require('connect-sqlite3')(session);
+const path = require('path');
 const routes = require('./routes');
 const db = require('../structures/database');
 
@@ -57,8 +59,13 @@ class WebDashboard {
         this.app.use(session({
             secret: process.env.SESSION_SECRET || 'rustplusplus_secret_dashboard_key_2024',
             name: 'rustplusplus.session',
-            resave: true,
-            saveUninitialized: true,
+            store: new SQLiteStore({
+                db: 'rustplusplus_saas.db',
+                dir: path.join(__dirname, '../../data'),
+                table: 'sessions'
+            }),
+            resave: false,
+            saveUninitialized: false,
             cookie: {
                 secure: this.hostUrl.startsWith('https'),
                 maxAge: 24 * 60 * 60 * 1000 // 24 horas

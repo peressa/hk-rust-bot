@@ -1,5 +1,14 @@
 require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 
+// Suprimir advertencia de depreciación del módulo punycode (Node 21+)
+const originalEmit = process.emit;
+(process as any).emit = function (name: string, data: any, ...args: any[]) {
+  if (name === 'warning' && typeof data === 'object' && data.name === 'DeprecationWarning' && data.message.includes('punycode')) {
+    return false;
+  }
+  return originalEmit.apply(process, [name, data, ...args] as any);
+};
+
 // ==============================================================
 // RESILIENCIA ABSOLUTA: Parche de Prototipo via Object.defineProperty
 // Este nivel de blindaje es imposible de saltarse.

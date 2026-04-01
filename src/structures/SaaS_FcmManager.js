@@ -9,11 +9,18 @@ class FcmManager {
     constructor(discordBot) {
         this.discordBot = discordBot;
         this.fcmListeners = new Map();
+        this.inProgressRegistrations = new Set();
     }
 
     // Registra un nuevo dispositivo "virtual" GCM para el usuario que recién vincula su cuenta
     async registerNewDevice(steamId) {
+        if (this.inProgressRegistrations.has(steamId)) {
+            console.warn(`[FCM] Registro ya en curso para ${steamId}. Ignorando duplicado.`);
+            return;
+        }
+
         try {
+            this.inProgressRegistrations.add(steamId);
             console.log(`[FCM] Generando credenciales Push-Receiver para usuario ${steamId}...`);
             
             // 1. Generar credenciales GCM
@@ -65,10 +72,18 @@ class FcmManager {
                         break; // Éxito
                     }
                     
+                    if (registerResponse.data.includes('PHONE_REGISTRATION_ERROR')) {
+                         console.error(`[FCM] ERROR CRÍTICO para ${steamId}: Google denegó el registro (PHONE_REGISTRATION_ERROR).`);
+                         console.error(`[FCM] TIP: Esto suele ocurrir por demasiados intentos o IP marcada por Google.`);
+                         throw new Error('Google PHONE_REGISTRATION_ERROR');
+                    }
+
                     if (retry === 2) throw new Error(`Google denegó el registro GCM: ${registerResponse.data}`);
                     console.warn(`[FCM] Reintentando registro GCM para ${steamId} (${retry + 1})...`);
                     await new Promise(r => setTimeout(r, 2000));
                 } catch (err) {
+                    if (err.message.includes('PHONE_REGISTRATION_ERROR')) throw err;
+
                     if (retry === 2) {
                         if (err.response && err.response.status === 500) {
                             console.error(`[FCM] ERROR 500 DETECTADO para ${steamId}. ADVERTENCIA: Facepunch requiere Steam Guard ACTIVO. Si no lo tienes, la vinculación fallará siempre.`);
@@ -107,6 +122,8 @@ class FcmManager {
             console.error(`[FCM] Error crítico al registrar dispositivo para ${steamId}:`, error.message);
             if (error.response) console.error(`[FCM] Detalle error Google:`, error.response.data);
             throw error;
+        } finally {
+            this.inProgressRegistrations.delete(steamId);
         }
     }
 
