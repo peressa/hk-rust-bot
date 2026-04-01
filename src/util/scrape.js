@@ -19,7 +19,7 @@
 */
 
 const Axios = require('axios');
-
+const Intl = require('../util/intl');
 const Constants = require('../util/constants.js');
 const Utils = require('../util/utils.js');
 
@@ -34,10 +34,20 @@ module.exports = {
     },
 
     scrapeSteamProfilePicture: async function (client, steamId) {
+        const _intlGet = (guildId, id, vars = {}) => {
+            if (client && typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+            return Intl.get(id, vars);
+        };
+
+        const _log = (title, msg, level = 'info') => {
+            if (client && typeof client.log === 'function') return client.log(title, msg, level);
+            Intl.log(title, msg, level);
+        };
+
         const response = await module.exports.scrape(`${Constants.STEAM_PROFILES_URL}${steamId}`);
 
         if (response.status !== 200) {
-            client.log(client.intlGet(null, 'errorCap'), client.intlGet(null, 'failedToScrapeProfilePicture', {
+            _log(_intlGet(null, 'errorCap'), _intlGet(null, 'failedToScrapeProfilePicture', {
                 link: `${Constants.STEAM_PROFILES_URL}${steamId}`
             }), 'error');
             return null;
@@ -52,10 +62,20 @@ module.exports = {
     },
 
     scrapeSteamProfileName: async function (client, steamId) {
+        const _intlGet = (guildId, id, vars = {}) => {
+            if (client && typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+            return Intl.get(id, vars);
+        };
+
+        const _log = (title, msg, level = 'info') => {
+            if (client && typeof client.log === 'function') return client.log(title, msg, level);
+            Intl.log(title, msg, level);
+        };
+
         const response = await module.exports.scrape(`${Constants.STEAM_PROFILES_URL}${steamId}`);
 
         if (response.status !== 200) {
-            client.log(client.intlGet(null, 'errorCap'), client.intlGet(null, 'failedToScrapeProfileName', {
+            _log(_intlGet(null, 'errorCap'), _intlGet(null, 'failedToScrapeProfileName', {
                 link: `${Constants.STEAM_PROFILES_URL}${steamId}`
             }), 'error');
             return null;

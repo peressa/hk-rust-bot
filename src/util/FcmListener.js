@@ -27,24 +27,36 @@ const Constants = require('../util/constants.js');
 const DiscordButtons = require('../discordTools/discordButtons.js');
 const DiscordEmbeds = require('../discordTools/discordEmbeds.js');
 const DiscordMessages = require('../discordTools/discordMessages.js');
+const Intl = require('../util/intl');
 const DiscordTools = require('../discordTools/discordTools.js');
 const InstanceUtils = require('../util/instanceUtils.js');
 const Map = require('../util/map.js');
 const Scrape = require('../util/scrape.js');
 
 module.exports = async (client, guild) => {
+    // helpers locales de resiliencia
+    const _intlGet = (guildId, id, vars = {}) => {
+        if (typeof client.intlGet === 'function') return client.intlGet(guildId, id, vars);
+        return Intl.get(id, vars);
+    };
+
+    const _log = (title, msg, level = 'info') => {
+        if (typeof client.log === 'function') return client.log(title, msg, level);
+        Intl.log(title, msg, level);
+    };
+
     const credentials = InstanceUtils.readCredentialsFile(guild.id);
     const hoster = credentials.hoster;
 
     if (Object.keys(credentials).length === 1) {
-        client.log(client.intlGet(null, 'warningCap'),
-            client.intlGet(null, 'credentialsNotRegisteredForGuild', { id: guild.id }));
+        _log(_intlGet(null, 'warningCap'),
+            _intlGet(null, 'credentialsNotRegisteredForGuild', { id: guild.id }));
         return;
     }
 
     if (!hoster) {
-        client.log(client.intlGet(null, 'warningCap'),
-            client.intlGet(guild.id, 'credentialsHosterNotSetForGuild', { id: guild.id }));
+        _log(_intlGet(null, 'warningCap'),
+            _intlGet(guild.id, 'credentialsHosterNotSetForGuild', { id: guild.id }));
         return;
     }
 
@@ -55,7 +67,7 @@ module.exports = async (client, guild) => {
         delete client.fcmListenersLite[guild.id][hoster];
     }
 
-    client.log(client.intlGet(null, 'infoCap'), client.intlGet(null, 'fcmListenerStartHost', {
+    _log(_intlGet(null, 'infoCap'), _intlGet(null, 'fcmListenerStartHost', {
         guildId: guild.id,
         steamId: hoster
     }));
