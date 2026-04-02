@@ -32,10 +32,15 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
-# Crucial: copy the localized protos to the final image for the patched library to find them
-# In standalone mode, files needed at runtime should be accessible from the app root
-COPY --from=builder /app/src/lib/fcm/proto ./src/lib/fcm/proto
-COPY --from=builder /app/src/lib/rustplus/proto ./src/lib/rustplus/proto
+# Fix missing .proto files in standalone node_modules
+# We copy them from the builder's node_modules to the runner's node_modules
+RUN mkdir -p /app/node_modules/@liamcottle/rustplus.js/ \
+    && mkdir -p /app/node_modules/@liamcottle/push-receiver/src/gcm/ \
+    && mkdir -p /app/node_modules/@liamcottle/push-receiver/src/
+
+COPY --from=builder /app/node_modules/@liamcottle/rustplus.js/rustplus.proto /app/node_modules/@liamcottle/rustplus.js/rustplus.proto
+COPY --from=builder /app/node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto /app/node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto
+COPY --from=builder /app/node_modules/@liamcottle/push-receiver/src/mcs.proto /app/node_modules/@liamcottle/push-receiver/src/mcs.proto
 
 # Create data directory for persistency (SQLite)
 RUN mkdir -p /app/data
