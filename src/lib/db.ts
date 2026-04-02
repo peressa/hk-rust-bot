@@ -36,7 +36,8 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS fcm_keys (
     steamId TEXT PRIMARY KEY,
-    keys TEXT -- JSON string
+    keys TEXT, -- JSON string
+    deviceId TEXT -- UUID for Facepunch identification
   );
 `);
 

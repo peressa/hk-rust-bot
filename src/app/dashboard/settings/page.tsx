@@ -18,11 +18,25 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (res.ok) {
-        alert("¡Registro exitoso! Tu dispositivo ahora está vinculado con Facepunch.");
+        alert("¡Registro exitoso! Identidad UUID generada con éxito.");
         fetchStatus();
       } else {
-        alert("Error: " + data.error);
+        alert("Error: " + (data.error || "Fallo en el registro"));
       }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (!confirm("¿Estás seguro? Esto borrará tus credenciales actuales y detendrá la escucha de señales.")) return;
+    setLoading(true);
+    try {
+      await fetch("/api/fcm/unregister", { method: "POST" });
+      setAuthToken("");
+      fetchStatus();
     } catch (err) {
       console.error(err);
     } finally {
@@ -72,6 +86,25 @@ export default function SettingsPage() {
                 color={status?.hasKeys ? "#22c55e" : "#ef4444"} 
               />
             </div>
+            
+            {status?.hasKeys && (
+              <button 
+                onClick={handleReset}
+                style={{ 
+                  marginTop: '1.5rem', 
+                  fontSize: '0.75rem', 
+                  color: '#ef4444', 
+                  background: 'none', 
+                  border: 'none', 
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem'
+                }}
+              >
+                Resetear Conexión y Borrar Datos
+              </button>
+            )}
           </section>
 
           {/* Registration Section */}
@@ -91,7 +124,7 @@ export default function SettingsPage() {
                   value={authToken}
                   onChange={(e) => setAuthToken(e.target.value)}
                   placeholder="Introduce tu Token de Autenticación..." 
-                  style={{ flex: 1 }}
+                  style={{ flex: 1, background: 'rgba(0,0,0,0.2)', color: 'white' }}
                 />
                 <button 
                   className="btn-primary" 
@@ -101,8 +134,8 @@ export default function SettingsPage() {
                   {loading ? <RefreshCw size={18} className="animate-spin" /> : "Vincular Ahora"}
                 </button>
               </div>
-              <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
-                <strong>⚠️ Migración a Conexión Directa:</strong> Si ya estabas vinculado pero no ves tus servidores, por favor <strong>vuelve a vincularte</strong> ahora para activar la recepción inmediata de datos.
+              <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
+                <strong>⚠️ Solución de Conectividad:</strong> Si el bot no detecta tus servidores ("PHONE_REGISTRATION_ERROR"), usa el botón de <strong>Resetear</strong> arriba y vuelve a vincularte aquí para generar una nueva identidad UUID.
               </p>
               <a 
                 href="https://companion-rust.facepunch.com/" 
@@ -121,9 +154,9 @@ export default function SettingsPage() {
             <p style={{ fontSize: '0.85rem' }}>
               Una vez vinculado, las notificaciones de emparejamiento llegarán automáticamente. 
             </p>
-            <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+            <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
               <p style={{ fontSize: '0.75rem', color: '#fca5a5', margin: 0 }}>
-                <strong>⚠️ Nota para Coolify:</strong> Para que tus credenciales no se borren en cada actualización, asegúrate de añadir un <strong>Volume</strong> en tu panel de Coolify mapeando la carpeta <code>/app/data</code>.
+                <strong>⚠️ Nota para Coolify (Vital):</strong> Asegúrate de añadir un <strong>Volume</strong> en tu panel de Coolify mapeando la carpeta <code>/app/data</code>. Sin esto, perderás tu identidad cada vez que el bot se reinicie.
               </p>
             </div>
           </section>
@@ -135,9 +168,9 @@ export default function SettingsPage() {
 
 function StatusBox({ label, value, color }: { label: string, value: string, color: string }) {
   return (
-    <div style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
-      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{label}</div>
-      <div style={{ fontSize: '1.1rem', fontWeight: 700, color }}>{value}</div>
+    <div style={{ padding: '1.25rem', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
+      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{label}</div>
+      <div style={{ fontSize: '1.2rem', fontWeight: 800, color }}>{value}</div>
     </div>
   );
 }

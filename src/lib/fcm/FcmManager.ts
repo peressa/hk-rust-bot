@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from "uuid";
 import AndroidFCM from "@liamcottle/push-receiver/src/android/fcm";
 // @ts-ignore
 import PushReceiverClient from "@liamcottle/push-receiver/src/client";
+import { saveServer, saveEntity } from "../db";
 import db from "../db";
 
 const FCM_CONFIG = {
@@ -23,6 +24,9 @@ export class FcmManager {
   static async register(steamId: string, authToken: string) {
     console.log(`[FCM] Registering for ${steamId}`);
     
+    // Generate a permanent DeviceId for this user
+    const deviceId = `rust-web-${uuidv4().substring(0, 8)}`;
+    
     const fcmCredentials = await AndroidFCM.register(
       FCM_CONFIG.apiKey,
       FCM_CONFIG.projectId,
@@ -33,24 +37,23 @@ export class FcmManager {
     );
 
     // PushKind 1 is for native Android (FCM/GCM)
-    // PushKind 3 was for Expo, which we no longer use for direct bot reception
     await axios.post("https://companion-rust.facepunch.com:443/api/push/register", {
       AuthToken: authToken,
-      DeviceId: `rust-web-${steamId}`,
+      DeviceId: deviceId,
       PushKind: 1, 
       PushToken: fcmCredentials.fcm.token,
     });
 
-    console.log(`[FCM] Successfully registered native FCM with Facepunch for ${steamId}`);
+    console.log(`[FCM] Successfully registered native FCM with Facepunch for ${steamId}. Device: ${deviceId}`);
 
     // Save credentials to DB
-    const stmt = db.prepare("INSERT OR REPLACE INTO fcm_keys (steamId, keys) VALUES (?, ?)");
+    const stmt = db.prepare("INSERT OR REPLACE INTO fcm_keys (steamId, keys, deviceId) VALUES (?, ?, ?)");
     stmt.run(steamId, JSON.stringify({
       fcm_credentials: fcmCredentials,
       rustplus_auth_token: authToken,
-    }));
+    }), deviceId);
 
-    return { fcmCredentials };
+    return { fcmCredentials, deviceId };
   }
 
   static isListening(steamId: string): boolean {
@@ -76,11 +79,12 @@ export class FcmManager {
       return;
     }
 
-    const stmt = db.prepare("SELECT keys FROM fcm_keys WHERE steamId = ?");
+    const stmt = db.prepare("SELECT keys, deviceId FROM fcm_keys WHERE steamId = ?");
     const row = stmt.get(steamId) as any;
     if (!row) throw new Error("FCM not registered for this user");
 
     const config = JSON.parse(row.keys);
+    const deviceId = row.deviceId || `rust-web-${steamId}`; // Fallback if old
     const client = new PushReceiverClient(
       config.fcm_credentials.gcm.androidId,
       config.fcm_credentials.gcm.securityToken,
@@ -142,7 +146,6 @@ export class FcmManager {
         console.log(`[FCM] Detected Server Pairing! Info:`, server);
         
         try {
-          const { saveServer } = require("../db");
           saveServer(server);
           console.log(`[FCM] SUCCESS: Server saved correctly: ${server.name}`);
         } catch (err) {
@@ -160,7 +163,6 @@ export class FcmManager {
         console.log(`[FCM] Detected Entity Pairing! Info:`, entity);
 
         try {
-          const { saveEntity } = require("../db");
           saveEntity(entity);
           console.log(`[FCM] SUCCESS: Entity saved correctly: ${entity.name}`);
         } catch (err) {
