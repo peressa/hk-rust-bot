@@ -35,6 +35,7 @@ COPY --from=builder /app/.next/static ./.next/static
 # Crucial: copy the localized protos to the final image for the patched library to find them
 # In standalone mode, files needed at runtime should be accessible from the app root
 COPY --from=builder /app/src/lib/fcm/proto ./src/lib/fcm/proto
+COPY --from=builder /app/src/lib/rustplus/proto ./src/lib/rustplus/proto
 
 # Create data directory for persistency (SQLite)
 RUN mkdir -p /app/data

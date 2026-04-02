@@ -34,3 +34,11 @@ patchFile(
   "path.resolve(__dirname, 'mcs.proto')",
   `path.join(process.cwd(), 'src/lib/fcm/proto/mcs.proto')`
 );
+
+// Patch RustPlus for rustplus.proto
+const rustplusPath = path.join(process.cwd(), 'node_modules', '@liamcottle', 'rustplus.js', 'rustplus.js');
+patchFile(
+  rustplusPath,
+  'path.resolve(__dirname, "rustplus.proto")',
+  `path.join(process.cwd(), 'src/lib/rustplus/proto/rustplus.proto')`
+);
