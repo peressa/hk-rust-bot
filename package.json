@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "postinstall": "node scripts/fix-push-receiver.js"
   },
   "dependencies": {
     "@liamcottle/push-receiver": "^0.0.4",
