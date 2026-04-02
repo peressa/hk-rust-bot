@@ -32,15 +32,15 @@ class RustPlusManager extends EventEmitter {
       const rustplus = new RustPlus(
         connection.ip,
         connection.port,
-        connection.playerId,
-        connection.playerToken
+        connection.playerId.toString(), // Mantener como string para no perder precisión de 64 bits
+        parseInt(connection.playerToken)
       );
 
       const timeout = setTimeout(() => {
-        reject(new Error(`Connection timeout to ${connection.ip}`));
+        reject(new Error(`Connection timeout to ${connection.ip} after 30s`));
         this.connecting.delete(key);
         this.ready.set(key, false);
-      }, 15000); // 15s timeout
+      }, 30000); // Increased to 30s for high-pop servers like Rustoria
 
       rustplus.on("connected", () => {
         clearTimeout(timeout);

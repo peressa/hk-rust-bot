@@ -17,6 +17,7 @@ export default function ChatPage() {
   const [team, setTeam] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedServer, setSelectedServer] = useState<any>(null);
   const [servers, setServers] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -27,12 +28,14 @@ export default function ChatPage() {
 
   useEffect(() => {
     if (selectedServer) {
+      setMessages([]); // Reset al cambiar de servidor
+      setError(null);
       fetchChat(selectedServer.id);
       fetchTeam(selectedServer.id);
       const interval = setInterval(() => {
         fetchChat(selectedServer.id);
         fetchTeam(selectedServer.id);
-      }, 5000); // Poll every 5s
+      }, 5000); 
       return () => clearInterval(interval);
     }
   }, [selectedServer?.id]);
@@ -60,7 +63,13 @@ export default function ChatPage() {
     try {
       const res = await fetch(`/api/rustplus/chat?serverId=${serverId}`);
       const data = await res.json();
-      setMessages(data);
+      if (data.error) {
+        if (data.error.includes("timeout")) {
+          setError("Error de conexión al servidor (Timeout). Reintenta enviando un mensaje.");
+        }
+      } else {
+        setMessages(data);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -81,6 +90,7 @@ export default function ChatPage() {
     if (!newMessage.trim() || !selectedServer || sending) return;
 
     setSending(true);
+    setError(null);
     try {
       const res = await fetch("/api/rustplus/chat", {
         method: "POST",
@@ -89,12 +99,15 @@ export default function ChatPage() {
           message: newMessage
         })
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (!res.ok) {
+        setError(`Error al enviar: ${data.error || "Servidor no responde"}`);
+      } else {
         setNewMessage("");
         fetchChat(selectedServer.id);
       }
     } catch (err) {
-      console.error(err);
+      setError("Error crítico de red al contactar con el bot.");
     } finally {
       setSending(false);
     }
@@ -122,6 +135,12 @@ export default function ChatPage() {
           </select>
         </header>
 
+        {error && (
+          <div style={{ marginBottom: '1rem', padding: '1rem', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', color: '#ef4444', borderRadius: '8px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Shield size={16} /> {error}
+          </div>
+        )}
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: '1.5rem', flex: 1, minHeight: 0 }}>
           {/* Chat Window */}
           <div className="premium-card" style={{ display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', border: '1px solid var(--border)' }}>
@@ -133,6 +152,7 @@ export default function ChatPage() {
                 <div style={{ textAlign: 'center', opacity: 0.3, marginTop: '20%' }}>
                   <MessageSquare size={48} style={{ marginBottom: '1rem' }} />
                   <p>No hay mensajes recientes en esta frecuencia.</p>
+                  <p style={{ fontSize: '0.75rem', marginTop: '0.5rem' }}>Los mensajes empezarán a aparecer en cuanto el bot esté conectado y reciba una señal del servidor.</p>
                 </div>
               ) : (
                 messages.map((msg, i) => (
