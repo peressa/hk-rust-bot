@@ -3,12 +3,14 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  // In Next.js 15+, the key changed to serverExternalPackages
+  // Set output to standalone for optimized Docker deployment
+  output: 'standalone',
+  
+  // Moved from experimental to top-level in Next.js 14+
   serverExternalPackages: ["@liamcottle/push-receiver", "better-sqlite3"],
+  
   experimental: {
-    // Ensuring Turbopack respects the external packages
-    serverComponentsExternalPackages: ["@liamcottle/push-receiver", "better-sqlite3"],
-    instrumentationHook: true,
+    // Keep empty as instrumentationHook is default and other keys removed
   }
 };
 
