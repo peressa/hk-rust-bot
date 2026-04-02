@@ -21,6 +21,7 @@ export default function DashboardPage() {
   const [serverInfo, setServerInfo] = useState<any>(null);
   const [worldTime, setWorldTime] = useState<any>(null);
   const [entities, setEntities] = useState<any[]>([]);
+  const [storageMonitor, setStorageMonitor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [fcmStatus, setFcmStatus] = useState("Inactivo");
   const [hasKeys, setHasKeys] = useState(false);
@@ -34,13 +35,14 @@ export default function DashboardPage() {
   // Sync data when server changes
   useEffect(() => {
     if (selectedServer) {
-      setServerInfo(null); // Reset for transition effect
+      setServerInfo(null);
+      setStorageMonitor(null);
       fetchEntities(selectedServer.id);
       fetchServerData(selectedServer.id);
       const interval = setInterval(() => fetchServerData(selectedServer.id), 10000); 
       return () => clearInterval(interval);
     }
-  }, [selectedServer?.id]); // Use ID dependency
+  }, [selectedServer?.id]);
 
   const startFcmListener = async () => {
     try {
@@ -67,14 +69,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Poll for servers if empty
-  useEffect(() => {
-    if (servers.length === 0) {
-      const interval = setInterval(fetchServers, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [servers.length]);
-
   const fetchServerData = async (serverId: string) => {
     try {
       const [infoRes, timeRes] = await Promise.all([
@@ -83,6 +77,23 @@ export default function DashboardPage() {
       ]);
       setServerInfo(await infoRes.json());
       setWorldTime(await timeRes.json());
+
+      // If we have a storage monitor ID, poll its info too
+      if (storageMonitor?.entityId) {
+        fetchStorageMonitorInfo(serverId, storageMonitor.entityId);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchStorageMonitorInfo = async (serverId: string, entityId: string) => {
+    try {
+      const res = await fetch(`/api/rustplus/entity?serverId=${serverId}&entityId=${entityId}`);
+      const data = await res.json();
+      if (data.response?.entityInfo?.payload) {
+        setStorageMonitor((prev: any) => ({ ...prev, ...data.response.entityInfo.payload }));
+      }
     } catch (err) {
       console.error(err);
     }
@@ -91,8 +102,16 @@ export default function DashboardPage() {
   const fetchEntities = async (serverId: string) => {
     try {
       const res = await fetch(`/api/entities?serverId=${serverId}`);
-      const data = await res.json();
+      const data: any[] = await res.json();
       setEntities(data);
+      
+      // Look for Storage Monitor (Type 3)
+      const monitor = data.find(e => e.entityType === 3 || e.name?.toLowerCase().includes("monitor") || e.name?.toLowerCase().includes("armario"));
+      if (monitor) {
+        setStorageMonitor(monitor);
+        // Initial fetch handled inside fetchServerData but let's be sure
+        fetchStorageMonitorInfo(serverId, monitor.entityId);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -122,6 +141,19 @@ export default function DashboardPage() {
     const hours = Math.floor(time);
     const minutes = Math.floor((time - hours) * 60);
     return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  };
+
+  const formatUpkeep = (expireTime?: number) => {
+    if (!expireTime) return "---";
+    const seconds = expireTime - Math.floor(Date.now() / 1000);
+    if (seconds <= 0) return "¡SIN MANTENIMIENTO!";
+    
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+
+    if (days > 0) return `${days}d ${hours}h`;
+    return `${hours}h ${mins}m`;
   };
 
   return (
@@ -267,10 +299,21 @@ export default function DashboardPage() {
                       color={entities.some(e => e.name?.toLowerCase().includes('turret') || e.name?.toLowerCase().includes('torreta')) ? "#22c55e" : "#9ca3af"}
                     />
                     <StatusLine 
-                      label="Tiempo Mundo" 
-                      value={worldTime ? formatTime(worldTime.time) : "---"} 
-                      color="#22c55e"
+                      label="Mantenimiento" 
+                      value={storageMonitor ? formatUpkeep(storageMonitor.protectionExpireTime) : "Sin Monitor TC"} 
+                      color={storageMonitor ? (storageMonitor.protectionExpireTime - Math.floor(Date.now()/1000) > 86400 ? "#22c55e" : "#ef4444") : "#9ca3af"}
                     />
+                    {storageMonitor && (
+                      <div style={{ marginTop: '0.5rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
+                          <span>Capacidad TC</span>
+                          <span>{Math.round(((storageMonitor.items?.length || 0) / (storageMonitor.capacity || 24)) * 100)}%</span>
+                        </div>
+                        <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                          <div style={{ width: `${((storageMonitor.items?.length || 0) / (storageMonitor.capacity || 24)) * 100}%`, height: '100%', background: 'var(--primary)' }}></div>
+                        </div>
+                      </div>
+                    )}
                     <StatusLine 
                       label="Jugadores" 
                       value={serverInfo ? `${serverInfo.players || 0} / ${serverInfo.maxPlayers || 0}` : "---"} 

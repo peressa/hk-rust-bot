@@ -131,6 +131,12 @@ class RustPlusManager extends EventEmitter {
     });
   }
 
+  async getEntityInfo(steamId: string, ip: string, entityId: string) {
+    return this.sendRequest(steamId, ip, {
+      getEntityInfo: { entityId }
+    });
+  }
+
   getChatHistory(steamId: string, ip: string) {
     return this.chatHistory.get(`${steamId}-${ip}`) || [];
   }

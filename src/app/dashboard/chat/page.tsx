@@ -178,20 +178,65 @@ export default function ChatPage() {
                 <Users size={16} /> Equipo ({team.length})
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {team.map((m, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <div style={{ position: 'relative' }}>
-                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.05)', display: 'grid', placeItems: 'center', fontSize: '0.8rem' }}>
-                        {m.name?.charAt(0)}
+                {team.map((m, i) => {
+                  const isAlive = m.isAlive;
+                  const isOnline = m.isOnline;
+                  let statusLabel = isOnline ? "En servicio" : "Fuera de línea";
+                  let statusColor = isOnline ? "#22c55e" : "#374151";
+                  let subLabel = isOnline ? "En el campo" : "Desconectado";
+
+                  if (isOnline) {
+                    if (!isAlive) {
+                      statusLabel = "MUERTO";
+                      statusColor = "#ef4444";
+                      const deathDate = new Date(m.deathTime * 1000);
+                      subLabel = `Murió hace ${Math.floor((Date.now() - deathDate.getTime()) / 60000)}m`;
+                    } else {
+                      statusLabel = "VIVO";
+                      statusColor = "#22c55e";
+                      subLabel = "Posición Estable";
+                    }
+                  }
+
+                  return (
+                    <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', opacity: isOnline ? 1 : 0.5 }}>
+                      <div style={{ position: 'relative' }}>
+                        <div style={{ 
+                          width: '36px', 
+                          height: '36px', 
+                          borderRadius: '50%', 
+                          background: isAlive ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                          display: 'grid', 
+                          placeItems: 'center', 
+                          fontSize: '0.9rem',
+                          fontWeight: 700,
+                          border: `1px solid ${isAlive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                          color: isAlive ? '#22c55e' : '#ef4444'
+                        }}>
+                          {m.name?.charAt(0)}
+                        </div>
+                        <div style={{ 
+                          position: 'absolute', 
+                          bottom: 0, 
+                          right: 0, 
+                          width: '10px', 
+                          height: '10px', 
+                          borderRadius: '50%', 
+                          background: statusColor, 
+                          border: '2px solid var(--surface)',
+                          animation: !isAlive && isOnline ? 'blink 1s infinite' : 'none'
+                        }}></div>
                       </div>
-                      <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderRadius: '50%', background: m.isOnline ? '#22c55e' : '#374151', border: '2px solid var(--surface)' }}></div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.85rem', fontWeight: 600, color: isOnline ? 'white' : 'var(--text-muted)' }}>{m.name}</span>
+                          <span style={{ fontSize: '0.6rem', fontWeight: 800, color: statusColor }}>{statusLabel}</span>
+                        </div>
+                        <div style={{ fontSize: '0.65rem', opacity: 0.5 }}>{subLabel}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 600, color: m.isOnline ? 'white' : 'var(--text-muted)' }}>{m.name}</div>
-                      <div style={{ fontSize: '0.65rem', opacity: 0.5 }}>{m.isOnline ? "En servicio" : "Fuera de línea"}</div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
