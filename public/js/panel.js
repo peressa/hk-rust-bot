@@ -112,6 +112,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ['gcm', 'fp'].forEach(s => updateDiagStep(s, ''));
         ['rust', 'guard', 'limited', 'token'].forEach(c => updateDiagChecklist(c, 'loading'));
         document.getElementById('diag-terminal').innerHTML = '';
+        document.getElementById('btn-copy-logs').style.display = 'none';
 
         enableFcmBtn.innerHTML = "Vinculando...";
         enableFcmBtn.disabled = true;
@@ -126,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (data.step === 'final') {
                 if (data.status === 'success') {
-                    logDiag("¡Vinculación completada con éxito!", 'info');
+                    logDiag("¡Vinculación completada con éxito!", 'success');
                     ['gcm', 'fp'].forEach(s => updateDiagStep(s, 'done'));
                     ['rust', 'guard', 'limited', 'token'].forEach(c => updateDiagChecklist(c, 'done'));
                     
@@ -149,7 +150,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     enableFcmBtn.innerHTML = "Error. Reintentar";
                     enableFcmBtn.disabled = false;
                 }
+                document.getElementById('btn-copy-logs').style.display = 'block';
                 events.close();
+                return;
+            }
+
+            if (data.step === 'fcm_trace') {
+                logDiag(data.msg, 'trace');
                 return;
             }
 
@@ -167,8 +174,20 @@ document.addEventListener('DOMContentLoaded', () => {
         events.onerror = () => {
             logDiag("Conexión perdida con el servidor de diagnóstico.", 'error');
             enableFcmBtn.disabled = false;
+            document.getElementById('btn-copy-logs').style.display = 'block';
             events.close();
         };
+    });
+
+    // Copy Logs Logic
+    document.getElementById('btn-copy-logs').addEventListener('click', () => {
+        const terminal = document.getElementById('diag-terminal');
+        const text = terminal.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            const btn = document.getElementById('btn-copy-logs');
+            btn.innerText = "¡Copiado!";
+            setTimeout(() => btn.innerText = "Copiar Logs", 2000);
+        });
     });
 
     // Reset Identity Handler

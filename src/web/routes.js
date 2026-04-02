@@ -169,15 +169,33 @@ router.get('/api/fcm/stream', ensureAuthenticated, (req, res) => {
 
     const send = (data) => res.write(`data: ${JSON.stringify(data)}\n\n`);
     
-    const user = db.getUser(req.user.id);
-    const authToken = req.query.token || (user ? user.auth_token : null);
+    // Extraer token de Facepunch (query param)
+    const authToken = req.query.token;
 
     if (!authToken) {
         send({ step: 'init', msg: 'Falta Token de Facepunch', status: 'error' });
         return res.end();
     }
 
-    global.fcmManager.debugRegisterDevice(req.user.id, authToken, (step, msg, status) => {
+    // EXTRAER STEAMID DEL TOKEN (JWT Payload): Permite vincular a amigos aunque el admin esté logueado
+    let targetSteamId = req.user.id;
+    try {
+        const payloadBase64 = authToken.split('.')[1];
+        if (payloadBase64) {
+            const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString());
+            if (payload && payload.steamId) {
+                targetSteamId = payload.steamId;
+                console.log(`[SSE] Token detectado para cuenta de Steam: ${targetSteamId}`);
+                
+                // Asegurar que el usuario exista en DB antes de registrar (Caso de amigos externos)
+                db.upsertUser(targetSteamId, "Usuario Rust+");
+            }
+        }
+    } catch (e) {
+        console.warn(`[SSE] No se pudo decodificar el token para extraer SteamID, usando sesión actual.`);
+    }
+
+    global.fcmManager.debugRegisterDevice(targetSteamId, authToken, (step, msg, status) => {
         send({ step, msg, status });
         if (step === 'final') {
              setTimeout(() => res.end(), 1000);

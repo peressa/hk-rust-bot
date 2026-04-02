@@ -218,6 +218,7 @@ class FcmManager {
 
             const pushToken = registerResponse.data.split('=')[1]?.trim();
             onProgress('gcm_register', 'Token FCM obtenido correctamente.', 'success');
+            onProgress('fcm_trace', `ID DISPOSITIVO: ${androidId}`, 'info');
 
             // Paso 3: Facepunch Link
             onProgress('fp_link', 'Sincronizando con los servidores de Facepunch...', 'loading');
@@ -346,11 +347,20 @@ class FcmManager {
         const client = new PushReceiverClient(credentials.gcm.androidId, credentials.gcm.securityToken);
         
         client.on('ON_DATA_RECEIVED', async (data) => {
+            console.log(`[FCM] Datos recibidos para ${steamId}`);
             try {
                 await this.handlePushData(steamId, data);
             } catch (error) {
                 console.error(`[FCM] Error procesando notificación para ${steamId}:`, error);
             }
+        });
+
+        client.on('CONNECTED', () => {
+             console.log(`[FCM] Conexión establecida con Google para ${steamId}`);
+        });
+
+        client.on('DISCONNECTED', () => {
+             console.log(`[FCM] Conexión perdida con Google para ${steamId}`);
         });
 
         client.connect();
@@ -360,6 +370,13 @@ class FcmManager {
 
     async handlePushData(steamId, data) {
         console.log(`[FCM-TRAZA] Notificación recibida para SteamID ${steamId}:`, JSON.stringify(data));
+        
+        // Alerta para el dashboard si hay una conexión activa de diagnóstico
+        const sseRes = global.sseClients ? global.sseClients.get(steamId) : null;
+        if (sseRes) {
+            sseRes.write(`data: ${JSON.stringify({ step: 'fcm_trace', msg: `PUSH RECIBIDO: Channel ${data.appData?.find(i => i.key === 'channelId')?.value || 'N/A'}`, status: 'info' })}\n\n`);
+        }
+
         const appData = data.appData;
         if (!appData) return;
 

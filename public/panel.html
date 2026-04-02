@@ -90,7 +90,7 @@
                         </div>
 
                         <!-- Deep Scan Timeline Integrated -->
-                        <div class="diag-timeline" id="diag-timeline" style="display:none;">
+                        <div class="diag-timeline" id="diag-timeline" style="display:none; margin-top: 30px;">
                             <div class="diag-step" id="step-gcm">
                                 <div class="diag-icon">📶</div>
                                 <div class="diag-content">GCM Device Identity Handshake</div>
@@ -100,14 +100,17 @@
                                 <div class="diag-content">Facepunch Master Sync</div>
                             </div>
                             
-                            <div id="diag-checklist" style="display:none; margin-top:20px; padding:15px; background:rgba(0,0,0,0.2); border-radius:12px;">
+                            <div id="diag-checklist" style="display:none; margin-top:20px; padding:20px; background:rgba(0,0,0,0.3); border-radius:12px; border: 1px solid var(--border);">
                                 <div class="diag-check-item" id="chk-rust"><span class="bullet">⚪</span> Propiedad de Rust</div>
                                 <div class="diag-check-item" id="chk-guard"><span class="bullet">⚪</span> Steam Guard</div>
                                 <div class="diag-check-item" id="chk-limited"><span class="bullet">⚪</span> Status $5 USD</div>
                                 <div class="diag-check-item" id="chk-token"><span class="bullet">⚪</span> Token Integrity</div>
                             </div>
 
-                            <div class="diag-terminal" id="diag-terminal" style="display:none;"></div>
+                            <div style="position:relative;">
+                                <div class="diag-terminal" id="diag-terminal" style="display:none;"></div>
+                                <button id="btn-copy-logs" class="btn" style="display:none; position:absolute; top:25px; right:10px;">Copiar Logs</button>
+                            </div>
                         </div>
                     </div>
 
