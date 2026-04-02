@@ -6,9 +6,6 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ 
 
 COPY package*.json ./
-COPY scripts ./scripts
-# Copy protos so the patch script can find them during postinstall
-COPY src/lib/fcm/proto ./src/lib/fcm/proto
 
 # Install dependencies and allow scripts (compiles better-sqlite3)
 RUN npm install --legacy-peer-deps
