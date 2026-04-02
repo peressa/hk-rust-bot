@@ -95,6 +95,15 @@ export class FcmManager {
       if (FcmManager.debugLogs.length > 20) FcmManager.debugLogs.pop();
 
       let payload = data.data || {};
+
+      // EXTREMELY IMPORTANT: Facepunch often sends data in an appData array
+      if (Array.isArray(data.appData)) {
+        data.appData.forEach((item: any) => {
+          payload[item.key] = item.value;
+        });
+        console.log(`[FCM] Extracted data from appData array`);
+      }
+
       if (data.data && data.data.body) {
         try {
           const bodyJson = JSON.parse(data.data.body);
