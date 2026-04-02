@@ -1,19 +1,14 @@
-version: '3.3'
+version: '3'
 services:
-    app:
-        build: .
-        volumes:
-            - ./src:/app/src
-            - ./public:/app/public
-            - ./index.ts:/app/index.ts
-            - ./credentials:/app/credentials
-            - ./instances:/app/instances
-            - ./logs:/app/logs
-            - ./maps:/app/maps
-            - ./.env:/app/.env
-        environment:
-            - RPP_LOG_CALL_STACK=true
-        container_name: rpp
-        restart: always
-        ports:
-            - "3000:3000"
+  rust-plus-web:
+    build: .
+    container_name: rust-plus-web
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-changeme}
+      - STEAM_API_KEY=${STEAM_API_KEY}
+    volumes:
+      - ./rust-plus.db:/app/rust-plus.db
+    restart: always
