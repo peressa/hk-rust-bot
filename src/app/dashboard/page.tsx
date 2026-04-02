@@ -50,18 +50,25 @@ export default function DashboardPage() {
   };
 
   const fetchServers = async () => {
-    setLoading(true);
     try {
       const res = await fetch("/api/servers");
       const data = await res.json();
       setServers(data);
-      if (data.length > 0) setSelectedServer(data[0]);
+      if (data.length > 0 && !selectedServer) setSelectedServer(data[0]);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
     }
   };
+
+  // Poll for servers if empty
+  useEffect(() => {
+    if (servers.length === 0) {
+      const interval = setInterval(fetchServers, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [servers.length]);
 
   const fetchServerData = async (serverId: string) => {
     try {

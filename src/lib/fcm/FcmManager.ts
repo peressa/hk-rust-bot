@@ -73,17 +73,25 @@ export class FcmManager {
     );
 
     client.on("ON_DATA_RECEIVED", (data: any) => {
-      console.log(`[FCM] Notification for ${steamId}:`, data);
+      console.log(`[FCM] Notification for ${steamId}:`, JSON.stringify(data));
       
-      const payload = JSON.parse(data.data.body);
+      // Facepunch notifications can be flat in data.data or inside a body string
+      let payload = data.data;
+      if (data.data.body) {
+        try {
+          payload = JSON.parse(data.data.body);
+        } catch (e) {
+          console.warn("[FCM] Failed to parse body as JSON, using raw data");
+        }
+      }
       
-      if (payload.type === "server") {
+      if (payload.type === "server" || (payload.ip && payload.port && payload.playerToken)) {
         const server = {
           ip: payload.ip,
           port: payload.port,
           playerId: payload.playerId,
           playerToken: payload.playerToken,
-          name: payload.serverName,
+          name: payload.serverName || payload.name || "Servidor Desconocido",
           steamId: steamId
         };
         const { saveServer } = require("../db");
@@ -92,17 +100,17 @@ export class FcmManager {
       } else if (payload.type === "entity") {
         const entity = {
           steamId: steamId,
-          serverId: payload.ip, // Use IP as temporary serverId link
+          serverId: payload.ip, 
           entityId: payload.entityId,
           entityType: payload.entityType,
-          name: payload.entityName
+          name: payload.entityName || payload.name
         };
         const { saveEntity } = require("../db");
         saveEntity(entity);
         console.log(`[FCM] Entity saved: ${entity.name}`);
       }
 
-      onNotification(data);
+      if (onNotification) onNotification(data);
     });
 
     await client.connect();
