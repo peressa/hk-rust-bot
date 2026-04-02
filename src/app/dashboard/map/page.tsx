@@ -15,7 +15,8 @@ export default function MapPage() {
   const [mapInfo, setMapInfo] = useState<any>(null);
   const [markers, setMarkers] = useState<any[]>([]);
   const [team, setTeam] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [mapError, setMapError] = useState<string | null>(null);
   const [selectedServer, setSelectedServer] = useState<any>(null);
   const [servers, setServers] = useState<any[]>([]);
 
@@ -25,9 +26,11 @@ export default function MapPage() {
 
   useEffect(() => {
     if (selectedServer) {
+      setMapInfo(null);
+      setMapError(null);
       fetchMapBase(selectedServer.id);
       fetchLiveMarkers(selectedServer.id);
-      const interval = setInterval(() => fetchLiveMarkers(selectedServer.id), 10000); // Live sync every 10s
+      const interval = setInterval(() => fetchLiveMarkers(selectedServer.id), 10000);
       return () => clearInterval(interval);
     }
   }, [selectedServer?.id]);
@@ -45,12 +48,17 @@ export default function MapPage() {
 
   const fetchMapBase = async (serverId: string) => {
     setLoading(true);
+    setMapError(null);
     try {
       const res = await fetch(`/api/rustplus/map?serverId=${serverId}`);
       const data = await res.json();
-      setMapInfo(data.response?.map);
-    } catch (err) {
-      console.error(err);
+      if (data.error) {
+        setMapError(data.error);
+      } else {
+        setMapInfo(data.response?.map || data);
+      }
+    } catch (err: any) {
+      setMapError(err.message || "Error de conexión");
     } finally {
       setLoading(false);
     }
@@ -60,8 +68,10 @@ export default function MapPage() {
     try {
       const res = await fetch(`/api/rustplus/markers?serverId=${serverId}`);
       const data = await res.json();
-      setMarkers(data.markers || []);
-      setTeam(data.team || []);
+      if (!data.error) {
+        setMarkers(data.markers || []);
+        setTeam(data.team || []);
+      }
     } catch (err) {
       console.error(err);
     }
@@ -113,8 +123,25 @@ export default function MapPage() {
               />
             ) : (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1rem', opacity: 0.5 }}>
-                <MapIcon size={48} className="animate-pulse" />
-                <p>{loading ? "Estableciendo conexión satelital..." : "Selecciona un servidor para ver el mapa"}</p>
+                <MapIcon size={48} className={loading ? "animate-pulse" : ""} />
+                <p style={{ fontSize: '0.95rem' }}>
+                  {loading 
+                    ? "Estableciendo conexión satelital..." 
+                    : mapError 
+                      ? `Error: ${mapError}` 
+                      : selectedServer 
+                        ? "Reconectando al servidor..." 
+                        : "Selecciona un servidor para ver el mapa"}
+                </p>
+                {mapError && selectedServer && (
+                  <button 
+                    onClick={() => fetchMapBase(selectedServer.id)}
+                    className="btn-secondary"
+                    style={{ fontSize: '0.8rem', padding: '0.5rem 1rem', opacity: 1 }}
+                  >
+                    Reintentar conexión
+                  </button>
+                )}
               </div>
             )}
             {loading && (

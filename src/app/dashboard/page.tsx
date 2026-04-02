@@ -262,9 +262,23 @@ export default function DashboardPage() {
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <StatusLine label="Interruptores" value={entities.length.toString()} />
-                    <StatusLine label="Torretas" value="Activas" color="#22c55e" />
-                    <StatusLine label="Mantenimiento" value={serverInfo ? "24D 12H" : "---"} color="#22c55e" />
-                    <StatusLine label="Alarma" value="Desactivada" color="#9ca3af" />
+                    <StatusLine 
+                      label="Torretas" 
+                      value={entities.some(e => e.name?.toLowerCase().includes('turret') || e.name?.toLowerCase().includes('torreta')) 
+                        ? `${entities.filter(e => e.name?.toLowerCase().includes('turret') || e.name?.toLowerCase().includes('torreta')).length} Activa(s)` 
+                        : "Sin emparejar"} 
+                      color={entities.some(e => e.name?.toLowerCase().includes('turret') || e.name?.toLowerCase().includes('torreta')) ? "#22c55e" : "#9ca3af"}
+                    />
+                    <StatusLine 
+                      label="Tiempo Mundo" 
+                      value={worldTime ? formatTime(worldTime.time) : "---"} 
+                      color="#22c55e"
+                    />
+                    <StatusLine 
+                      label="Jugadores" 
+                      value={serverInfo ? `${serverInfo.players || 0} / ${serverInfo.maxPlayers || 0}` : "---"} 
+                      color={serverInfo?.players > 0 ? "#22c55e" : "#9ca3af"}
+                    />
                   </div>
                 </div>
 

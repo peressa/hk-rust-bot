@@ -31,20 +31,44 @@ export async function GET(request: Request) {
       playerToken: server.playerToken
     });
 
-    // Request camera frame
-    // Note: rustplus.js handles camera streams via a sequence of frames. 
-    // We send a request for a single subscribe then get back the stream.
-    // For a simple web preview, we use the camera control.
-    
-    // In rustplus.js, we need to handle camera subscription carefully.
-    // This is a complex logic that usually involves a callback for frames.
-    // For now, we will implement the PTZ and Subscription logic.
-    
-    return NextResponse.json({ 
-      info: "Camera system initialized. Polling frames via WebSockets is recommended for production.",
-      identifier
+    // Request camera subscription frame via rustplus.js
+    // rustplus.js supports getCameraFrame via sendRequest with cameraSubscribe
+    const response: any = await rustPlusManager.sendRequest(
+      session.user.steamId,
+      server.ip,
+      {
+        cameraSubscribe: {
+          cameraId: identifier
+        }
+      }
+    );
+
+    if (response?.response?.error) {
+      return NextResponse.json({ error: response.response.error.error || "Camera not found" }, { status: 404 });
+    }
+
+    // Camera frame data comes back as a buffer in response
+    const cameraInfo = response?.response?.cameraSubscribeInfo;
+    if (!cameraInfo) {
+      return NextResponse.json({ 
+        error: `Camera ID "${identifier}" not found on this server. Make sure the camera is placed and has this exact ID.` 
+      }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      identifier,
+      width: cameraInfo.width,
+      height: cameraInfo.height,
+      nearPlane: cameraInfo.nearPlane,
+      farPlane: cameraInfo.farPlane,
+      controlFlags: cameraInfo.controlFlags,
+      // Frame data if available
+      frameBase64: cameraInfo.cameraFrame 
+        ? Buffer.from(cameraInfo.cameraFrame).toString("base64")
+        : null
     });
   } catch (error: any) {
+    console.error("[API Camera] Error:", error?.message);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
