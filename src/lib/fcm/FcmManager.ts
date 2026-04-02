@@ -74,6 +74,34 @@ export class FcmManager {
 
     client.on("ON_DATA_RECEIVED", (data: any) => {
       console.log(`[FCM] Notification for ${steamId}:`, data);
+      
+      const payload = JSON.parse(data.data.body);
+      
+      if (payload.type === "server") {
+        const server = {
+          ip: payload.ip,
+          port: payload.port,
+          playerId: payload.playerId,
+          playerToken: payload.playerToken,
+          name: payload.serverName,
+          steamId: steamId
+        };
+        const { saveServer } = require("../db");
+        saveServer(server);
+        console.log(`[FCM] Server saved: ${server.name}`);
+      } else if (payload.type === "entity") {
+        const entity = {
+          steamId: steamId,
+          serverId: payload.ip, // Use IP as temporary serverId link
+          entityId: payload.entityId,
+          entityType: payload.entityType,
+          name: payload.entityName
+        };
+        const { saveEntity } = require("../db");
+        saveEntity(entity);
+        console.log(`[FCM] Entity saved: ${entity.name}`);
+      }
+
       onNotification(data);
     });
 

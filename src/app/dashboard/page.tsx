@@ -19,10 +19,22 @@ export default function DashboardPage() {
   const [entities, setEntities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [fcmStatus, setFcmStatus] = useState("Inactivo");
+
   // Fetch servers from DB on mount
   useEffect(() => {
     fetchServers();
+    startFcmListener();
   }, []);
+
+  const startFcmListener = async () => {
+    try {
+      await fetch("/api/fcm/start", { method: "POST" });
+      setFcmStatus("Escuchando...");
+    } catch (err) {
+      setFcmStatus("Error");
+    }
+  };
 
   // Fetch entities when a server is selected
   useEffect(() => {
