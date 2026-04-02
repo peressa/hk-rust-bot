@@ -1,5 +1,5 @@
 import { NextAuthOptions } from "next-auth";
-import SteamProvider, { PROXIED_STEAM_COMMON_URL } from "next-auth-steam";
+import SteamProvider from "next-auth-steam";
 import { NextRequest } from "next/server";
 
 export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
