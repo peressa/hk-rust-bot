@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth/authOptions";
 import db from "@/lib/db";
+import { FcmManager } from "@/lib/fcm/FcmManager";
 
 export async function GET() {
   const session = await getServerSession(getAuthOptions());
@@ -17,11 +18,11 @@ export async function GET() {
     const stmt = db.prepare("SELECT keys FROM fcm_keys WHERE steamId = ?");
     const row = stmt.get(steamId);
     
-    // For simplicity in this mockup/v1, we assume if they have keys, they can be listening.
-    // In a full implementation, we'd check an active process/connection registry.
+    const isListening = FcmManager.isListening(steamId);
+
     return NextResponse.json({
       hasKeys: !!row,
-      listening: !!row, // Placeholder for actual listener status
+      listening: isListening,
     });
   } catch (error) {
     console.error("[API FCM Status] Error:", error);

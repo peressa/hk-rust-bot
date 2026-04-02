@@ -15,6 +15,8 @@ import {
   Users
 } from "lucide-react";
 
+import ServerHero from "@/components/dashboard/ServerHero";
+
 export default function DashboardPage() {
   const [servers, setServers] = useState<any[]>([]);
   const [selectedServer, setSelectedServer] = useState<any>(null);
@@ -33,17 +35,20 @@ export default function DashboardPage() {
   // Sync data when server changes
   useEffect(() => {
     if (selectedServer) {
+      setServerInfo(null); // Reset for transition effect
       fetchEntities(selectedServer.id);
       fetchServerData(selectedServer.id);
-      const interval = setInterval(() => fetchServerData(selectedServer.id), 10000); // Sync every 10s
+      const interval = setInterval(() => fetchServerData(selectedServer.id), 10000); 
       return () => clearInterval(interval);
     }
-  }, [selectedServer]);
+  }, [selectedServer?.id]); // Use ID dependency
 
   const startFcmListener = async () => {
     try {
       await fetch("/api/fcm/start", { method: "POST" });
-      setFcmStatus("Escuchando...");
+      const res = await fetch("/api/fcm/status");
+      const data = await res.json();
+      setFcmStatus(data.listening ? "Escuchando..." : "Inactivo");
     } catch (err) {
       setFcmStatus("Error");
     }
@@ -110,7 +115,7 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading) return <div className="loading-spinner" />;
+  if (loading) return <div style={{ display: 'grid', placeItems: 'center', height: '80vh' }}><RefreshCw className="animate-spin" size={40} color="var(--primary)" /></div>;
 
   const formatTime = (time?: number) => {
     if (time === undefined) return "--:--";
@@ -126,58 +131,61 @@ export default function DashboardPage() {
           <div>
             <h1 style={{ fontSize: '2rem', fontWeight: 800 }}>Mando Central</h1>
             <p style={{ color: 'var(--text-muted)' }}>
-              {selectedServer ? `Conectado a ${selectedServer.name}` : "Bienvenido de nuevo, Comandante."}
+              {selectedServer ? `Sincronización táctica activa.` : "Bienvenido de nuevo, Comandante."}
             </p>
           </div>
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ textAlign: 'right', fontSize: '0.8rem' }}>
-              <div style={{ color: 'var(--text-muted)' }}>FCM Status</div>
-              <div style={{ color: fcmStatus === "Escuchando..." ? "#22c55e" : "#ef4444", fontWeight: 700 }}>{fcmStatus}</div>
+              <div style={{ color: 'var(--text-muted)' }}>Status del Bot</div>
+              <div style={{ color: fcmStatus === "Escuchando..." ? "#22c55e" : "#ef4444", fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: fcmStatus === "Escuchando..." ? "#22c55e" : "#ef4444" }}></div>
+                {fcmStatus}
+              </div>
             </div>
-            <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <PlusCircle size={20} /> Vincular Servidor
-            </button>
+            <a href="/dashboard/settings" className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <PlusCircle size={20} /> Vincular Nuevo
+            </a>
           </div>
         </header>
 
         {servers.length === 0 ? (
-          <div className="premium-card" style={{ textAlign: 'center', padding: '4rem' }}>
-            <Server size={48} color="var(--primary)" style={{ marginBottom: '1rem' }} />
-            <h2 style={{ marginBottom: '0.5rem' }}>No hay servidores vinculados</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-              Ve a Configuración para registrar tu dispositivo y ver tus servidores aquí.
+          <div className="premium-card" style={{ textAlign: 'center', padding: '5rem 2rem', border: '1px dashed var(--border)' }}>
+            <div style={{ position: 'relative', display: 'inline-block', marginBottom: '2rem' }}>
+              <Server size={64} color="var(--primary)" style={{ opacity: 0.2 }} />
+              <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+                <Activity size={32} color="var(--primary)" className="animate-pulse" />
+              </div>
+            </div>
+            <h2 style={{ marginBottom: '0.75rem', fontSize: '1.5rem' }}>Buscando señales...</h2>
+            <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', maxWidth: '400px', margin: '0 auto 2.5rem' }}>
+              No detectamos servidores enlazados. Abre Rust en tu equipo y pulsa "Pair with Server" para comenzar.
             </p>
-            <button className="btn-primary">Empezar Ahora</button>
+            <a href="/dashboard/settings" className="btn-primary">Configurar Identidad</a>
           </div>
         ) : (
           <>
-            {/* Quick Stats Bar */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
-              <StatCard icon={<Users size={20} />} label="Jugadores" value={`${serverInfo?.players || 0} / ${serverInfo?.maxPlayers || 0}`} />
-              <StatCard icon={<Clock size={20} />} label="Hora Mundo" value={formatTime(worldTime?.time)} />
-              <StatCard icon={<Activity size={20} />} label="Uptime" value="Excelente" color="#22c55e" />
-              <StatCard icon={<Shield size={20} />} label="Seguridad" value="Protegido" color="#22c55e" />
-            </div>
+            {/* Server Hero Section */}
+            <ServerHero server={selectedServer} info={serverInfo} />
 
-            {/* Server Selector */}
-            <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto', paddingBottom: '1rem', marginBottom: '2rem' }}>
+            {/* Server Selector Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
               {servers.map(server => (
                 <div 
                   key={server.id} 
                   onClick={() => setSelectedServer(server)}
                   className={`premium-card ${selectedServer?.id === server.id ? 'active-card' : ''}`}
-                  style={{ 
-                    minWidth: '220px', 
-                    cursor: 'pointer', 
-                    padding: '1.25rem'
-                  }}
+                  style={{ cursor: 'pointer', padding: '1rem' }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Server size={20} color={selectedServer?.id === server.id ? "var(--primary)" : "white"} />
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></div>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ background: selectedServer?.id === server.id ? 'var(--primary)' : 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '10px', transition: 'var(--transition)' }}>
+                      <Server size={20} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <h3 style={{ fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>{server.name}</h3>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{server.ip}</div>
+                    </div>
+                    {selectedServer?.id === server.id && <div className="status-online"></div>}
                   </div>
-                  <h3 style={{ marginTop: '1rem', fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{server.name}</h3>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{server.ip}</span>
                 </div>
               ))}
             </div>
@@ -187,23 +195,23 @@ export default function DashboardPage() {
               <section>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h2 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Settings size={20} /> Dispositivos Inteligentes
+                    <Settings size={20} className="glow" /> Dispositivos Inteligentes
                   </h2>
-                  <button onClick={() => fetchEntities(selectedServer.id)} className="btn-secondary" style={{ padding: '0.4rem' }}>
+                  <button onClick={() => fetchEntities(selectedServer.id)} className="btn-secondary" style={{ padding: '0.4rem', background: 'transparent', border: '1px solid var(--border)' }}>
                     <RefreshCw size={16} />
                   </button>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.25rem' }}>
                   {entities.length === 0 ? (
-                    <div className="premium-card" style={{ gridColumn: '1 / -1', textAlign: 'center', opacity: 0.5, padding: '3rem' }}>
-                      No hay dispositivos emparejados con este servidor aún.
+                    <div className="premium-card" style={{ gridColumn: '1 / -1', textAlign: 'center', opacity: 0.5, padding: '3.5rem', border: '1px dashed var(--border)' }}>
+                      No hay dispositivos inteligentes emparejados.
                     </div>
                   ) : (
                     entities.map(device => (
-                      <div key={device.entityId} className="premium-card" style={{ padding: '1.25rem' }}>
+                      <div key={device.entityId} className="premium-card" style={{ padding: '1.25rem', borderLeft: device.value ? '3px solid var(--primary)' : '1px solid var(--border)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.5rem', borderRadius: '8px' }}>
+                          <div style={{ background: device.value ? 'rgba(205, 65, 43, 0.1)' : 'rgba(255,255,255,0.02)', padding: '0.5rem', borderRadius: '8px', transition: 'var(--transition)' }}>
                             <Power size={18} color={device.value ? "var(--primary)" : "var(--text-muted)"} />
                           </div>
                           <label className="switch">
@@ -216,7 +224,7 @@ export default function DashboardPage() {
                           </label>
                         </div>
                         <h4 style={{ marginTop: '1rem', fontWeight: 600, fontSize: '0.95rem' }}>{device.name}</h4>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>ID: {device.entityId}</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem', opacity: 0.6 }}>UUID: {device.entityId}</div>
                       </div>
                     ))
                   )}
@@ -225,27 +233,32 @@ export default function DashboardPage() {
 
               {/* Status Sidebar */}
               <aside style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                <div className="premium-card" style={{ background: 'linear-gradient(135deg, rgba(205, 65, 43, 0.1), transparent)' }}>
-                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1.25rem' }}>
-                    <Shield size={18} color="var(--primary)" /> Inventario Base
+                <div className="premium-card" style={{ background: 'linear-gradient(165deg, rgba(205, 65, 43, 0.08), transparent)' }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1.5rem', color: 'var(--primary)' }}>
+                    <Shield size={18} /> Seguridad de la Base
                   </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     <StatusLine label="Interruptores" value={entities.length.toString()} />
-                    <StatusLine label="Cámaras" value="Funcional" color="#22c55e" />
-                    <StatusLine label="Estado TC" value="12D 4H" color="#22c55e" />
+                    <StatusLine label="Torretas" value="Activas" color="#22c55e" />
+                    <StatusLine label="Mantenimiento" value={serverInfo ? "24D 12H" : "---"} color="#22c55e" />
+                    <StatusLine label="Alarma" value="Desactivada" color="#9ca3af" />
                   </div>
                 </div>
 
                 <div className="premium-card">
                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1.25rem' }}>
-                    <AlertTriangle size={18} color="#ef4444" /> Historial Reciente
+                    <Clock size={18} color="var(--primary)" /> Historial Táctico
                   </h3>
-                  <div style={{ fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                     <div style={{ borderLeft: '2px solid var(--primary)', paddingLeft: '1rem' }}>
-                      <div style={{ fontWeight: 600 }}>Servidor Conectado</div>
-                      <div style={{ opacity: 0.6 }}>WebSocket establecido con éxito.</div>
+                      <div style={{ fontWeight: 700, color: '#f0f0f0' }}>Vigilancia Iniciada</div>
+                      <div style={{ opacity: 0.6 }}>Bot escuchando señales de Facepunch.</div>
+                      <div style={{ fontSize: '0.7rem', marginTop: '0.25rem', color: 'var(--primary)' }}>Hace 2 min</div>
                     </div>
-                    <div style={{ opacity: 0.5, fontStyle: 'italic' }}>Esperando eventos de intrusión...</div>
+                    <div style={{ borderLeft: '2px solid rgba(255,255,255,0.1)', paddingLeft: '1rem', opacity: 0.6 }}>
+                      <div style={{ fontWeight: 600 }}>Sincronización Completa</div>
+                      <div style={{ opacity: 0.8 }}>Datos del mapa actualizados.</div>
+                    </div>
                   </div>
                 </div>
               </aside>

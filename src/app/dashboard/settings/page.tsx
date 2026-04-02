@@ -111,13 +111,18 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className="premium-card" style={{ opacity: 0.7 }}>
+          <section className="premium-card">
             <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Bell size={20} /> Notificaciones Push
+              <Bell size={20} color="var(--primary)" /> Notificaciones y Persistencia
             </h3>
             <p style={{ fontSize: '0.85rem' }}>
-              Una vez vinculado, las notificaciones de emparejamiento (servidores y dispositivos) llegarán automáticamente a tu base de datos y se mostrarán en el Dashboard.
+              Una vez vinculado, las notificaciones de emparejamiento llegarán automáticamente. 
             </p>
+            <div style={{ marginTop: '1rem', padding: '0.75rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <p style={{ fontSize: '0.75rem', color: '#fca5a5', margin: 0 }}>
+                <strong>⚠️ Nota para Coolify:</strong> Para que tus credenciales no se borren en cada actualización, asegúrate de añadir un <strong>Volume</strong> en tu panel de Coolify mapeando la carpeta <code>/app/data</code>.
+              </p>
+            </div>
           </section>
         </div>
       </div>

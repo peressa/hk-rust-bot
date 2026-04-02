@@ -1,7 +1,14 @@
 import Database from "better-sqlite3";
 import path from "path";
 
-const dbPath = path.resolve(process.cwd(), "rust-plus.db");
+import fs from "fs";
+
+const dataDir = path.resolve(process.cwd(), "data");
+if (!fs.existsSync(dataDir)) {
+  fs.mkdirSync(dataDir, { recursive: true });
+}
+
+const dbPath = path.resolve(dataDir, "rust-plus.db");
 const db = new Database(dbPath);
 
 // Initialize tables

@@ -8,6 +8,7 @@ const nextConfig = {
   experimental: {
     // Ensuring Turbopack respects the external packages
     serverComponentsExternalPackages: ["@liamcottle/push-receiver", "better-sqlite3"],
+    instrumentationHook: true,
   }
 };
 

@@ -15,6 +15,8 @@ const FCM_CONFIG = {
   androidPackageCert: "E28D05345FB78A7A1A63D70F4A302DBF426CA5AD",
 };
 
+import { listenerRegistry } from "./ListenerRegistry";
+
 export class FcmManager {
   static async register(steamId: string, authToken: string) {
     console.log(`[FCM] Registering for ${steamId}`);
@@ -48,6 +50,10 @@ export class FcmManager {
     return { fcmCredentials, expoPushToken };
   }
 
+  static isListening(steamId: string): boolean {
+    return listenerRegistry.isListening(steamId);
+  }
+
   private static async getExpoPushToken(fcmToken: string) {
     const response = await axios.post("https://exp.host/--/api/v2/push/getExpoPushToken", {
       type: "fcm",
@@ -61,6 +67,12 @@ export class FcmManager {
   }
 
   static async listen(steamId: string, onNotification: (data: any) => void) {
+    // Check registry first
+    if (listenerRegistry.isListening(steamId)) {
+      console.log(`[FCM] Listener already active for ${steamId}. Skipping...`);
+      return;
+    }
+
     const stmt = db.prepare("SELECT keys FROM fcm_keys WHERE steamId = ?");
     const row = stmt.get(steamId) as any;
     if (!row) throw new Error("FCM not registered for this user");
@@ -114,6 +126,10 @@ export class FcmManager {
     });
 
     await client.connect();
+    
+    // Register in global registry
+    listenerRegistry.setListener(steamId, client);
+    
     return client;
   }
 }
