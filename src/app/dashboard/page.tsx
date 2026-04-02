@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 
 import ServerHero from "@/components/dashboard/ServerHero";
+import ManualPairingInput from "@/components/dashboard/ManualPairingInput";
 
 export default function DashboardPage() {
   const [servers, setServers] = useState<any[]>([]);
@@ -25,6 +26,7 @@ export default function DashboardPage() {
   const [entities, setEntities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [fcmStatus, setFcmStatus] = useState("Inactivo");
+  const [hasKeys, setHasKeys] = useState(false);
 
   // Fetch servers from DB on mount
   useEffect(() => {
@@ -49,6 +51,7 @@ export default function DashboardPage() {
       const res = await fetch("/api/fcm/status");
       const data = await res.json();
       setFcmStatus(data.listening ? "Escuchando..." : "Inactivo");
+      setHasKeys(data.hasKeys);
     } catch (err) {
       setFcmStatus("Error");
     }
@@ -149,18 +152,38 @@ export default function DashboardPage() {
         </header>
 
         {servers.length === 0 ? (
-          <div className="premium-card" style={{ textAlign: 'center', padding: '5rem 2rem', border: '1px dashed var(--border)' }}>
-            <div style={{ position: 'relative', display: 'inline-block', marginBottom: '2rem' }}>
-              <Server size={64} color="var(--primary)" style={{ opacity: 0.2 }} />
-              <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
-                <Activity size={32} color="var(--primary)" className="animate-pulse" />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', alignItems: 'center' }}>
+            <div className="premium-card" style={{ textAlign: 'center', padding: '5rem 2rem', border: '1px dashed var(--border)', maxWidth: '800px', width: '100%' }}>
+              <div style={{ position: 'relative', display: 'inline-block', marginBottom: '2rem' }}>
+                <Server size={64} color="var(--primary)" style={{ opacity: 0.2 }} />
+                <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center' }}>
+                  <Activity size={32} color="var(--primary)" className="animate-pulse" />
+                </div>
+              </div>
+              <h2 style={{ marginBottom: '0.75rem', fontSize: '1.5rem' }}>
+                {hasKeys ? "Listo para enlazar" : "Buscando señales..."}
+              </h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', maxWidth: '400px', margin: '0 auto 2.5rem' }}>
+                {hasKeys 
+                  ? "Identidad detectada. Pulsa 'Pair with Server' en el juego para sincronizar tu mando táctico."
+                  : "No detectamos servidores enlazados. Abre Rust en tu equipo y pulsa 'Pair with Server' para comenzar."}
+              </p>
+              
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                {!hasKeys && <a href="/dashboard/settings" className="btn-secondary">Configurar Identidad</a>}
               </div>
             </div>
-            <h2 style={{ marginBottom: '0.75rem', fontSize: '1.5rem' }}>Buscando señales...</h2>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', maxWidth: '400px', margin: '0 auto 2.5rem' }}>
-              No detectamos servidores enlazados. Abre Rust en tu equipo y pulsa "Pair with Server" para comenzar.
-            </p>
-            <a href="/dashboard/settings" className="btn-primary">Configurar Identidad</a>
+
+            {/* Manual Pairing Fallback */}
+            <div className="premium-card" style={{ maxWidth: '800px', width: '100%', padding: '2rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
+              <h3 style={{ fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <PlusCircle size={18} color="var(--primary)" /> ¿FCM no responde? Emparejamiento Manual
+              </h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
+                Si las notificaciones tardan demasiado, puedes pegar el enlace de emparejamiento (<code>rustplus://...</code>) directamente aquí.
+              </p>
+              <ManualPairingInput onPaired={fetchServers} />
+            </div>
           </div>
         ) : (
           <>

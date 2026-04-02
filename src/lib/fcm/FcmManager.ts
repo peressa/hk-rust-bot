@@ -142,9 +142,8 @@ export class FcmManager {
         console.log(`[FCM] Detected Server Pairing! Info:`, server);
         
         try {
-          // Use global singleton db if possible or local require
-          const dbModule = require("../db");
-          dbModule.saveServer(server);
+          const { saveServer } = require("../db");
+          saveServer(server);
           console.log(`[FCM] SUCCESS: Server saved correctly: ${server.name}`);
         } catch (err) {
           console.error(`[FCM] DATABASE ERROR: Failed to save server:`, err);
@@ -161,8 +160,8 @@ export class FcmManager {
         console.log(`[FCM] Detected Entity Pairing! Info:`, entity);
 
         try {
-          const dbModule = require("../db");
-          dbModule.saveEntity(entity);
+          const { saveEntity } = require("../db");
+          saveEntity(entity);
           console.log(`[FCM] SUCCESS: Entity saved correctly: ${entity.name}`);
         } catch (err) {
           console.error(`[FCM] DATABASE ERROR: Failed to save entity:`, err);
