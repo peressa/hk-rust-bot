@@ -37,6 +37,7 @@ RUN mkdir -p /app/node_modules/@liamcottle/rustplus.js/ \
 
 COPY --from=builder /app/node_modules/@liamcottle/rustplus.js/rustplus.proto /app/node_modules/@liamcottle/rustplus.js/rustplus.proto
 COPY --from=builder /app/node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto /app/node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto
+COPY --from=builder /app/node_modules/@liamcottle/push-receiver/src/gcm/android_checkin.proto /app/node_modules/@liamcottle/push-receiver/src/gcm/android_checkin.proto
 COPY --from=builder /app/node_modules/@liamcottle/push-receiver/src/mcs.proto /app/node_modules/@liamcottle/push-receiver/src/mcs.proto
 
 # Create data directory for persistency (SQLite)
