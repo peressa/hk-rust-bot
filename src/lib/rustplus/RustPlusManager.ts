@@ -6,6 +6,7 @@ export interface ServerConnection {
   port: string;
   playerId: string;
   playerToken: string;
+  useProxy?: boolean;
 }
 
 class RustPlusManager extends EventEmitter {
@@ -14,7 +15,7 @@ class RustPlusManager extends EventEmitter {
   private chatHistory: Map<string, any[]> = new Map(); // steamId-ip -> messages[]
   private ready: Map<string, boolean> = new Map(); // Track if connection is ready
 
-  async connect(steamId: string, connection: ServerConnection): Promise<any> {
+  async connect(steamId: string, connection: ServerConnection, isRetry = false): Promise<any> {
     const key = `${steamId}-${connection.ip}`;
 
     // If already connected and ready, return existing connection
@@ -29,22 +30,37 @@ class RustPlusManager extends EventEmitter {
 
     // Start a new connection
     const connectPromise = new Promise<any>((resolve, reject) => {
+      console.log(`[RustPlus] Connecting to ${connection.ip} (Proxy: ${connection.useProxy || false}, Retry: ${isRetry})`);
+      
       const rustplus = new RustPlus(
         connection.ip,
         connection.port,
-        connection.playerId.toString(), // Mantener como string para no perder precisión de 64 bits
-        parseInt(connection.playerToken)
+        connection.playerId.toString(), 
+        parseInt(connection.playerToken),
+        connection.useProxy || false
       );
 
-      const timeout = setTimeout(() => {
-        reject(new Error(`Connection timeout to ${connection.ip} after 30s`));
+      const timeout = setTimeout(async () => {
+        rustplus.disconnect();
         this.connecting.delete(key);
-        this.ready.set(key, false);
-      }, 30000); // Increased to 30s for high-pop servers like Rustoria
+        
+        // AUTO-PROXY FALLBACK: If direct failed and we haven't tried proxy yet, try it!
+        if (!connection.useProxy && !isRetry) {
+          console.log(`[RustPlus] Timeout on direct connection to ${connection.ip}. Retrying via Proxy...`);
+          try {
+            const proxyConn = await this.connect(steamId, { ...connection, useProxy: true }, true);
+            resolve(proxyConn);
+          } catch (e) {
+            reject(new Error(`Connection timeout to ${connection.ip} even via Proxy`));
+          }
+        } else {
+          reject(new Error(`Connection timeout to ${connection.ip} after 30s`));
+        }
+      }, 30000); 
 
       rustplus.on("connected", () => {
         clearTimeout(timeout);
-        console.log(`[RustPlus] Connected to ${connection.ip} for ${steamId}`);
+        console.log(`[RustPlus] SUCCESS: Connected to ${connection.ip} for ${steamId}`);
         this.ready.set(key, true);
         this.connections.set(key, rustplus);
         this.connecting.delete(key);

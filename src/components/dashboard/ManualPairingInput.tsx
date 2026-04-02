@@ -5,6 +5,7 @@ import { Send, RefreshCw, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function ManualPairingInput({ onPaired }: { onPaired: () => void }) {
   const [url, setUrl] = useState("");
+  const [useProxy, setUseProxy] = useState(true); // Default to true for better compatibility
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
 
@@ -21,7 +22,7 @@ export default function ManualPairingInput({ onPaired }: { onPaired: () => void 
     try {
       const res = await fetch("/api/rustplus/pair-url", {
         method: "POST",
-        body: JSON.stringify({ url })
+        body: JSON.stringify({ url, useProxy })
       });
       const data = await res.json();
 
@@ -69,6 +70,19 @@ export default function ManualPairingInput({ onPaired }: { onPaired: () => void 
           Emparejar
         </button>
       </form>
+
+      <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <input 
+          type="checkbox" 
+          id="useProxy" 
+          checked={useProxy} 
+          onChange={(e) => setUseProxy(e.target.checked)}
+          style={{ cursor: 'pointer' }}
+        />
+        <label htmlFor="useProxy" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          Usar Facepunch Proxy (Recomendado para servidores oficiales/protegidos)
+        </label>
+      </div>
 
       {status && (
         <div style={{ 

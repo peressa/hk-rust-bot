@@ -38,6 +38,7 @@ COPY --from=builder /app/src/lib/fcm/proto ./src/lib/fcm/proto
 
 # Create data directory for persistency (SQLite)
 RUN mkdir -p /app/data
+VOLUME ["/app/data"]
 
 EXPOSE 3000
 

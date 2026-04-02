@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { url } = await request.json();
+    const { url, useProxy } = await request.json();
     if (!url || !url.startsWith("rustplus://")) {
       return NextResponse.json({ error: "Invalid Rust+ URL" }, { status: 400 });
     }
@@ -36,7 +36,8 @@ export async function POST(request: Request) {
       playerId,
       playerToken,
       name,
-      steamId: session.user.steamId
+      steamId: session.user.steamId,
+      useProxy: useProxy || false
     };
 
     saveServer(server);

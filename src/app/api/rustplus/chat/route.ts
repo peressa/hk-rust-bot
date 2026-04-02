@@ -42,7 +42,8 @@ export async function POST(request: Request) {
       ip: server.ip,
       port: server.port,
       playerId: server.playerId,
-      playerToken: server.playerToken
+      playerToken: server.playerToken,
+      useProxy: server.useProxy === 1
     });
 
     await rustPlusManager.sendTeamMessage(session.user.steamId, server.ip, message);

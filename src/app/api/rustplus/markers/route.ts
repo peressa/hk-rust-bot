@@ -21,7 +21,8 @@ export async function GET(request: Request) {
       ip: server.ip,
       port: server.port,
       playerId: server.playerId,
-      playerToken: server.playerToken
+      playerToken: server.playerToken,
+      useProxy: server.useProxy === 1
     });
 
     const markersData = await rustPlusManager.getMapMarkers(session.user.steamId, server.ip);

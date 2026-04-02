@@ -21,6 +21,7 @@ db.exec(`
     playerId TEXT,
     playerToken TEXT,
     name TEXT,
+    useProxy INTEGER DEFAULT 0,
     UNIQUE(steamId, ip)
   );
 
@@ -45,10 +46,19 @@ export default db;
 
 export function saveServer(server: any) {
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO servers (id, steamId, ip, port, playerId, playerToken, name)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO servers (id, steamId, ip, port, playerId, playerToken, name, useProxy)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  stmt.run(server.id || `${server.steamId}-${server.ip}`, server.steamId, server.ip, server.port, server.playerId, server.playerToken, server.name);
+  stmt.run(
+    server.id || `${server.steamId}-${server.ip}`, 
+    server.steamId, 
+    server.ip, 
+    server.port, 
+    server.playerId, 
+    server.playerToken, 
+    server.name,
+    server.useProxy ? 1 : 0
+  );
 }
 
 export function getServers(steamId: string) {
