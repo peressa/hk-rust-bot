@@ -18,6 +18,8 @@ const FCM_CONFIG = {
 import { listenerRegistry } from "./ListenerRegistry";
 
 export class FcmManager {
+  public static debugLogs: any[] = [];
+
   static async register(steamId: string, authToken: string) {
     console.log(`[FCM] Registering for ${steamId}`);
     
@@ -88,6 +90,10 @@ export class FcmManager {
     client.on("ON_DATA_RECEIVED", (data: any) => {
       console.log(`[FCM RAW] Received raw data for ${steamId}:`, JSON.stringify(data));
       
+      // Blackbox for Live Debugging
+      FcmManager.debugLogs.unshift({ timestamp: Date.now(), data });
+      if (FcmManager.debugLogs.length > 20) FcmManager.debugLogs.pop();
+
       let payload = data.data || {};
       if (data.data && data.data.body) {
         try {
