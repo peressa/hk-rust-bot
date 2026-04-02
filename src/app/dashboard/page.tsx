@@ -290,14 +290,7 @@ export default function DashboardPage() {
                     <Shield size={18} /> Seguridad de la Base
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <StatusLine label="Interruptores" value={entities.length.toString()} />
-                    <StatusLine 
-                      label="Torretas" 
-                      value={entities.some(e => e.name?.toLowerCase().includes('turret') || e.name?.toLowerCase().includes('torreta')) 
-                        ? `${entities.filter(e => e.name?.toLowerCase().includes('turret') || e.name?.toLowerCase().includes('torreta')).length} Activa(s)` 
-                        : "Sin emparejar"} 
-                      color={entities.some(e => e.name?.toLowerCase().includes('turret') || e.name?.toLowerCase().includes('torreta')) ? "#22c55e" : "#9ca3af"}
-                    />
+                    <StatusLine label="Dispositivos" value={entities.length.toString()} />
                     <StatusLine 
                       label="Mantenimiento" 
                       value={storageMonitor ? formatUpkeep(storageMonitor.protectionExpireTime) : "Sin Monitor TC"} 
@@ -306,7 +299,7 @@ export default function DashboardPage() {
                     {storageMonitor && (
                       <div style={{ marginTop: '0.5rem' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                          <span>Capacidad TC</span>
+                          <span>Ocupación de Armario</span>
                           <span>{Math.round(((storageMonitor.items?.length || 0) / (storageMonitor.capacity || 24)) * 100)}%</span>
                         </div>
                         <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
@@ -315,8 +308,8 @@ export default function DashboardPage() {
                       </div>
                     )}
                     <StatusLine 
-                      label="Jugadores" 
-                      value={serverInfo ? `${serverInfo.players || 0} / ${serverInfo.maxPlayers || 0}` : "---"} 
+                      label="Población Servidor" 
+                      value={serverInfo ? `${serverInfo.players || 0} / ${serverInfo.maxPlayers || 0}${serverInfo.queued ? ` (+${serverInfo.queued})` : ''}` : "---"} 
                       color={serverInfo?.players > 0 ? "#22c55e" : "#9ca3af"}
                     />
                   </div>
@@ -325,28 +318,23 @@ export default function DashboardPage() {
                 {/* Info real del servidor */}
                 <div className="premium-card">
                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1.25rem' }}>
-                    <Activity size={18} color="var(--primary)" /> Info del Servidor
+                    <Activity size={18} color="var(--primary)" /> Detalles del Nodo
                   </h3>
                   {serverInfo ? (
                     <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                       <StatusLine label="Nombre" value={serverInfo.name || selectedServer?.name || '---'} />
-                      <StatusLine label="Mapa" value={serverInfo.map || serverInfo.levelUrl || '---'} />
-                      <StatusLine label="Seed" value={serverInfo.seed !== undefined ? String(serverInfo.seed) : '---'} />
-                      <StatusLine label="Tamaño" value={serverInfo.mapSize !== undefined ? `${serverInfo.mapSize}` : '---'} />
+                      <StatusLine label="IP" value={`${selectedServer?.ip}:${selectedServer?.port}`} />
+                      <StatusLine label="Tipo de Conexión" value={serverInfo.useProxy || selectedServer?.useProxy ? "Facepunch Proxy (Seguro)" : "Directa (Rápida)"} color="#3b82f6" />
+                      <StatusLine label="Mapa" value={serverInfo.map || 'Procedural Map'} />
                       <StatusLine 
-                        label="Hora in-game" 
+                        label="Hora In-Game" 
                         value={worldTime?.time !== undefined ? formatTime(worldTime.time) : '---'} 
-                        color="#22c55e" 
-                      />
-                      <StatusLine 
-                        label="Conectado" 
-                        value="Sí" 
-                        color="#22c55e" 
+                        color="#eab308" 
                       />
                     </div>
                   ) : (
                     <div style={{ opacity: 0.4, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <RefreshCw size={14} className="animate-spin" /> Conectando al servidor...
+                      <RefreshCw size={14} className="animate-spin" /> Sincronizando datos...
                     </div>
                   )}
                 </div>

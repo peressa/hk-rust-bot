@@ -28,13 +28,21 @@ class RustPlusManager extends EventEmitter {
       return this.connecting.get(key);
     }
 
-    // Start a new connection
-    const connectPromise = new Promise<any>((resolve, reject) => {
-      console.log(`[RustPlus] Connecting to ${connection.ip} (Proxy: ${connection.useProxy || false}, Retry: ${isRetry})`);
+    // Start a new connection process
+    const connectPromise = this.internalConnect(steamId, connection, isRetry);
+    this.connecting.set(key, connectPromise);
+    return connectPromise;
+  }
+
+  private internalConnect(steamId: string, connection: ServerConnection, isRetry = false): Promise<any> {
+    const key = `${steamId}-${connection.ip}`;
+    
+    return new Promise<any>((resolve, reject) => {
+      console.log(`[RustPlus] Attempting ${connection.useProxy ? 'PROXY' : 'DIRECT'} connection to ${connection.ip}`);
       
       const rustplus = new RustPlus(
         connection.ip,
-        parseInt(connection.port), // Forzar número para evitar errores de socket
+        parseInt(connection.port), 
         connection.playerId.toString(), 
         parseInt(connection.playerToken),
         connection.useProxy || false
@@ -45,43 +53,39 @@ class RustPlusManager extends EventEmitter {
         this.connecting.delete(key);
         
         if (!connection.useProxy && !isRetry) {
-          console.log(`[RustPlus] Timeout on direct connection to ${connection.ip}. Retrying via Proxy...`);
+          console.log(`[RustPlus] Timeout on direct. Fallback to Proxy for ${connection.ip}...`);
           try {
-            const proxyConn = await this.connect(steamId, { ...connection, useProxy: true }, true);
+            // Sequential attempt, not recursive through public connect to avoid deadlock
+            const proxyConn = await this.internalConnect(steamId, { ...connection, useProxy: true }, true);
             resolve(proxyConn);
           } catch (e) {
-            reject(new Error(`Connection timeout to ${connection.ip} even via Proxy`));
+            reject(new Error(`Connection timeout even via Proxy for ${connection.ip}`));
           }
         } else {
-          reject(new Error(`Connection timeout to ${connection.ip} after 30s`));
+          reject(new Error(`Connection timeout after 30s for ${connection.ip}`));
         }
       }, 30000); 
 
       rustplus.on("connected", () => {
         clearTimeout(timeout);
-        console.log(`[RustPlus] SUCCESS: Connected to ${connection.ip} for ${steamId}`);
+        console.log(`[RustPlus] SUCCESS: ${connection.useProxy ? 'PROXY' : 'DIRECT'} connected to ${connection.ip}`);
         this.ready.set(key, true);
         this.connections.set(key, rustplus);
         this.connecting.delete(key);
-        this.emit("connected", { steamId, ip: connection.ip });
+        this.emit("connected", { steamId, ip: connection.ip, useProxy: !!connection.useProxy });
         resolve(rustplus);
       });
 
       rustplus.on("message", (message: any) => {
-        // Capture incoming team chat messages
         if (message.broadcast?.teamChat) {
           const teamKey = `${steamId}-${connection.ip}`;
           const chatMsg = message.broadcast.teamChat.message;
           const history = this.chatHistory.get(teamKey) || [];
           
-          history.push({
-            ...chatMsg,
-            time: Date.now()
-          });
+          history.push({ ...chatMsg, time: Date.now() });
           if (history.length > 100) history.shift();
           this.chatHistory.set(teamKey, history);
 
-          // PROCESS CLAN COMMANDS
           if (chatMsg.message.startsWith("!")) {
             this.handleTeamCommand(steamId, connection.ip, chatMsg.message);
           }
@@ -109,9 +113,6 @@ class RustPlusManager extends EventEmitter {
 
       rustplus.connect();
     });
-
-    this.connecting.set(key, connectPromise);
-    return connectPromise;
   }
 
   private async handleTeamCommand(steamId: string, ip: string, cmd: string) {
