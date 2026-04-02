@@ -55,6 +55,26 @@ class RustPlusManager extends EventEmitter {
     });
   }
 
+  async getMap(steamId: string, ip: string) {
+    return this.sendRequest(steamId, ip, { getMap: {} });
+  }
+
+  async getMapMarkers(steamId: string, ip: string) {
+    return this.sendRequest(steamId, ip, { getMapMarkers: {} });
+  }
+
+  async getTeamInfo(steamId: string, ip: string) {
+    return this.sendRequest(steamId, ip, { getTeamInfo: {} });
+  }
+
+  async sendTeamMessage(steamId: string, ip: string, message: string) {
+    return this.sendRequest(steamId, ip, {
+      sendTeamMessage: {
+        message: message
+      }
+    });
+  }
+
   getClient(steamId: string, ip: string) {
     return this.connections.get(`${steamId}-${ip}`);
   }

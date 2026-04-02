@@ -3,8 +3,20 @@
 import React, { useState } from "react";
 import { Send, User } from "lucide-react";
 
-export default function TeamChat({ messages = [] }: { messages?: any[] }) {
+export default function TeamChat({ 
+  messages = [], 
+  onSendMessage 
+}: { 
+  messages?: any[], 
+  onSendMessage: (text: string) => void 
+}) {
   const [input, setInput] = useState("");
+
+  const handleSend = () => {
+    if (!input.trim()) return;
+    onSendMessage(input);
+    setInput("");
+  };
 
   return (
     <div className="premium-card" style={{ height: '700px', display: 'flex', flexDirection: 'column', padding: '0' }}>
@@ -36,7 +48,7 @@ export default function TeamChat({ messages = [] }: { messages?: any[] }) {
                 gap: '0.5rem',
                 alignItems: 'center'
               }}>
-                {!msg.me && <User size={12} />} {msg.user}
+                {!msg.me && <User size={12} />} {msg.username}
               </div>
               <div style={{ 
                 padding: '0.75rem 1rem', 
@@ -44,9 +56,11 @@ export default function TeamChat({ messages = [] }: { messages?: any[] }) {
                 background: msg.me ? 'var(--primary)' : 'var(--secondary)',
                 color: 'white',
                 fontSize: '0.95rem',
-                boxShadow: 'var(--shadow-sm)'
+                boxShadow: 'var(--shadow-sm)',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word'
               }}>
-                {msg.text}
+                {msg.message}
               </div>
             </div>
           ))
@@ -59,11 +73,11 @@ export default function TeamChat({ messages = [] }: { messages?: any[] }) {
           type="text" 
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleSend()}
           placeholder="Escribe un mensaje al equipo..." 
-          style={{ flex: 1 }}
-          onKeyDown={(e) => e.key === 'Enter' && setInput("")}
+          style={{ flex: 1, padding: '0.75rem 1.25rem', borderRadius: '10px', background: 'var(--surface)', border: '1px solid var(--border)', color: 'white' }}
         />
-        <button className="btn-primary" style={{ padding: '0.75rem' }} onClick={() => setInput("")}>
+        <button className="btn-primary" style={{ padding: '0.75rem' }} onClick={handleSend}>
           <Send size={20} />
         </button>
       </div>
