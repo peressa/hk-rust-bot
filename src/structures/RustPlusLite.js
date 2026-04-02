@@ -25,7 +25,11 @@ const Config = require('../../config');
 
 class RustPlusLite extends RustPlusLib {
     constructor(guildId, logger, rustplus, serverIp, appPort, steamId, playerToken) {
-        super(serverIp, appPort, steamId, playerToken);
+        // Asegurar tipos para Handshake v3200
+        const validSteamId = steamId.toString();
+        const validToken = parseInt(playerToken);
+        
+        super(serverIp, appPort, validSteamId, validToken);
 
         this.serverId = `${this.server}-${this.port}`;
         this.guildId = guildId;
@@ -35,6 +39,47 @@ class RustPlusLite extends RustPlusLib {
         this.isActive = true;
 
         this.loadRustPlusLiteEvents();
+    }
+
+    /**
+     * Sobrescritura de connect para usar el esquema .proto MAESTRO
+     */
+    connect() {
+        const protobuf = require("protobufjs");
+        const WebSocket = require('ws');
+        const path = require('path');
+
+        protobuf.load(path.resolve(__dirname, "rustplus.proto")).then((root) => {
+            if (this.websocket) this.disconnect();
+
+            this.AppRequest = root.lookupType("rustplus.AppRequest");
+            this.AppMessage = root.lookupType("rustplus.AppMessage");
+
+            this.emit('connecting');
+
+            const address = `wss://companion-rust.facepunch.com/game/${this.server}/${this.port}`;
+            this.websocket = new WebSocket(address);
+
+            this.websocket.on('open', () => this.emit('connected'));
+            this.websocket.on('error', (e) => this.emit('error', e));
+
+            this.websocket.on('message', (data) => {
+                try {
+                    const message = this.AppMessage.decode(data);
+                    if (message.response && message.response.seq && this.seqCallbacks[message.response.seq]) {
+                        const callback = this.seqCallbacks[message.response.seq];
+                        const result = callback(message);
+                        delete this.seqCallbacks[message.response.seq];
+                        if (result) return;
+                    }
+                    this.emit('message', message);
+                } catch (e) {
+                    this.emit('error', new Error(`Error decodificando Protobuf Lite: ${e.message}`));
+                }
+            });
+
+            this.websocket.on('close', () => this.emit('disconnected'));
+        });
     }
 
     loadRustPlusLiteEvents() {

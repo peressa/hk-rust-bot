@@ -44,7 +44,11 @@ const TOKENS_REPLENISH = 3;     /* Per second */
 
 class RustPlus extends RustPlusLib {
     constructor(discordBot, guildId, serverIp, appPort, steamId, playerToken) {
-        super(serverIp, appPort, steamId, playerToken);
+        // Asegurar tipos correctos para el Handshake inicial (Senior Fix)
+        const validSteamId = steamId.toString(); // BigInt/Uint64 como String
+        const validToken = parseInt(playerToken); // Int32
+        
+        super(serverIp, appPort, validSteamId, validToken);
 
         this.discordBot = discordBot;
 
@@ -144,6 +148,61 @@ class RustPlus extends RustPlusLib {
         this.notificationSettings = instance.notificationSettings;
 
         this.connect();
+    }
+
+    /**
+     * Sobrescritura del método connect para usar el esquema .proto MAESTRO
+     * Garantiza compatibilidad v3200 y manejo de BigInt para playerId.
+     */
+    connect() {
+        const protobuf = require("protobufjs");
+        const WebSocket = require('ws');
+        const path = require('path');
+
+        // Cargar protobuf MAESTRO local
+        protobuf.load(path.resolve(__dirname, "rustplus.proto")).then((root) => {
+            if (this.websocket) {
+                this.disconnect();
+            }
+
+            this.AppRequest = root.lookupType("rustplus.AppRequest");
+            this.AppMessage = root.lookupType("rustplus.AppMessage");
+
+            this.emit('connecting');
+
+            const address = this.useFacepunchProxy 
+                ? `wss://companion-rust.facepunch.com/game/${this.server}/${this.port}` 
+                : `ws://${this.server}:${this.port}`;
+                
+            this.websocket = new WebSocket(address);
+
+            this.websocket.on('open', () => {
+                this.emit('connected');
+            });
+
+            this.websocket.on('error', (e) => {
+                this.emit('error', e);
+            });
+
+            this.websocket.on('message', (data) => {
+                try {
+                    const message = this.AppMessage.decode(data);
+                    if (message.response && message.response.seq && this.seqCallbacks[message.response.seq]) {
+                        const callback = this.seqCallbacks[message.response.seq];
+                        const result = callback(message);
+                        delete this.seqCallbacks[message.response.seq];
+                        if (result) return;
+                    }
+                    this.emit('message', message);
+                } catch (e) {
+                    this.emit('error', new Error(`Error decodificando Protobuf: ${e.message}`));
+                }
+            });
+
+            this.websocket.on('close', () => {
+                this.emit('disconnected');
+            });
+        });
     }
 
     updateLeaderRustPlusLiteInstance() {

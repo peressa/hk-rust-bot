@@ -69,16 +69,16 @@ class FcmManager {
                             device: androidId,
                             sender: rustSenderId,
                             'X-scope': '*',
-                            'X-app_ver': '2555',
-                            'X-os_ver': '30',
-                            'X-cliv': 'fcm-23.4.0',
-                            'X-messenger_ver': '2555'
+                            'X-app_ver': '3200',
+                            'X-os_ver': '33',
+                            'X-cliv': 'fcm-23.5.0',
+                            'X-messenger_ver': '3200'
                         }), 
                         {
                             headers: {
                                 Authorization: `AidLogin ${androidId}:${securityToken}`,
                                 'Content-Type': 'application/x-www-form-urlencoded',
-                                'User-Agent': 'Android-GCM/1.5',
+                                'User-Agent': 'Rust/3200 (Android; 13; Pixel 7)',
                             },
                             timeout: 10000
                         }
@@ -196,16 +196,16 @@ class FcmManager {
                     device: androidId,
                     sender: rustSenderId,
                     'X-scope': '*',
-                    'X-app_ver': '2555',
-                    'X-os_ver': '30',
-                    'X-cliv': 'fcm-23.4.0',
-                    'X-messenger_ver': '2555'
+                    'X-app_ver': '3200',
+                    'X-os_ver': '33',
+                    'X-cliv': 'fcm-23.5.0',
+                    'X-messenger_ver': '3200'
                 }), 
                 {
                     headers: {
                         Authorization: `AidLogin ${androidId}:${securityToken}`,
                         'Content-Type': 'application/x-www-form-urlencoded',
-                        'User-Agent': 'Android-GCM/1.5',
+                        'User-Agent': 'Rust/3200 (Android; 13; Pixel 7)',
                     },
                     timeout: 10000
                 }
@@ -238,21 +238,40 @@ class FcmManager {
                 const fpResponse = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                     serverType: "Official",
                     deviceId: stableDeviceId,
-                    deviceName: "HK-RUST Pro",
-                    pushService: 1, // Entero 1 (FCM Android)
+                    deviceName: "HK-RUST Pro v3200",
+                    pushService: 1, // FCM
                     pushToken: pushToken,
-                    steamId: steamId,
-                    authToken: authToken
+                    steamId: steamId.toString(),
+                    authToken: authToken,
+                    appVersion: '3200'
                 }, {
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': authToken,
-                        'X-Rust-Companion-App-Version': '3004',
+                        'X-Rust-Companion-App-Version': '3200',
                         'X-Rust-Companion-Device-Id': stableDeviceId,
-                        'User-Agent': 'Rust/3004 (Android; 13; Pixel 7)'
+                        'X-Rust-Companion-Platform': 'android',
+                        'User-Agent': 'Rust/3200 (Android; 13; Pixel 7)'
                     },
                     timeout: 20000 
                 });
+
+                // Paso 4: Activación de Visibilidad (PRO TRIGGER)
+                onProgress('fp_check', 'Activando visibilidad en el menú del juego...', 'loading');
+                try {
+                    await axios.get('https://companion-rust.facepunch.com/api/companion/check', {
+                        headers: {
+                            'Authorization': `Bearer ${authToken}`,
+                            'User-Agent': 'Rust/3200 (Android; 13; Pixel 7)',
+                            'X-Rust-Companion-App-Version': '3200',
+                            'X-Rust-Companion-Device-Id': stableDeviceId,
+                            'X-Rust-Companion-Platform': 'android'
+                        }
+                    });
+                    onProgress('fp_check', 'Dispositivo activado y visible (Rustalytics Style).', 'success');
+                } catch (checkErr) {
+                    console.warn('[FCM-V3200] Advertencia en companion/check:', checkErr.message);
+                }
 
                 if (fpResponse.status === 200) {
                     console.log(`[FCM-V3004] Facepunch Sync Successful. Body:`, JSON.stringify(fpResponse.data));
@@ -503,18 +522,20 @@ class FcmManager {
             const response = await axios.post('https://companion-rust.facepunch.com/api/push/register', {
                 serverType: "Official",
                 deviceId: stableDeviceId,
-                deviceName: "HK Rust Bot",
+                deviceName: "HK Rust Bot v3200",
                 pushService: 1, // 1 = GCM/FCM
                 pushToken: pushToken,
                 steamId: steamId.toString(),
-                authToken: authToken
+                authToken: authToken,
+                appVersion: '3200'
             }, {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': authToken,
-                    'X-Rust-Companion-App-Version': '3004',
+                    'X-Rust-Companion-App-Version': '3200',
                     'X-Rust-Companion-Device-Id': stableDeviceId,
-                    'User-Agent': 'Rust/3004 (Android; 13; Pixel 7)' 
+                    'X-Rust-Companion-Platform': 'android',
+                    'User-Agent': 'Rust/3200 (Android; 13; Pixel 7)' 
                 },
                 timeout: 10000
             });
