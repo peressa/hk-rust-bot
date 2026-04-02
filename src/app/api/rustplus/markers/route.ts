@@ -17,17 +17,22 @@ export async function GET(request: Request) {
     const server = db.prepare("SELECT * FROM servers WHERE id = ? AND steamId = ?").get(serverId, session.user.steamId) as any;
     if (!server) return NextResponse.json({ error: "Server not found" }, { status: 404 });
 
-    await rustPlusManager.connect(session.user.steamId, {
+    const client = await rustPlusManager.connect(session.user.steamId, {
       ip: server.ip,
       port: server.port,
       playerId: server.playerId,
       playerToken: server.playerToken
     });
 
-    const mapData = await rustPlusManager.getMap(session.user.steamId, server.ip);
-    return NextResponse.json(mapData);
+    const markersData = await rustPlusManager.getMapMarkers(session.user.steamId, server.ip);
+    const teamData = await rustPlusManager.getTeamInfo(session.user.steamId, server.ip);
+
+    return NextResponse.json({
+      markers: (markersData as any)?.response?.mapMarkers?.markers || [],
+      team: (teamData as any)?.response?.teamInfo?.members || []
+    });
   } catch (error: any) {
-    console.error("[API Map] Error:", error);
+    console.error("[API Markers] Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

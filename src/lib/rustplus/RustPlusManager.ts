@@ -10,6 +10,7 @@ export interface ServerConnection {
 
 class RustPlusManager extends EventEmitter {
   private connections: Map<string, any> = new Map();
+  private chatHistory: Map<string, any[]> = new Map(); // steamId-ip -> messages[]
 
   async connect(steamId: string, connection: ServerConnection) {
     const key = `${steamId}-${connection.ip}`;
@@ -30,6 +31,16 @@ class RustPlusManager extends EventEmitter {
     });
 
     rustplus.on("message", (message: any) => {
+      if (message.broadcast?.teamChat) {
+        const teamKey = `${steamId}-${connection.ip}`;
+        const history = this.chatHistory.get(teamKey) || [];
+        history.push({
+          ...message.broadcast.teamChat.message,
+          time: Date.now()
+        });
+        if (history.length > 50) history.shift();
+        this.chatHistory.set(teamKey, history);
+      }
       this.emit("message", { steamId, ip: connection.ip, message });
     });
 
@@ -73,6 +84,10 @@ class RustPlusManager extends EventEmitter {
         message: message
       }
     });
+  }
+
+  getChatHistory(steamId: string, ip: string) {
+    return this.chatHistory.get(`${steamId}-${ip}`) || [];
   }
 
   getClient(steamId: string, ip: string) {

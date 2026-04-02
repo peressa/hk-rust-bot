@@ -101,6 +101,9 @@ export default function SettingsPage() {
                   {loading ? <RefreshCw size={18} className="animate-spin" /> : "Vincular Ahora"}
                 </button>
               </div>
+              <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
+                <strong>⚠️ Migración a Conexión Directa:</strong> Si ya estabas vinculado pero no ves tus servidores, por favor <strong>vuelve a vincularte</strong> ahora para activar la recepción inmediata de datos.
+              </p>
               <a 
                 href="https://companion-rust.facepunch.com/" 
                 target="_blank" 
