@@ -3,11 +3,12 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  // Fix for libraries loading files from node_modules (e.g. push-receiver .proto files)
-  serverComponentsExternalPackages: ["@liamcottle/push-receiver", "better-sqlite3"],
+  // In Next.js 15+, the key changed to serverExternalPackages
+  serverExternalPackages: ["@liamcottle/push-receiver", "better-sqlite3"],
+  experimental: {
+    // Ensuring Turbopack respects the external packages
+    serverComponentsExternalPackages: ["@liamcottle/push-receiver", "better-sqlite3"],
+  }
 };
 
 export default nextConfig;

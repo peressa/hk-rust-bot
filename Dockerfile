@@ -6,12 +6,14 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
-# Install dependencies but ignore scripts for now (as fix-push-receiver depends on src/ files)
-RUN npm install --legacy-peer-deps --ignore-scripts
+COPY scripts ./scripts
+# Copy protos so the patch script can find them during postinstall
+COPY src/lib/fcm/proto ./src/lib/fcm/proto
+
+# Install dependencies and allow scripts (compiles better-sqlite3)
+RUN npm install --legacy-peer-deps
 
 COPY . .
-# Now run the patch manually before building
-RUN node scripts/fix-push-receiver.js
 RUN npm run build
 
 # Production stage
