@@ -8,11 +8,8 @@ import {
   Power, 
   Activity, 
   Shield, 
-  AlertTriangle,
   PlusCircle,
   RefreshCw,
-  Clock,
-  Users
 } from "lucide-react";
 
 import ServerHero from "@/components/dashboard/ServerHero";
@@ -282,21 +279,33 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
+                {/* Info real del servidor */}
                 <div className="premium-card">
                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1.25rem' }}>
-                    <Clock size={18} color="var(--primary)" /> Historial Táctico
+                    <Activity size={18} color="var(--primary)" /> Info del Servidor
                   </h3>
-                  <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                    <div style={{ borderLeft: '2px solid var(--primary)', paddingLeft: '1rem' }}>
-                      <div style={{ fontWeight: 700, color: '#f0f0f0' }}>Vigilancia Iniciada</div>
-                      <div style={{ opacity: 0.6 }}>Bot escuchando señales de Facepunch.</div>
-                      <div style={{ fontSize: '0.7rem', marginTop: '0.25rem', color: 'var(--primary)' }}>Hace 2 min</div>
+                  {serverInfo ? (
+                    <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      <StatusLine label="Nombre" value={serverInfo.name || selectedServer?.name || '---'} />
+                      <StatusLine label="Mapa" value={serverInfo.map || serverInfo.levelUrl || '---'} />
+                      <StatusLine label="Seed" value={serverInfo.seed !== undefined ? String(serverInfo.seed) : '---'} />
+                      <StatusLine label="Tamaño" value={serverInfo.mapSize !== undefined ? `${serverInfo.mapSize}` : '---'} />
+                      <StatusLine 
+                        label="Hora in-game" 
+                        value={worldTime?.time !== undefined ? formatTime(worldTime.time) : '---'} 
+                        color="#22c55e" 
+                      />
+                      <StatusLine 
+                        label="Conectado" 
+                        value="Sí" 
+                        color="#22c55e" 
+                      />
                     </div>
-                    <div style={{ borderLeft: '2px solid rgba(255,255,255,0.1)', paddingLeft: '1rem', opacity: 0.6 }}>
-                      <div style={{ fontWeight: 600 }}>Sincronización Completa</div>
-                      <div style={{ opacity: 0.8 }}>Datos del mapa actualizados.</div>
+                  ) : (
+                    <div style={{ opacity: 0.4, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <RefreshCw size={14} className="animate-spin" /> Conectando al servidor...
                     </div>
-                  </div>
+                  )}
                 </div>
               </aside>
             </div>
