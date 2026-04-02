@@ -1,0 +1,8 @@
+resources
+RustPlusDesk.sln
+RustPlusDesktop
+rustplus.js-master
+nixpacks.toml
+.nixpacks
+node_modules
+.next

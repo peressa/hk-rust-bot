@@ -1,0 +1,12 @@
+node_modules
+.next
+out
+build
+.git
+.gitignore
+*.md
+rust-plus.db
+resources
+temp-app
+nixpacks.toml
+.nixpacks
