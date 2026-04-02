@@ -1,5 +1,5 @@
 import NextAuth from "next-auth";
-import { getAuthOptions } from "../../../lib/auth/authOptions";
+import { getAuthOptions } from "@/lib/auth/authOptions";
 import { NextRequest } from "next/server";
 
 async function handler(req: NextRequest, ctx: { params: any }) {
