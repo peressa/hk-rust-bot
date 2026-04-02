@@ -6,9 +6,12 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
-# Use --legacy-peer-deps to avoid React 19 / Next 16 issues
-RUN npm install --legacy-peer-deps
+# Install dependencies but ignore scripts for now (as fix-push-receiver depends on src/ files)
+RUN npm install --legacy-peer-deps --ignore-scripts
+
 COPY . .
+# Now run the patch manually before building
+RUN node scripts/fix-push-receiver.js
 RUN npm run build
 
 # Production stage
