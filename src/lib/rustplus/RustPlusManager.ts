@@ -34,7 +34,7 @@ class RustPlusManager extends EventEmitter {
       
       const rustplus = new RustPlus(
         connection.ip,
-        connection.port,
+        parseInt(connection.port), // Forzar número para evitar errores de socket
         connection.playerId.toString(), 
         parseInt(connection.playerToken),
         connection.useProxy || false
@@ -44,7 +44,6 @@ class RustPlusManager extends EventEmitter {
         rustplus.disconnect();
         this.connecting.delete(key);
         
-        // AUTO-PROXY FALLBACK: If direct failed and we haven't tried proxy yet, try it!
         if (!connection.useProxy && !isRetry) {
           console.log(`[RustPlus] Timeout on direct connection to ${connection.ip}. Retrying via Proxy...`);
           try {
@@ -72,13 +71,20 @@ class RustPlusManager extends EventEmitter {
         // Capture incoming team chat messages
         if (message.broadcast?.teamChat) {
           const teamKey = `${steamId}-${connection.ip}`;
+          const chatMsg = message.broadcast.teamChat.message;
           const history = this.chatHistory.get(teamKey) || [];
+          
           history.push({
-            ...message.broadcast.teamChat.message,
+            ...chatMsg,
             time: Date.now()
           });
           if (history.length > 100) history.shift();
           this.chatHistory.set(teamKey, history);
+
+          // PROCESS CLAN COMMANDS
+          if (chatMsg.message.startsWith("!")) {
+            this.handleTeamCommand(steamId, connection.ip, chatMsg.message);
+          }
         }
         this.emit("message", { steamId, ip: connection.ip, message });
       });
@@ -106,6 +112,30 @@ class RustPlusManager extends EventEmitter {
 
     this.connecting.set(key, connectPromise);
     return connectPromise;
+  }
+
+  private async handleTeamCommand(steamId: string, ip: string, cmd: string) {
+    const key = `${steamId}-${ip}`;
+    const rustplus = this.connections.get(key);
+    if (!rustplus) return;
+
+    const command = cmd.toLowerCase().trim();
+    
+    try {
+      if (command === "!time") {
+        const timeResp = await this.sendRequest(steamId, ip, { getTime: {} });
+        const t = timeResp.response.time;
+        rustplus.sendTeamMessage(`🕒 Hora HK: ${t.time} (${t.dayLengthMinutes}m día / ${t.nightLengthMinutes}m noche)`);
+      } else if (command === "!pop") {
+        const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
+        const i = infoResp.response.info;
+        rustplus.sendTeamMessage(`📊 Pop HK: ${i.players}/${i.maxPlayers} (Cola: ${i.queued || 0})`);
+      } else if (command === "!upkeep") {
+        rustplus.sendTeamMessage(`🏠 Mantenimiento: Consulta el mapa interactivo de HK Rust para ver el tiempo real.`);
+      }
+    } catch (err) {
+      console.error("[RustPlus Command Error]:", err);
+    }
   }
 
   async sendRequest(steamId: string, ip: string, request: any, timeoutMs = 10000): Promise<any> {

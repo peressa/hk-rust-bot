@@ -25,8 +25,20 @@ export async function GET(request: Request) {
       useProxy: server.useProxy === 1
     });
 
-    const mapData = await rustPlusManager.getMap(session.user.steamId, server.ip);
-    return NextResponse.json(mapData);
+    const mapResponse = await rustPlusManager.getMap(session.user.steamId, server.ip);
+    const map = (mapResponse as any)?.response?.map;
+    
+    if (!map || !map.jpgImage) {
+      throw new Error("No se pudo obtener la imagen del mapa");
+    }
+
+    // Convert Buffer to Base64 string for the frontend
+    const base64Map = Buffer.from(map.jpgImage).toString('base64');
+
+    return NextResponse.json({
+      ...map,
+      jpgImage: base64Map
+    });
   } catch (error: any) {
     console.error("[API Map] Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
