@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-// Importación estricta de Leaflet en cliente
-import dynamic from "next/dynamic";
+// El CSS debe importarse de forma estática pura para que el compilador de NextJS
+// lo añada al CSS global sin provocar Chunk Load Errors.
+import "leaflet/dist/leaflet.css";
 
 const MARKER_TYPES = {
   PLAYER: "Player",
@@ -38,10 +39,11 @@ export default function RustMap({
   useEffect(() => {
     let isMounted = true;
     import("leaflet").then((leaflet) => {
-      import("leaflet/dist/leaflet.css");
       if (isMounted) {
         setL(leaflet);
       }
+    }).catch(err => {
+      console.error("No se pudo cargar Leaflet:", err);
     });
 
     return () => { isMounted = false; };
@@ -100,51 +102,57 @@ export default function RustMap({
     });
   };
 
-  // Inicializar mapa subyacente
+  // Inicializar o actualizar mapa subyacente
   useEffect(() => {
-    if (!L || !mapRef.current || leafletMap.current) return;
+    if (!L || !mapRef.current) return;
 
-    leafletMap.current = L.map(mapRef.current, {
-      crs: L.CRS.Simple,
-      minZoom: -2,
-      maxZoom: 4,
-      zoom: -1,
-      center: [500, 500],
-      attributionControl: false,
-    });
+    try {
+      if (!leafletMap.current) {
+        leafletMap.current = L.map(mapRef.current, {
+          crs: L.CRS.Simple,
+          minZoom: -2,
+          maxZoom: 4,
+          zoom: -1,
+          center: [500, 500],
+          attributionControl: false,
+        });
 
-    // Capa base táctica
-    const numCells = Math.ceil(mapSize / GRID_SIZE);
-    const step = (GRID_SIZE / mapSize) * 1000;
-    
-    const gridGroup = L.layerGroup().addTo(leafletMap.current);
-    gridLinesRef.current = [];
+        // Capa base táctica
+        const numCells = Math.ceil(mapSize / GRID_SIZE);
+        const step = (GRID_SIZE / mapSize) * 1000;
+        
+        const gridGroup = L.layerGroup().addTo(leafletMap.current);
+        gridLinesRef.current = [];
 
-    for (let i = 0; i <= numCells; i++) {
-      const pos = i * step;
-      if (pos > 1005) break;
+        for (let i = 0; i <= numCells; i++) {
+          const pos = i * step;
+          if (pos > 1005) break;
 
-      const opts = { color: 'white', weight: 0.5, opacity: 0.4, dashArray: '5, 10' };
+          const opts = { color: 'white', weight: 0.5, opacity: 0.4, dashArray: '5, 10' };
 
-      // Vertical
-      gridLinesRef.current.push(L.polyline([[0, pos], [1000, pos]], opts).addTo(gridGroup));
-      // Horizontal
-      const hPos = 1000 - pos;
-      gridLinesRef.current.push(L.polyline([[hPos, 0], [hPos, 1000]], opts).addTo(gridGroup));
+          // Vertical
+          gridLinesRef.current.push(L.polyline([[0, pos], [1000, pos]], opts).addTo(gridGroup));
+          // Horizontal
+          const hPos = 1000 - pos;
+          gridLinesRef.current.push(L.polyline([[hPos, 0], [hPos, 1000]], opts).addTo(gridGroup));
 
-      const charCode = 65 + (i % 26);
-      const suffix = i >= 26 ? Math.floor(i / 26) : "";
-      const vLabel = String.fromCharCode(charCode) + suffix;
+          const charCode = 65 + (i % 26);
+          const suffix = i >= 26 ? Math.floor(i / 26) : "";
+          const vLabel = String.fromCharCode(charCode) + suffix;
 
-      L.marker([5, pos + 2], {
-        icon: L.divIcon({ className: 'grid-label', html: `<span class="grid-label-text">${vLabel}</span>`, iconSize: [20, 20] })
-      }).addTo(gridGroup);
+          L.marker([5, pos + 2], {
+            icon: L.divIcon({ className: 'grid-label', html: `<span class="grid-label-text">${vLabel}</span>`, iconSize: [20, 20] })
+          }).addTo(gridGroup);
 
-      if (parseInt(i.toString()) > 0) {
-        L.marker([hPos + 2, 5], {
-          icon: L.divIcon({ className: 'grid-label', html: `<span class="grid-label-text">${i}</span>`, iconSize: [20, 20] })
-        }).addTo(gridGroup);
+          if (i > 0) {
+            L.marker([hPos + 2, 5], {
+              icon: L.divIcon({ className: 'grid-label', html: `<span class="grid-label-text">${i}</span>`, iconSize: [20, 20] })
+            }).addTo(gridGroup);
+          }
+        }
       }
+    } catch (err) {
+      console.error("Error inicializando Leaflet:", err);
     }
   }, [L, mapSize]);
 
