@@ -1,8 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import RustMap from "@/components/map/RustMap";
+
+// Importación dinámica obligatoria para react-leaflet en SSR
+const RustMap = dynamic(() => import("@/components/map/RustMap"), { ssr: false, loading: () => <div className="p-8 text-center" style={{color: 'var(--text-muted)'}}>Cargando motor de mapa...</div> });
+
 import { 
   Map as MapIcon, 
   RefreshCw, 

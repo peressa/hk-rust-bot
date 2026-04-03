@@ -1,6 +1,23 @@
 import RustPlus from "@liamcottle/rustplus.js";
+import * as protobuf from "protobufjs";
 import { EventEmitter } from "events";
 import * as db from "../db";
+
+// =====================================================================
+// MONKEY PATCH: Forzar campos Opcionales en Protobufjs
+// Esto evita que el error "ProtocolError: missing required '...'" 
+// cierre el proceso o bloquee las promesas cuando Rust manda datos incompletos.
+// =====================================================================
+const originalAdd = protobuf.Type.prototype.add;
+protobuf.Type.prototype.add = function (obj: any) {
+  if (obj && obj.rule === "required") {
+    obj.rule = "optional";
+    obj.required = false;
+    obj.optional = true;
+  }
+  return originalAdd.call(this, obj);
+};
+// =====================================================================
 
 export interface ServerConnection {
   ip: string;

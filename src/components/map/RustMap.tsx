@@ -1,29 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import dynamic from "next/dynamic";
-
-// MapContainer components must be loaded dynamically for SSR compatibility
-const MapContainer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.MapContainer),
-  { ssr: false, loading: () => <div className="map-placeholder">Cargando contenedor...</div> }
-);
-const ImageOverlay = dynamic(
-  () => import("react-leaflet").then((mod) => mod.ImageOverlay),
-  { ssr: false }
-);
-const Marker = dynamic(
-  () => import("react-leaflet").then((mod) => mod.Marker),
-  { ssr: false }
-);
-const Popup = dynamic(
-  () => import("react-leaflet").then((mod) => mod.Popup),
-  { ssr: false }
-);
-const Polyline = dynamic(
-  () => import("react-leaflet").then((mod) => mod.Polyline),
-  { ssr: false }
-);
+import { MapContainer, ImageOverlay, Marker, Popup, Polyline } from "react-leaflet";
 
 // RustPlus Marker Types
 const MARKER_TYPES = {
