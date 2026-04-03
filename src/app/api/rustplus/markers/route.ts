@@ -25,15 +25,20 @@ export async function GET(request: Request) {
       useProxy: server.useProxy === 1
     });
 
-    const markersData = await rustPlusManager.getMapMarkers(session.user.steamId, server.ip);
-    const teamData = await rustPlusManager.getTeamInfo(session.user.steamId, server.ip);
+    const markersData = await rustPlusManager.getMapMarkers(session.user.steamId, server.ip).catch(() => ({}));
+    const teamData = await rustPlusManager.getTeamInfo(session.user.steamId, server.ip).catch(() => ({}));
 
     return NextResponse.json({
       markers: (markersData as any)?.response?.mapMarkers?.markers || [],
       team: (teamData as any)?.response?.teamInfo?.members || []
     });
   } catch (error: any) {
-    console.error("[API Markers] Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.warn("[API Markers] Silent Fallback (200 OK with empty lists):", error.message || error);
+    // Return empty results instead of 500 to keep Frontend alive during reconnections
+    return NextResponse.json({ 
+      markers: [], 
+      team: [], 
+      status: "reconnecting" 
+    }, { status: 200 });
   }
 }

@@ -251,7 +251,9 @@ class RustPlusManager extends EventEmitter {
     // 2. Definir donde DEBERÍAN estar los protos (en el root o en data)
     const sourceProtos = [
       '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
+      '/ROOT/.next/standalone/node_modules/@liamcottle/rustplus.js/rustplus.proto',
       path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
+      path.join(process.cwd(), '.next/standalone/node_modules/@liamcottle/rustplus.js/rustplus.proto'),
       '/app/node_modules/@liamcottle/rustplus.js/rustplus.proto'
     ];
 
@@ -259,13 +261,13 @@ class RustPlusManager extends EventEmitter {
     if (libPath) {
       const targetProto = path.join(libPath, 'rustplus.proto');
       if (!fs.existsSync(targetProto)) {
-        console.log(`[RustPlus] Target proto MISSING at ${targetProto}. Searching for source...`);
+        console.log(`[RustPlus] Target proto MISSING at ${targetProto}. Searching in ${sourceProtos.length} locations...`);
         for (const src of sourceProtos) {
           if (fs.existsSync(src)) {
             console.log(`[RustPlus] FOUND source proto at ${src}. Patching library...`);
             try {
               fs.copyFileSync(src, targetProto);
-              console.log("[RustPlus] SUCCESS: Library patched with rustplus.proto");
+              console.log("[RustPlus] SUCCESS: Library patched with rustplus.proto from source.");
               break;
             } catch (copyErr) {
               console.error(`[RustPlus] Failed to copy proto: ${copyErr}`);
@@ -273,7 +275,7 @@ class RustPlusManager extends EventEmitter {
           }
         }
       } else {
-        console.log("[RustPlus] Proto already present in library folder.");
+        console.log("[RustPlus] Proto already present in library folder. No patch needed.");
       }
     }
 
@@ -281,6 +283,7 @@ class RustPlusManager extends EventEmitter {
     const routes = [
       path.resolve(__dirname, '../../node_modules/@liamcottle/rustplus.js/rustplus.proto'),
       '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
+      '/ROOT/.next/standalone/node_modules/@liamcottle/rustplus.js/rustplus.proto',
       path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto')
     ];
 

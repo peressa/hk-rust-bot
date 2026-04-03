@@ -32,18 +32,25 @@ COPY --from=builder /ROOT/public ./public
 COPY --from=builder /ROOT/.next/standalone ./
 COPY --from=builder /ROOT/.next/static ./.next/static
 
-# Fix missing .proto files in standalone node_modules
-# We copy them from the builder's node_modules to the runner's node_modules
-# Coolify expects files in /ROOT
+# Fix missing .proto files in BOTH standard and standalone node_modules
 RUN mkdir -p /ROOT/node_modules/@liamcottle/rustplus.js/ \
     && mkdir -p /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/ \
-    && mkdir -p /ROOT/node_modules/@liamcottle/push-receiver/src/
+    && mkdir -p /ROOT/node_modules/@liamcottle/push-receiver/src/ \
+    && mkdir -p /ROOT/.next/standalone/node_modules/@liamcottle/rustplus.js/ \
+    && mkdir -p /ROOT/.next/standalone/node_modules/@liamcottle/push-receiver/src/gcm/ \
+    && mkdir -p /ROOT/.next/standalone/node_modules/@liamcottle/push-receiver/src/
 
 # Redundant copy to ensure they are found regardless of path resolution
 COPY --from=builder /ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto /ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto
 COPY --from=builder /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto
 COPY --from=builder /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/android_checkin.proto /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/android_checkin.proto
 COPY --from=builder /ROOT/node_modules/@liamcottle/push-receiver/src/mcs.proto /ROOT/node_modules/@liamcottle/push-receiver/src/mcs.proto
+
+# Next.js Standalone structure copies (CRITICAL)
+COPY --from=builder /ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto /ROOT/.next/standalone/node_modules/@liamcottle/rustplus.js/rustplus.proto
+COPY --from=builder /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto /ROOT/.next/standalone/node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto
+COPY --from=builder /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/android_checkin.proto /ROOT/.next/standalone/node_modules/@liamcottle/push-receiver/src/gcm/android_checkin.proto
+COPY --from=builder /ROOT/node_modules/@liamcottle/push-receiver/src/mcs.proto /ROOT/.next/standalone/node_modules/@liamcottle/push-receiver/src/mcs.proto
 
 # Create data directory for persistency (SQLite)
 RUN mkdir -p /ROOT/data
