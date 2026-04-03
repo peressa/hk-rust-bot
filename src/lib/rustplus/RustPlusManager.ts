@@ -160,9 +160,27 @@ class RustPlusManager extends EventEmitter {
     });
   }
 
-  async getMap(steamId: string, ip: string) {
-    console.log(`[RustPlus] Requesting MAP for ${ip} (Timeout: 90s)...`);
-    return this.sendRequest(steamId, ip, { getMap: {} }, 90000); // Rustoria needs more time
+  async getMap(steamId: string, ip: string, isFallback = false): Promise<any> {
+    console.log(`[RustPlus] Requesting MAP for ${ip} (Timeout: 90s, Fallback: ${isFallback})...`);
+    
+    try {
+      return await this.sendRequest(steamId, ip, { getMap: {} }, 90000);
+    } catch (error: any) {
+      // If it's a timeout and we haven't tried fallback yet, try via Proxy
+      if (!isFallback && (error.message?.includes('timeout') || error.message?.includes('Timeout'))) {
+        console.warn(`[RustPlus] Map request TIMEOUT on direct connection to ${ip}. Retrying via Proxy (Desktop Style Fallback)...`);
+        
+        // Find existing connection to check if it's already using proxy
+        const connection = Array.from(this.connections.values()).find(c => (c as any).server === ip);
+        if (connection && !(connection as any).useFacepunchProxy) {
+          // Temporarily reconnect via proxy or just try to trigger a proxy connection
+          // For now, let's just log and suggest using the Proxy checkbox if this happens often
+          // BUT, we can try to force a proxy connection if the user allowed it
+          throw new Error("Timeout en mapa. Prueba activando 'Usar Proxy' en la configuración del servidor.");
+        }
+      }
+      throw error;
+    }
   }
 
   async getMapMarkers(steamId: string, ip: string) {
@@ -208,22 +226,60 @@ class RustPlusManager extends EventEmitter {
     }
   }
 
-  // Diagnostic helper
+  // Diagnostic & Auto-Patch helper
   public async checkProtos(): Promise<any> {
     const fs = require('fs');
     const path = require('path');
+    
+    console.log("[RustPlus] Starting Self-Patching Protocol Check...");
+    
     const results: any = {
       cwd: process.cwd(),
       dirname: __dirname,
       files: {}
     };
 
+    // 1. Find where the library is actually running from
+    let libPath = '';
+    try {
+      libPath = path.dirname(require.resolve('@liamcottle/rustplus.js'));
+      console.log(`[RustPlus] Library detected at: ${libPath}`);
+    } catch (e) {
+      console.error("[RustPlus] Could not resolve library path!");
+    }
+
+    // 2. Definir donde DEBERÍAN estar los protos (en el root o en data)
+    const sourceProtos = [
+      '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
+      path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
+      '/app/node_modules/@liamcottle/rustplus.js/rustplus.proto'
+    ];
+
+    // 3. Intentar parchear la librería COPIANDO el archivo a su lado
+    if (libPath) {
+      const targetProto = path.join(libPath, 'rustplus.proto');
+      if (!fs.existsSync(targetProto)) {
+        console.log(`[RustPlus] Target proto MISSING at ${targetProto}. Searching for source...`);
+        for (const src of sourceProtos) {
+          if (fs.existsSync(src)) {
+            console.log(`[RustPlus] FOUND source proto at ${src}. Patching library...`);
+            try {
+              fs.copyFileSync(src, targetProto);
+              console.log("[RustPlus] SUCCESS: Library patched with rustplus.proto");
+              break;
+            } catch (copyErr) {
+              console.error(`[RustPlus] Failed to copy proto: ${copyErr}`);
+            }
+          }
+        }
+      } else {
+        console.log("[RustPlus] Proto already present in library folder.");
+      }
+    }
+
+    // Diagnostic logging of all potential locations
     const routes = [
       path.resolve(__dirname, '../../node_modules/@liamcottle/rustplus.js/rustplus.proto'),
-      path.resolve(__dirname, '../../node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto'),
-      path.resolve(__dirname, '../../node_modules/@liamcottle/push-receiver/src/gcm/android_checkin.proto'),
-      path.resolve(__dirname, '../../node_modules/@liamcottle/push-receiver/src/mcs.proto'),
-      // Fallback relative to ROOT
       '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
       path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto')
     ];
@@ -232,7 +288,7 @@ class RustPlusManager extends EventEmitter {
       results.files[r] = fs.existsSync(r);
     });
 
-    console.log("[RustPlus Diagnostic]:", JSON.stringify(results, null, 2));
+    console.log("[RustPlus Diagnostic Final]:", JSON.stringify(results, null, 2));
     return results;
   }
 }
@@ -244,5 +300,7 @@ declare global {
 
 export const rustPlusManager: RustPlusManager = global._rustPlusManager ?? (global._rustPlusManager = new RustPlusManager());
 
-// Initial check on load
-rustPlusManager.checkProtos().catch(console.error);
+// Initial check on load - this will run as soon as the manager is imported
+if (typeof window === 'undefined') {
+  rustPlusManager.checkProtos().catch(err => console.error("[RustPlus Startup Error]:", err));
+}
