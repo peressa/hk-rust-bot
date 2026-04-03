@@ -16,6 +16,31 @@ class RustPlusManager extends EventEmitter {
   private chatHistory: Map<string, any[]> = new Map(); // steamId-ip -> messages[]
   private ready: Map<string, boolean> = new Map(); // Track if connection is ready
 
+  constructor() {
+    super();
+    // Prevenir que errores asíncronos de sockets o protobufs maten el proceso Next.js
+    if (typeof process !== 'undefined') {
+      const isRegistered = process.listeners('uncaughtException').some(l => l.name === 'rustplusUncaught');
+      if (!isRegistered) {
+        process.on('uncaughtException', function rustplusUncaught(error: any) {
+          if (error.message?.includes('ProtocolError') || error.message?.includes('required')) {
+            console.warn(`[RustPlus Manager] Ignorando Uncaught ProtocolError: ${error.message}`);
+            return;
+          }
+          console.error('[RustPlus Manager] Global UncaughtException detectada:', error);
+        });
+
+        process.on('unhandledRejection', function rustplusUnhandled(reason: any) {
+          if (reason?.message?.includes('FCM not registered')) {
+            console.warn(`[RustPlus Manager] Ignorando (FCM not registered for this user).`);
+            return;
+          }
+          console.error('[RustPlus Manager] Global UnhandledRejection:', reason);
+        });
+      }
+    }
+  }
+
   async connect(steamId: string, connection: ServerConnection, isRetry = false): Promise<any> {
     const key = `${steamId}-${connection.ip}`;
 

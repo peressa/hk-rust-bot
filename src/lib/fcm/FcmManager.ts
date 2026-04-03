@@ -81,7 +81,10 @@ export class FcmManager {
 
     const stmt = db.prepare("SELECT keys, deviceId FROM fcm_keys WHERE steamId = ?");
     const row = stmt.get(steamId) as any;
-    if (!row) throw new Error("FCM not registered for this user");
+    if (!row) {
+      console.warn(`[FCM] Skipping listen: FCM not registered for user ${steamId}.`);
+      return null;
+    }
 
     const config = JSON.parse(row.keys);
     const deviceId = row.deviceId || `rust-web-${steamId}`; // Fallback if old

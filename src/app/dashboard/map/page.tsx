@@ -38,11 +38,15 @@ export default function MapPage() {
   const fetchServers = async () => {
     try {
       const res = await fetch("/api/servers");
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Servidor fuera de línea (${res.status}): ${text.slice(0, 50)}...`);
+      }
       const data = await res.json();
       setServers(data);
       if (data.length > 0) setSelectedServer(data[0]);
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("[MapPage] Error fetchServers:", err.message);
     }
   };
 
@@ -52,6 +56,15 @@ export default function MapPage() {
     try {
       console.log(`[MapPage] Solicitando imagen base para ${serverId} (refresh: ${refresh})...`);
       const res = await fetch(`/api/rustplus/map?serverId=${serverId}${refresh ? '&refresh=true' : ''}`);
+      
+      if (!res.ok) {
+        const text = await res.text();
+        if (text.includes("Bad Gateway") || text.includes("Gateway Timeout")) {
+          throw new Error("El servidor de la aplicación (o el proxy) ha tardado demasiado en responder. El mapa se seguirá intentando en segundo plano.");
+        }
+        throw new Error(`Error en el servidor (${res.status}): ${text.slice(0, 50)}...`);
+      }
+
       const data = await res.json();
       
       if (data.error) {
@@ -62,6 +75,7 @@ export default function MapPage() {
         setMapError(null);
       }
     } catch (err: any) {
+      console.warn("[MapPage] Catch Error:", err.message);
       setMapError(err.message || "Error de conexión con el servidor interno");
     } finally {
       setLoading(false);
@@ -71,13 +85,14 @@ export default function MapPage() {
   const fetchLiveMarkers = async (serverId: string) => {
     try {
       const res = await fetch(`/api/rustplus/markers?serverId=${serverId}`);
+      if (!res.ok) return; // Silent failure for markers, keep retrying
       const data = await res.json();
       if (!data.error) {
         setMarkers(data.markers || []);
         setTeam(data.team || []);
       }
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      console.error("[MapPage] Error fetchLiveMarkers:", err.message);
     }
   };
 
