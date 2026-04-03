@@ -225,7 +225,9 @@ export default function RustMap({
           />
         )}
         
-        {markers.map((marker, i) => (
+        {markers
+          .filter(marker => marker && typeof marker.x === 'number' && typeof marker.y === 'number' && !isNaN(marker.x) && !isNaN(marker.y))
+          .map((marker, i) => (
           <Marker 
             key={`${marker.steamId || marker.id || i}-${i}`} 
             position={getPosition(marker.x, marker.y)} 
@@ -234,7 +236,7 @@ export default function RustMap({
             <Popup>
               <div style={{ color: 'white', padding: '0.25rem' }}>
                 <strong style={{ display: 'block', marginBottom: '0.25rem', color: 'var(--primary)' }}>
-                  {marker.name || `Tipo: ${marker.type}`}
+                  {marker.name || `Tipo: ${marker.type || 'Desconocido'}`}
                 </strong>
                 <div style={{ fontSize: '0.75rem', opacity: 0.8, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                   <span>X: {Math.round(marker.x)} | Y: {Math.round(marker.y)}</span>
