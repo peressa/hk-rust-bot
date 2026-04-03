@@ -25,7 +25,12 @@ export async function GET(request: Request) {
       useProxy: server.useProxy === 1
     });
 
+    console.log(`[API Map] Requesting map from RustPlusManager for ${server.ip}...`);
+    const startTime = Date.now();
     const mapResponse = await rustPlusManager.getMap(session.user.steamId, server.ip);
+    const endTime = Date.now();
+    console.log(`[API Map] Response received in ${endTime - startTime}ms`);
+
     const map = (mapResponse as any)?.response?.map;
     
     if (!map || !map.jpgImage) {
@@ -34,13 +39,14 @@ export async function GET(request: Request) {
 
     // Convert Buffer to Base64 string for the frontend
     const base64Map = Buffer.from(map.jpgImage).toString('base64');
+    console.log(`[API Map] Success: Base64 converted, size: ${base64Map.length} chars`);
 
     return NextResponse.json({
       ...map,
       jpgImage: base64Map
     });
   } catch (error: any) {
-    console.error("[API Map] Error:", error);
+    console.error("[API Map] Error:", error.message || error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

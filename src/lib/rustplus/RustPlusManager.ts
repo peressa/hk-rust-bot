@@ -161,7 +161,8 @@ class RustPlusManager extends EventEmitter {
   }
 
   async getMap(steamId: string, ip: string) {
-    return this.sendRequest(steamId, ip, { getMap: {} }, 30000); // Map can be large
+    console.log(`[RustPlus] Requesting MAP for ${ip} (Timeout: 90s)...`);
+    return this.sendRequest(steamId, ip, { getMap: {} }, 90000); // Rustoria needs more time
   }
 
   async getMapMarkers(steamId: string, ip: string) {
@@ -206,6 +207,34 @@ class RustPlusManager extends EventEmitter {
       this.connecting.delete(key);
     }
   }
+
+  // Diagnostic helper
+  public async checkProtos(): Promise<any> {
+    const fs = require('fs');
+    const path = require('path');
+    const results: any = {
+      cwd: process.cwd(),
+      dirname: __dirname,
+      files: {}
+    };
+
+    const routes = [
+      path.resolve(__dirname, '../../node_modules/@liamcottle/rustplus.js/rustplus.proto'),
+      path.resolve(__dirname, '../../node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto'),
+      path.resolve(__dirname, '../../node_modules/@liamcottle/push-receiver/src/gcm/android_checkin.proto'),
+      path.resolve(__dirname, '../../node_modules/@liamcottle/push-receiver/src/mcs.proto'),
+      // Fallback relative to ROOT
+      '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
+      path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto')
+    ];
+
+    routes.forEach(r => {
+      results.files[r] = fs.existsSync(r);
+    });
+
+    console.log("[RustPlus Diagnostic]:", JSON.stringify(results, null, 2));
+    return results;
+  }
 }
 
 // Singleton for the whole app (persists across requests in Next.js)
@@ -214,3 +243,6 @@ declare global {
 }
 
 export const rustPlusManager: RustPlusManager = global._rustPlusManager ?? (global._rustPlusManager = new RustPlusManager());
+
+// Initial check on load
+rustPlusManager.checkProtos().catch(console.error);
