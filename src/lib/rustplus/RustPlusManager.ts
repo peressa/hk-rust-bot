@@ -164,19 +164,25 @@ class RustPlusManager extends EventEmitter {
     console.log(`[RustPlus] Requesting MAP for ${ip} (Timeout: 90s, Fallback: ${isFallback})...`);
     
     try {
-      return await this.sendRequest(steamId, ip, { getMap: {} }, 90000);
+      const response = await this.sendRequest(steamId, ip, { getMap: {} }, 90000);
+      
+      // Validador de respuesta de mapa
+      if (!response?.response?.map) {
+        console.warn(`[RustPlus] Map response received but empty or invalid for ${ip}`);
+        throw new Error("El servidor devolvió una respuesta de mapa vacía. Esto suele ocurrir por falta del archivo .proto");
+      }
+
+      return response;
     } catch (error: any) {
+      console.error(`[RustPlus] Map Request Error for ${ip}:`, error.message || error);
+
       // If it's a timeout and we haven't tried fallback yet, try via Proxy
       if (!isFallback && (error.message?.includes('timeout') || error.message?.includes('Timeout'))) {
-        console.warn(`[RustPlus] Map request TIMEOUT on direct connection to ${ip}. Retrying via Proxy (Desktop Style Fallback)...`);
+        console.warn(`[RustPlus] Map request TIMEOUT on direct connection to ${ip}.`);
         
-        // Find existing connection to check if it's already using proxy
         const connection = Array.from(this.connections.values()).find(c => (c as any).server === ip);
         if (connection && !(connection as any).useFacepunchProxy) {
-          // Temporarily reconnect via proxy or just try to trigger a proxy connection
-          // For now, let's just log and suggest using the Proxy checkbox if this happens often
-          // BUT, we can try to force a proxy connection if the user allowed it
-          throw new Error("Timeout en mapa. Prueba activando 'Usar Proxy' en la configuración del servidor.");
+          throw new Error("Timeout prolongado en mapa. Intenta activar 'Usar Proxy' en la configuración del servidor.");
         }
       }
       throw error;
@@ -250,24 +256,24 @@ class RustPlusManager extends EventEmitter {
 
     // 2. Definir donde DEBERÍAN estar los protos (en el root o en data)
     const sourceProtos = [
-      '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
-      '/ROOT/.next/standalone/node_modules/@liamcottle/rustplus.js/rustplus.proto',
       path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
-      path.join(process.cwd(), '.next/standalone/node_modules/@liamcottle/rustplus.js/rustplus.proto'),
+      path.join(process.cwd(), 'rustplus.proto'),
+      path.join(process.cwd(), 'resources/rustplus.proto'),
+      '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
       '/app/node_modules/@liamcottle/rustplus.js/rustplus.proto'
     ];
 
     // 3. Intentar parchear la librería COPIANDO el archivo a su lado
     if (libPath) {
       const targetProto = path.join(libPath, 'rustplus.proto');
-      if (!fs.existsSync(targetProto)) {
-        console.log(`[RustPlus] Target proto MISSING at ${targetProto}. Searching in ${sourceProtos.length} locations...`);
+      if (!fs.existsSync(targetProto) || fs.statSync(targetProto).size < 100) {
+        console.log(`[RustPlus] Target proto MISSING or INVALID at ${targetProto}. Searching...`);
         for (const src of sourceProtos) {
           if (fs.existsSync(src)) {
             console.log(`[RustPlus] FOUND source proto at ${src}. Patching library...`);
             try {
               fs.copyFileSync(src, targetProto);
-              console.log("[RustPlus] SUCCESS: Library patched with rustplus.proto from source.");
+              console.log("[RustPlus] SUCCESS: Library patched with rustplus.proto.");
               break;
             } catch (copyErr) {
               console.error(`[RustPlus] Failed to copy proto: ${copyErr}`);
@@ -275,7 +281,7 @@ class RustPlusManager extends EventEmitter {
           }
         }
       } else {
-        console.log("[RustPlus] Proto already present in library folder. No patch needed.");
+        console.log(`[RustPlus] Proto present in library folder (${fs.statSync(targetProto).size} bytes).`);
       }
     }
 

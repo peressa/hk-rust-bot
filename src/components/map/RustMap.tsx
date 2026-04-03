@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import dynamic from "next/dynamic";
-import "leaflet/dist/leaflet.css";
 
+// MapContainer components must be loaded dynamically for SSR compatibility
 const MapContainer = dynamic(
   () => import("react-leaflet").then((mod) => mod.MapContainer),
-  { ssr: false }
+  { ssr: false, loading: () => <div className="map-placeholder">Cargando contenedor...</div> }
 );
 const ImageOverlay = dynamic(
   () => import("react-leaflet").then((mod) => mod.ImageOverlay),
@@ -32,28 +32,54 @@ const MARKER_TYPES = {
   HELI: 7
 };
 
+interface RustMapProps {
+  mapJpg?: string;
+  mapSize?: number;
+  markers?: any[];
+}
+
 export default function RustMap({ 
   mapJpg, 
   mapSize = 4000, 
   markers = [] 
-}: { 
-  mapJpg?: string, 
-  mapSize?: number, 
-  markers?: any[] 
-}) {
+}: RustMapProps) {
   const [L, setL] = useState<any>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Import Leaflet CSS and JS on the client side
     import("leaflet").then((leaflet) => {
+      import("leaflet/dist/leaflet.css");
       setL(leaflet);
+      setMounted(true);
     });
   }, []);
 
-  if (!L) return <div style={{ height: '500px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--surface)' }}>Incializando motor de mapa...</div>;
-
-  const bounds: any = [[0, 0], [1000, 1000]];
+  // Use useMemo for bounds to prevent re-renders of MapContainer
+  const bounds: any = useMemo(() => [[0, 0], [1000, 1000]], []);
   
+  if (!mounted || !L) {
+    return (
+      <div style={{ 
+        height: '100%', 
+        width: '100%', 
+        display: 'flex', 
+        flexDirection: 'column',
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        background: '#0a0a0b',
+        color: 'var(--text-muted)',
+        gap: '1rem'
+      }}>
+        <div className="animate-spin" style={{ width: '30px', height: '30px', border: '3px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
+        <span>Incializando motor de mapa...</span>
+      </div>
+    );
+  }
+
   const getPosition = (x: number, y: number): [number, number] => {
+    // Rust coordinates (x, y) to Leaflet (lat, lng)
+    // Scale from mapSize (e.g. 4000) to our internal 1000x1000 unit system
     const lng = (x / mapSize) * 1000;
     const lat = (y / mapSize) * 1000; 
     return [lat, lng];
@@ -92,7 +118,6 @@ export default function RustMap({
       iconHtml = `<div style="background: ${color}; width: 8px; height: 8px; border-radius: 2px; border: 1px solid white;"></div>`;
       size = 8;
     } else {
-        // Fallback for monuments or others
         color = "#94a3b8";
         iconHtml = `<div style="background: ${color}; width: 10px; height: 10px; border-radius: 50%; border: 1px solid white;"></div>`;
         size = 10;
@@ -106,17 +131,22 @@ export default function RustMap({
     });
   };
 
+  const imageLoaded = mapJpg && mapJpg.length > 100;
+
   return (
-    <div style={{ height: '100%', width: '100%', background: '#0a0a0b' }}>
+    <div className="rust-map-wrapper" style={{ height: '100%', width: '100%', background: '#0a0a0b', position: 'relative' }}>
       <MapContainer 
         crs={L.CRS.Simple}
         bounds={bounds}
         center={[500, 500]}
-        zoom={0} 
-        style={{ height: "100%", width: "100%" }}
+        zoom={0}
+        minZoom={-2}
+        maxZoom={4}
+        style={{ height: "100%", width: "100%", backgroundColor: '#0a0a0b' }}
         attributionControl={false}
       >
         <style>{`
+          .leaflet-container { background: #0a0a0b !important; }
           .radar-pulse { animation: pulse 2s infinite; }
           .raid-pulse { animation: raid-blink 0.5s infinite; }
           @keyframes pulse {
@@ -129,25 +159,34 @@ export default function RustMap({
             100% { opacity: 1; transform: scale(1); }
           }
           .custom-div-icon { background: none; border: none; }
+          .leaflet-popup-content-wrapper { background: var(--surface); color: white; border: 1px solid var(--border); border-radius: 8px; }
+          .leaflet-popup-tip { background: var(--surface); border: 1px solid var(--border); }
         `}</style>
 
-        {mapJpg && (
+        {imageLoaded && (
           <ImageOverlay 
             url={`data:image/jpeg;base64,${mapJpg}`}
             bounds={bounds}
+            opacity={1}
+            zIndex={1}
           />
         )}
         
         {markers.map((marker, i) => (
           <Marker 
-            key={i} 
+            key={`${marker.steamId || marker.id || i}-${i}`} 
             position={getPosition(marker.x, marker.y)} 
             icon={getIcon(marker.type || marker.id, marker.name)}
           >
             <Popup>
-              <div style={{ color: 'black' }}>
-                <strong style={{ display: 'block', marginBottom: '0.25rem' }}>{marker.name || `Tipo: ${marker.type}`}</strong>
-                <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>Cuadrante: {marker.grid || 'N/A'}</span>
+              <div style={{ color: 'white', padding: '0.25rem' }}>
+                <strong style={{ display: 'block', marginBottom: '0.25rem', color: 'var(--primary)' }}>
+                  {marker.name || `Tipo: ${marker.type}`}
+                </strong>
+                <div style={{ fontSize: '0.75rem', opacity: 0.8, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                  <span>X: {Math.round(marker.x)} | Y: {Math.round(marker.y)}</span>
+                  {marker.grid && <span>Cuadrante: {marker.grid}</span>}
+                </div>
               </div>
             </Popup>
           </Marker>

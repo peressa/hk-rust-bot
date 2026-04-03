@@ -10,13 +10,14 @@ export async function GET(request: Request) {
   const serverId = searchParams.get("serverId");
 
   if (!session?.user?.steamId || !serverId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
   try {
     const server = db.prepare("SELECT * FROM servers WHERE id = ? AND steamId = ?").get(serverId, session.user.steamId) as any;
-    if (!server) return NextResponse.json({ error: "Server not found" }, { status: 404 });
+    if (!server) return NextResponse.json({ error: "Servidor no encontrado" }, { status: 404 });
 
+    console.log(`[API Map] Iniciando conexión para ${server.ip}...`);
     await rustPlusManager.connect(session.user.steamId, {
       ip: server.ip,
       port: server.port,
@@ -25,32 +26,38 @@ export async function GET(request: Request) {
       useProxy: server.useProxy === 1
     });
 
-    console.log(`[API Map] Requesting map from RustPlusManager for ${server.ip}...`);
+    console.log(`[API Map] Solicitando mapa a RustPlusManager...`);
     const startTime = Date.now();
     const mapResponse = await rustPlusManager.getMap(session.user.steamId, server.ip);
     const endTime = Date.now();
-    console.log(`[API Map] Response received in ${endTime - startTime}ms`);
-
-    const map = (mapResponse as any)?.response?.map;
     
+    const map = mapResponse?.response?.map;
     if (!map || !map.jpgImage) {
-      throw new Error("No se pudo obtener la imagen del mapa");
+      console.error("[API Map] Error: La respuesta no contiene imagen JPG válida.");
+      throw new Error("No se pudo obtener la imagen del mapa. El servidor de Rust no respondió con datos válidos.");
     }
 
-    // Convert Buffer to Base64 string for the frontend
-    const base64Map = Buffer.from(map.jpgImage).toString('base64');
-    console.log(`[API Map] Success: Base64 converted, size: ${base64Map.length} chars`);
+    // El buffer puede venir como Uint8Array o Buffer directo
+    const imageBuffer = Buffer.isBuffer(map.jpgImage) 
+      ? map.jpgImage 
+      : Buffer.from(map.jpgImage);
+
+    const base64Map = imageBuffer.toString('base64');
+    console.log(`[API Map] Éxito en ${endTime - startTime}ms. Tamaño Base64: ${base64Map.length} chars`);
 
     return NextResponse.json({
       ...map,
-      jpgImage: base64Map
+      jpgImage: base64Map,
+      fetchedAt: new Date().toISOString()
     });
   } catch (error: any) {
-    console.warn("[API Map] Silent Fallback:", error.message || error);
-    // Return a 200 with error info so the frontend can show a "Loading/Reconnecting" state
+    console.warn("[API Map] Error Detectado:", error.message || error);
+    
+    // Devolvemos 200 con el error para que el frontend maneje el estado visualmente
     return NextResponse.json({ 
-      error: error.message,
-      status: "reconnecting" 
+      error: error.message || "Error desconocido al cargar el mapa",
+      status: "error",
+      details: error.stack
     }, { status: 200 });
   }
 }
