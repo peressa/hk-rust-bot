@@ -46,12 +46,12 @@ export default function MapPage() {
     }
   };
 
-  const fetchMapBase = async (serverId: string) => {
+  const fetchMapBase = async (serverId: string, refresh = false) => {
     setLoading(true);
-    setMapError(null);
+    if (!refresh) setMapError(null);
     try {
-      console.log(`[MapPage] Solicitando imagen base para ${serverId}...`);
-      const res = await fetch(`/api/rustplus/map?serverId=${serverId}`);
+      console.log(`[MapPage] Solicitando imagen base para ${serverId} (refresh: ${refresh})...`);
+      const res = await fetch(`/api/rustplus/map?serverId=${serverId}${refresh ? '&refresh=true' : ''}`);
       const data = await res.json();
       
       if (data.error) {
@@ -116,19 +116,29 @@ export default function MapPage() {
                onClick={() => selectedServer && fetchMapBase(selectedServer.id)} 
                className="btn-secondary" 
                style={{ padding: '0.5rem', background: 'transparent', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+               title="Actualizar datos en vivo"
                disabled={loading}
             >
-              <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
+              <RefreshCw size={20} className={loading && !mapInfo ? "animate-spin" : ""} />
+            </button>
+            <button 
+               onClick={() => selectedServer && fetchMapBase(selectedServer.id, true)} 
+               className="btn-secondary" 
+               style={{ padding: '0.5rem', background: 'transparent', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}
+               title="Forzar descarga y limpiar caché"
+               disabled={loading}
+            >
+              <MapIcon size={20} />
             </button>
           </div>
         </header>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '2rem' }}>
           <div className="premium-card" style={{ padding: '0', height: '750px', border: '1px solid var(--border)', overflow: 'hidden', position: 'relative', background: '#0a0a0b' }}>
-            {mapInfo?.jpgImage ? (
+            {(mapInfo?.jpgImage || (mapError && selectedServer)) ? (
               <RustMap 
-                mapJpg={mapInfo.jpgImage} 
-                mapSize={mapInfo.width || 4000} 
+                mapJpg={mapInfo?.jpgImage} 
+                mapSize={mapInfo?.width || 4000} 
                 markers={allMarkers} 
               />
             ) : (
@@ -142,20 +152,18 @@ export default function MapPage() {
                   <p style={{ fontSize: '1.1rem', fontWeight: 500, marginBottom: '0.5rem' }}>
                     {loading 
                       ? "Estableciendo conexión satelital..." 
-                      : mapError 
-                        ? "Fallo en la recepción del mapa" 
-                        : selectedServer 
-                          ? "Sincronizando con el servidor de Rust..." 
-                          : "Selecciona un servidor para iniciar el escaneo"}
+                      : selectedServer 
+                        ? "Sincronizando con el servidor de Rust..." 
+                        : "Selecciona un servidor para iniciar el escaneo"}
                   </p>
                   
-                  {mapError && (
+                  {(mapError && !loading) && (
                     <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
                        <p style={{ color: '#f87171', fontSize: '0.85rem', lineHeight: 1.5 }}>{mapError}</p>
                     </div>
                   )}
 
-                  {(mapError || (!loading && !selectedServer)) && selectedServer && (
+                  {!loading && selectedServer && (
                     <button 
                       onClick={() => fetchMapBase(selectedServer.id)}
                       className="btn-primary"
@@ -165,6 +173,12 @@ export default function MapPage() {
                     </button>
                   )}
                 </div>
+              </div>
+            )}
+            
+            {(mapError && selectedServer) && (
+              <div style={{ position: 'absolute', bottom: '1rem', left: '1rem', zIndex: 1000, background: 'rgba(239, 68, 68, 0.8)', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', fontSize: '0.75rem', backdropFilter: 'blur(4px)' }}>
+                <strong>Modo Táctico Activo:</strong> Error al cargar imagen. Mostrando cuadrícula base.
               </div>
             )}
             

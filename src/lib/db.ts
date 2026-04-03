@@ -40,6 +40,14 @@ db.exec(`
     keys TEXT, -- JSON string
     deviceId TEXT -- UUID for Facepunch identification
   );
+
+  CREATE TABLE IF NOT EXISTS map_cache (
+    serverId TEXT PRIMARY KEY,
+    jpgImage TEXT, -- Bloque Base64 de la imagen
+    width INTEGER,
+    height INTEGER,
+    updatedAt TEXT
+  );
 `);
 
 export default db;
@@ -59,6 +67,24 @@ export function saveServer(server: any) {
     server.name,
     server.useProxy ? 1 : 0
   );
+}
+
+export function saveMapCache(serverId: string, mapData: any) {
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO map_cache (serverId, jpgImage, width, height, updatedAt)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  stmt.run(serverId, mapData.jpgImage, mapData.width, mapData.height, new Date().toISOString());
+}
+
+export function getMapCache(serverId: string) {
+  const stmt = db.prepare("SELECT * FROM map_cache WHERE serverId = ?");
+  return stmt.get(serverId);
+}
+
+export function clearMapCache(serverId: string) {
+  const stmt = db.prepare("DELETE FROM map_cache WHERE serverId = ?");
+  stmt.run(serverId);
 }
 
 export function getServers(steamId: string) {

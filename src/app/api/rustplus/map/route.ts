@@ -26,9 +26,11 @@ export async function GET(request: Request) {
       useProxy: server.useProxy === 1
     });
 
-    console.log(`[API Map] Solicitando mapa a RustPlusManager...`);
+    console.log(`[API Map] Solicitando mapa a RustPlusManager con caché habilitado...`);
     const startTime = Date.now();
-    const mapResponse = await rustPlusManager.getMap(session.user.steamId, server.ip);
+    // Pasamos el serverId para habilitar la caché en DB
+    const forceRefresh = searchParams.get("refresh") === "true";
+    const mapResponse = await rustPlusManager.getMap(session.user.steamId, server.ip, serverId, forceRefresh);
     const endTime = Date.now();
     
     const map = mapResponse?.response?.map;

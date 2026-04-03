@@ -20,6 +20,10 @@ const Popup = dynamic(
   () => import("react-leaflet").then((mod) => mod.Popup),
   { ssr: false }
 );
+const Polyline = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Polyline),
+  { ssr: false }
+);
 
 // RustPlus Marker Types
 const MARKER_TYPES = {
@@ -45,6 +49,7 @@ export default function RustMap({
 }: RustMapProps) {
   const [L, setL] = useState<any>(null);
   const [mounted, setMounted] = useState(false);
+  const GRID_SIZE = 146.3; // Constante de Rust para cuadrículas de mapa
 
   useEffect(() => {
     // Import Leaflet CSS and JS on the client side
@@ -78,12 +83,35 @@ export default function RustMap({
   }
 
   const getPosition = (x: number, y: number): [number, number] => {
-    // Rust coordinates (x, y) to Leaflet (lat, lng)
-    // Scale from mapSize (e.g. 4000) to our internal 1000x1000 unit system
+    // Rust coord (x,y) -> Leaflet (lat,lng). 
+    // Invertimos Y porque en Leaflet Simple CRS, [0,0] suele ser arriba-izquierda o abajo-izquierda.
+    // Nosotros usamos [lat, lng] donde 1000 es el tope.
+    // Rust (0,0) es abajo izquierda. Leaflet Simple CRS [0,0] es abajo izquierda por defecto.
     const lng = (x / mapSize) * 1000;
     const lat = (y / mapSize) * 1000; 
     return [lat, lng];
   };
+
+  // Generar líneas de cuadrícula
+  const gridLines = useMemo(() => {
+    const lines = [];
+    const numCells = Math.ceil(mapSize / GRID_SIZE);
+    const step = (GRID_SIZE / mapSize) * 1000;
+
+    for (let i = 0; i <= numCells; i++) {
+      const pos = i * step;
+      if (pos > 1005) break;
+      
+      // Letras (X)
+      const charCode = 65 + (i % 26);
+      const suffix = i >= 26 ? Math.floor(i / 26) : "";
+      const label = String.fromCharCode(charCode) + suffix;
+
+      lines.push({ type: 'v', pos, label });
+      lines.push({ type: 'h', pos: 1000 - pos, label: i.toString() });
+    }
+    return lines;
+  }, [mapSize]);
 
   const getIcon = (type: any, name: string) => {
     let color = "var(--primary)";
@@ -159,9 +187,56 @@ export default function RustMap({
             100% { opacity: 1; transform: scale(1); }
           }
           .custom-div-icon { background: none; border: none; }
+          .grid-label-text { 
+            color: rgba(255,255,255,0.4); 
+            font-size: 11px; 
+            font-weight: bold; 
+            text-shadow: 1px 1px 2px black;
+            font-family: 'JetBrains Mono', monospace;
+          }
           .leaflet-popup-content-wrapper { background: var(--surface); color: white; border: 1px solid var(--border); border-radius: 8px; }
           .leaflet-popup-tip { background: var(--surface); border: 1px solid var(--border); }
         `}</style>
+
+        {/* Tactical Grid Layer */}
+        {gridLines.filter(l => l.type === 'v').map((l, i) => (
+          <Polyline 
+            key={`v-line-${i}`}
+            positions={[[0, l.pos], [1000, l.pos]]}
+            pathOptions={{ color: 'white', weight: 0.5, opacity: imageLoaded ? 0.1 : 0.4, dashArray: '5, 10' }}
+          />
+        ))}
+        {gridLines.filter(l => l.type === 'h').map((l, i) => (
+          <Polyline 
+            key={`h-line-${i}`}
+            positions={[[l.pos, 0], [l.pos, 1000]]}
+            pathOptions={{ color: 'white', weight: 0.5, opacity: imageLoaded ? 0.1 : 0.4, dashArray: '5, 10' }}
+          />
+        ))}
+
+        {/* Coordenadas en los bordes */}
+        {gridLines.filter(l => l.type === 'v').map((l, i) => (
+          <Marker 
+            key={`v-label-${i}`}
+            position={[5, l.pos + 2]}
+            icon={L.divIcon({
+              className: 'grid-label',
+              html: `<span class="grid-label-text">${l.label}</span>`,
+              iconSize: [20, 20]
+            })}
+          />
+        ))}
+        {gridLines.filter(l => l.type === 'h' && parseInt(l.label) > 0).map((l, i) => (
+          <Marker 
+            key={`h-label-${i}`}
+            position={[l.pos + 2, 5]}
+            icon={L.divIcon({
+              className: 'grid-label',
+              html: `<span class="grid-label-text">${l.label}</span>`,
+              iconSize: [20, 20]
+            })}
+          />
+        ))}
 
         {imageLoaded && (
           <ImageOverlay 

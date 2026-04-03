@@ -1,5 +1,6 @@
 import RustPlus from "@liamcottle/rustplus.js";
 import { EventEmitter } from "events";
+import * as db from "../db";
 
 export interface ServerConnection {
   ip: string;
@@ -160,25 +161,62 @@ class RustPlusManager extends EventEmitter {
     });
   }
 
-  async getMap(steamId: string, ip: string, isFallback = false): Promise<any> {
-    console.log(`[RustPlus] Requesting MAP for ${ip} (Timeout: 90s, Fallback: ${isFallback})...`);
+  async getMap(steamId: string, ip: string, serverId?: string | null, forceRefresh = false): Promise<any> {
+    const logPrefix = `[RustPlus Manager Map]`;
+    
+    // 1. Intentar cargar desde cache persistente si tenemos serverId
+    if (serverId && !forceRefresh) {
+      const cached: any = db.getMapCache(serverId);
+      if (cached) {
+        console.log(`${logPrefix} Usando caché de DB para ${serverId}`);
+        return {
+          response: {
+            map: {
+              jpgImage: Buffer.from(cached.jpgImage, 'base64'),
+              width: cached.width,
+              height: cached.height,
+              cached: true,
+              updatedAt: cached.updatedAt
+            }
+          }
+        };
+      }
+    }
+
+    console.log(`${logPrefix} Solicitando MAP real para ${ip} (Timeout: 90s)...`);
     
     try {
       const response = await this.sendRequest(steamId, ip, { getMap: {} }, 90000);
       
       // Validador de respuesta de mapa
       if (!response?.response?.map) {
-        console.warn(`[RustPlus] Map response received but empty or invalid for ${ip}`);
-        throw new Error("El servidor devolvió una respuesta de mapa vacía. Esto suele ocurrir por falta del archivo .proto");
+        console.warn(`${logPrefix} Respuesta vacía para ${ip}`);
+        throw new Error("El servidor devolvió una respuesta de mapa vacía. Posible error de .proto");
+      }
+
+      // 2. Guardar en caché si tenemos éxito y serverId
+      if (serverId && response.response.map.jpgImage) {
+        try {
+          const map = response.response.map;
+          const base64 = Buffer.from(map.jpgImage).toString('base64');
+          db.saveMapCache(serverId, {
+            jpgImage: base64,
+            width: map.width,
+            height: map.height
+          });
+          console.log(`${logPrefix} Mapa guardado en caché para ${serverId}`);
+        } catch (cacheErr) {
+          console.error(`${logPrefix} Error guardando caché:`, cacheErr);
+        }
       }
 
       return response;
     } catch (error: any) {
-      console.error(`[RustPlus] Map Request Error for ${ip}:`, error.message || error);
+      console.error(`${logPrefix} Error en ${ip}:`, error.message || error);
 
-      // If it's a timeout and we haven't tried fallback yet, try via Proxy
-      if (!isFallback && (error.message?.includes('timeout') || error.message?.includes('Timeout'))) {
-        console.warn(`[RustPlus] Map request TIMEOUT on direct connection to ${ip}.`);
+      // Si es un timeout, advertir sobre la posibilidad de usar Proxy o Fallback.
+      if (error.message?.includes('timeout') || error.message?.includes('Timeout')) {
+        console.warn(`${logPrefix} Timeout detectado para ${ip}.`);
         
         const connection = Array.from(this.connections.values()).find(c => (c as any).server === ip);
         if (connection && !(connection as any).useFacepunchProxy) {
