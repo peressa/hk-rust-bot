@@ -1,7 +1,29 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { MapContainer, ImageOverlay, Marker, Popup, Polyline } from "react-leaflet";
+import dynamic from "next/dynamic";
+
+const MapContainer = dynamic(
+  () => import("react-leaflet").then((mod) => mod.MapContainer),
+  { ssr: false, loading: () => <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-muted)' }}>Cargando contenedor...</div> }
+);
+const ImageOverlay = dynamic(
+  () => import("react-leaflet").then((mod) => mod.ImageOverlay),
+  { ssr: false }
+);
+const Marker = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Marker),
+  { ssr: false }
+);
+const Popup = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Popup),
+  { ssr: false }
+);
+const Polyline = dynamic(
+  () => import("react-leaflet").then((mod) => mod.Polyline),
+  { ssr: false }
+);
+
 
 // RustPlus Marker Types
 const MARKER_TYPES = {
