@@ -17,6 +17,9 @@ RUN npm run build
 FROM node:22-alpine AS runner
 WORKDIR /ROOT
 
+# Cache breaker to force fresh rebuild
+ARG CACHE_BUST=1
+
 ENV NODE_ENV=production
 # Force Next.js to use the correct hostname for container
 ENV HOSTNAME="0.0.0.0"
@@ -36,6 +39,7 @@ RUN mkdir -p /ROOT/node_modules/@liamcottle/rustplus.js/ \
     && mkdir -p /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/ \
     && mkdir -p /ROOT/node_modules/@liamcottle/push-receiver/src/
 
+# Redundant copy to ensure they are found regardless of path resolution
 COPY --from=builder /ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto /ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto
 COPY --from=builder /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/checkin.proto
 COPY --from=builder /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/android_checkin.proto /ROOT/node_modules/@liamcottle/push-receiver/src/gcm/android_checkin.proto
