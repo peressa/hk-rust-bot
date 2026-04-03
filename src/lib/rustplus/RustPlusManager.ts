@@ -10,10 +10,12 @@ import * as db from "../db";
 // =====================================================================
 const originalAdd = protobuf.Type.prototype.add;
 protobuf.Type.prototype.add = function (obj: any) {
-  if (obj && obj.rule === "required") {
-    obj.rule = "optional";
-    obj.required = false;
-    obj.optional = true;
+  try {
+    if (obj && obj.rule === "required") {
+      obj.rule = "optional";
+    }
+  } catch (e) {
+    // Silencioso
   }
   return originalAdd.call(this, obj);
 };
