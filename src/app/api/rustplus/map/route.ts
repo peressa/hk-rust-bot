@@ -46,7 +46,11 @@ export async function GET(request: Request) {
       jpgImage: base64Map
     });
   } catch (error: any) {
-    console.error("[API Map] Error:", error.message || error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.warn("[API Map] Silent Fallback:", error.message || error);
+    // Return a 200 with error info so the frontend can show a "Loading/Reconnecting" state
+    return NextResponse.json({ 
+      error: error.message,
+      status: "reconnecting" 
+    }, { status: 200 });
   }
 }

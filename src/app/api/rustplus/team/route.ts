@@ -25,10 +25,10 @@ export async function GET(request: Request) {
       useProxy: server.useProxy === 1
     });
 
-    const teamData = await rustPlusManager.getTeamInfo(session.user.steamId, server.ip);
+    const teamData = await rustPlusManager.getTeamInfo(session.user.steamId, server.ip).catch(() => ({}));
     return NextResponse.json((teamData as any)?.response?.teamInfo || { members: [] });
   } catch (error: any) {
-    console.error("[API Team] Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.warn("[API Team] Silent Fallback");
+    return NextResponse.json({ members: [] }, { status: 200 });
   }
 }

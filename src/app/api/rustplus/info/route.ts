@@ -31,9 +31,10 @@ export async function GET(request: Request) {
       useProxy: server.useProxy === 1
     });
 
-    const info: any = await rustPlusManager.sendRequest(session.user.steamId, server.ip, { getInfo: {} });
-    return NextResponse.json(info.response.info);
+    const info: any = await rustPlusManager.sendRequest(session.user.steamId, server.ip, { getInfo: {} }).catch(() => ({ response: { info: {} } }));
+    return NextResponse.json(info.response?.info || {});
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.warn(`[API Info] Silent Fallback for ${server.ip}`);
+    return NextResponse.json({}, { status: 200 });
   }
 }

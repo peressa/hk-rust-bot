@@ -30,9 +30,10 @@ export async function GET(request: Request) {
       playerToken: server.playerToken
     });
 
-    const response: any = await rustPlusManager.sendRequest(session.user.steamId, server.ip, { getTime: {} });
-    return NextResponse.json(response.response.time);
+    const response: any = await rustPlusManager.sendRequest(session.user.steamId, server.ip, { getTime: {} }).catch(() => ({ response: { time: {} } }));
+    return NextResponse.json(response.response?.time || {});
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.warn(`[API Time] Silent Fallback for ${server.ip}`);
+    return NextResponse.json({}, { status: 200 });
   }
 }
