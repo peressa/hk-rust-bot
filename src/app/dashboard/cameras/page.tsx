@@ -24,18 +24,36 @@ export default function CamerasPage() {
 
   useEffect(() => {
     fetchServers();
-    return () => {
-      // Cleanup all polling intervals on unmount
-      intervalRefs.current.forEach(clearInterval);
-    };
   }, []);
+
+  useEffect(() => {
+    if (selectedServer) {
+      fetchCameras(selectedServer.id);
+    }
+  }, [selectedServer?.id]);
 
   const fetchServers = async () => {
     try {
       const res = await fetch("/api/servers");
       const data = await res.json();
       setServers(data);
-      if (data.length > 0) setSelectedServer(data[0]);
+      if (data.length > 0 && !selectedServer) setSelectedServer(data[0]);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const fetchCameras = async (serverId: string) => {
+    try {
+      const res = await fetch(`/api/cameras?serverId=${serverId}`);
+      const data = await res.json();
+      const slots = data.map((c: any) => ({
+        ...c,
+        frameUrl: `/api/rustplus/camera?serverId=${serverId}&identifier=${c.identifier}&t=${Date.now()}`,
+        loading: false,
+        error: null
+      }));
+      setCameras(slots);
     } catch (err) {
       console.error(err);
     }
@@ -44,48 +62,41 @@ export default function CamerasPage() {
   const addCamera = async () => {
     if (!newCamId.trim() || !selectedServer) return;
     setAdding(true);
-    const slot: CameraSlot = {
-      id: `${Date.now()}`,
-      identifier: newCamId.trim().toUpperCase(),
-      name: newCamName.trim() || newCamId.trim().toUpperCase(),
-      frameUrl: null,
-      loading: true,
-      error: null
-    };
-    setCameras(prev => [...prev, slot]);
-    setNewCamId("");
-    setNewCamName("");
-    setAdding(false);
-    startPolling(slot);
-  };
-
-  const removeCamera = (id: string) => {
-    const t = intervalRefs.current.get(id);
-    if (t) { clearInterval(t); intervalRefs.current.delete(id); }
-    setCameras(prev => prev.filter(c => c.id !== id));
-  };
-
-  const startPolling = (slot: CameraSlot) => {
-    fetchFrame(slot.id, slot.identifier);
-    const t = setInterval(() => fetchFrame(slot.id, slot.identifier), 3000);
-    intervalRefs.current.set(slot.id, t);
-  };
-
-  const fetchFrame = async (slotId: string, identifier: string) => {
-    if (!selectedServer) return;
     try {
-      const res = await fetch(`/api/rustplus/camera?serverId=${selectedServer.id}&identifier=${identifier}`);
-      const data = await res.json();
-      setCameras(prev => prev.map(c => c.id === slotId ? {
-        ...c,
-        loading: false,
-        error: data.error || null,
-        frameUrl: data.frameBase64 ? `data:image/jpeg;base64,${data.frameBase64}` : c.frameUrl
-      } : c));
-    } catch (err: any) {
-      setCameras(prev => prev.map(c => c.id === slotId ? { ...c, loading: false, error: err.message } : c));
+      await fetch("/api/cameras", {
+        method: "POST",
+        body: JSON.stringify({
+          serverId: selectedServer.id,
+          identifier: newCamId.trim().toUpperCase(),
+          name: newCamName.trim() || newCamId.trim().toUpperCase()
+        })
+      });
+      fetchCameras(selectedServer.id);
+      setNewCamId("");
+      setNewCamName("");
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setAdding(false);
     }
   };
+
+  const removeCamera = async (id: string) => {
+    try {
+      await fetch(`/api/cameras?id=${id}`, { method: "DELETE" });
+      setCameras(prev => prev.filter(c => c.id !== id));
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const refreshCamera = (slotId: string) => {
+    setCameras(prev => prev.map(c => c.id === slotId ? {
+      ...c,
+      frameUrl: `/api/rustplus/camera?serverId=${selectedServer.id}&identifier=${c.identifier}&t=${Date.now()}`
+    } : c));
+  };
+
 
   return (
     <DashboardLayout>
@@ -159,17 +170,29 @@ export default function CamerasPage() {
               <div key={cam.id} className="premium-card" style={{ padding: 0, overflow: 'hidden', border: '1px solid var(--border)' }}>
                 {/* Stream View */}
                 <div style={{ height: '250px', background: '#000', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {cam.frameUrl ? (
+                  {cam.frameUrl && !cam.error ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={cam.frameUrl} alt={cam.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img 
+                      src={cam.frameUrl} 
+                      alt={cam.name} 
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      onError={() => {
+                        setCameras(prev => prev.map(c => c.id === cam.id ? { ...c, error: "Sin señal / Error de conexión" } : c));
+                      }}
+                    />
                   ) : cam.error ? (
                     <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1rem' }}>
                       <AlertCircle size={32} color="#ef4444" style={{ marginBottom: '0.5rem' }} />
-                      <p style={{ fontSize: '0.8rem' }}>
-                        {cam.error.includes('Camera') || cam.error.includes('camera') || cam.error.includes('identifier')
-                          ? `ID "${cam.identifier}" no encontrado en este servidor`
-                          : cam.error}
-                      </p>
+                      <p style={{ fontSize: '0.8rem' }}>{cam.error}</p>
+                      <button 
+                        onClick={() => {
+                          setCameras(prev => prev.map(c => c.id === cam.id ? { ...c, error: null } : c));
+                          refreshCamera(cam.id);
+                        }}
+                        style={{ marginTop: '1rem', background: 'var(--primary)', border: 'none', color: 'white', padding: '0.4rem 0.8rem', borderRadius: '4px', cursor: 'pointer', fontSize: '0.75rem' }}
+                      >
+                        Reintentar
+                      </button>
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -180,30 +203,40 @@ export default function CamerasPage() {
 
                   {/* REC Badge */}
                   <div style={{ position: 'absolute', top: '0.75rem', left: '0.75rem', background: 'rgba(0,0,0,0.7)', padding: '0.2rem 0.6rem', borderRadius: '4px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: cam.frameUrl ? '#ef4444' : '#9ca3af', animation: cam.frameUrl ? 'blink 2s infinite' : 'none' }}></div>
-                    REC · {cam.identifier}
+                    <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: cam.frameUrl && !cam.error ? '#ef4444' : '#9ca3af', animation: cam.frameUrl && !cam.error ? 'blink 2s infinite' : 'none' }}></div>
+                    LIVE · {cam.identifier}
                   </div>
 
-                  {/* Remove button */}
-                  <button
-                    onClick={() => removeCamera(cam.id)}
-                    style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '0.3rem', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
+                  {/* Overlay Controls */}
+                  <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      onClick={() => refreshCamera(cam.id)}
+                      title="Refrescar Imagen"
+                      style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', padding: '0.3rem', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}
+                    >
+                      <RefreshCw size={14} />
+                    </button>
+                    <button
+                      onClick={() => removeCamera(cam.id)}
+                      title="Eliminar Cámara"
+                      style={{ background: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.1)', color: '#ef4444', padding: '0.3rem', borderRadius: '6px', cursor: 'pointer', display: 'flex' }}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Camera Info */}
                 <div style={{ padding: '1rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <h3 style={{ fontWeight: 600, fontSize: '0.95rem', marginBottom: '0.25rem' }}>{cam.name}</h3>
-                    <code style={{ fontSize: '0.7rem', color: 'var(--primary)', background: 'rgba(205,65,43,0.1)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                    <h3 style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.2rem' }}>{cam.name}</h3>
+                    <code style={{ fontSize: '0.65rem', color: 'var(--primary)', background: 'rgba(205,65,43,0.1)', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>
                       ID: {cam.identifier}
                     </code>
                   </div>
-                  <div style={{ fontSize: '0.75rem', color: cam.loading ? 'var(--text-muted)' : cam.error ? '#ef4444' : '#22c55e', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                    {cam.loading ? <RefreshCw size={12} className="animate-spin" /> : <Camera size={12} />}
-                    {cam.loading ? 'Conectando...' : cam.error ? 'Sin señal' : 'En vivo'}
+                  <div style={{ fontSize: '0.7rem', color: cam.error ? '#ef4444' : '#22c55e', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                    <Camera size={12} />
+                    {cam.error ? 'Desconectado' : 'Sincronizado'}
                   </div>
                 </div>
               </div>

@@ -10,6 +10,13 @@ import {
   Shield, 
   PlusCircle,
   RefreshCw,
+  MessageSquare,
+  Save,
+  BarChart2,
+  Search,
+  Trophy,
+  Zap,
+  ChevronRight
 } from "lucide-react";
 
 import ServerHero from "@/components/dashboard/ServerHero";
@@ -25,20 +32,27 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [fcmStatus, setFcmStatus] = useState("Inactivo");
   const [hasKeys, setHasKeys] = useState(false);
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [savingWebhook, setSavingWebhook] = useState(false);
+  const [bmId, setBmId] = useState("");
+  const [savingBmId, setSavingBmId] = useState(false);
+  const [bmData, setBmData] = useState<any>(null);
 
-  // Fetch servers from DB on mount
   useEffect(() => {
     fetchServers();
     startFcmListener();
   }, []);
 
-  // Sync data when server changes
   useEffect(() => {
     if (selectedServer) {
       setServerInfo(null);
       setStorageMonitor(null);
+      setBmData(null);
+      setWebhookUrl(selectedServer.discordWebhook || "");
+      setBmId(selectedServer.bmId || "");
       fetchEntities(selectedServer.id);
       fetchServerData(selectedServer.id);
+      if (selectedServer.bmId) fetchBattleMetricsData(selectedServer.bmId);
       const interval = setInterval(() => fetchServerData(selectedServer.id), 10000); 
       return () => clearInterval(interval);
     }
@@ -78,7 +92,6 @@ export default function DashboardPage() {
       setServerInfo(await infoRes.json());
       setWorldTime(await timeRes.json());
 
-      // If we have a storage monitor ID, poll its info too
       if (storageMonitor?.entityId) {
         fetchStorageMonitorInfo(serverId, storageMonitor.entityId);
       }
@@ -105,11 +118,9 @@ export default function DashboardPage() {
       const data: any[] = await res.json();
       setEntities(data);
       
-      // Look for Storage Monitor (Type 3)
       const monitor = data.find(e => e.entityType === 3 || e.name?.toLowerCase().includes("monitor") || e.name?.toLowerCase().includes("armario"));
       if (monitor) {
         setStorageMonitor(monitor);
-        // Initial fetch handled inside fetchServerData but let's be sure
         fetchStorageMonitorInfo(serverId, monitor.entityId);
       }
     } catch (err) {
@@ -134,6 +145,41 @@ export default function DashboardPage() {
     }
   };
 
+  const saveWebhook = async () => {
+    if (!selectedServer) return;
+    setSavingWebhook(true);
+    try {
+      await fetch("/api/servers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverId: selectedServer.id, discordWebhook: webhookUrl })
+      });
+      fetchServers();
+    } catch (err) { console.error(err); } finally { setSavingWebhook(false); }
+  };
+
+  const fetchBattleMetricsData = async (id: string) => {
+    try {
+      const res = await fetch(`/api/intel/battlemetrics?bmId=${id}`);
+      const data = await res.json();
+      if (!data.error) setBmData(data);
+    } catch (err) { console.warn("BM Fetch Error", err); }
+  };
+
+  const saveBmId = async () => {
+    if (!selectedServer) return;
+    setSavingBmId(true);
+    try {
+      await fetch("/api/servers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ serverId: selectedServer.id, bmId: bmId })
+      });
+      fetchServers();
+      fetchBattleMetricsData(bmId);
+    } catch (err) { console.error(err); } finally { setSavingBmId(false); }
+  };
+
   if (loading) return <div style={{ display: 'grid', placeItems: 'center', height: '80vh' }}><RefreshCw className="animate-spin" size={40} color="var(--primary)" /></div>;
 
   const formatTime = (time?: number) => {
@@ -147,13 +193,10 @@ export default function DashboardPage() {
     if (!expireTime) return "---";
     const seconds = expireTime - Math.floor(Date.now() / 1000);
     if (seconds <= 0) return "¡SIN MANTENIMIENTO!";
-    
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
-
-    if (days > 0) return `${days}d ${hours}h`;
-    return `${hours}h ${mins}m`;
+    return days > 0 ? `${days}d ${hours}h` : `${hours}h ${mins}m`;
   };
 
   return (
@@ -189,102 +232,92 @@ export default function DashboardPage() {
                   <Activity size={32} color="var(--primary)" className="animate-pulse" />
                 </div>
               </div>
-              <h2 style={{ marginBottom: '0.75rem', fontSize: '1.5rem' }}>
-                {hasKeys ? "Listo para enlazar" : "Buscando señales..."}
-              </h2>
+              <h2 style={{ marginBottom: '0.75rem', fontSize: '1.5rem' }}>Buscando señales...</h2>
               <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem', maxWidth: '400px', margin: '0 auto 2.5rem' }}>
-                {hasKeys 
-                  ? "Identidad detectada. Pulsa 'Pair with Server' en el juego para sincronizar tu mando táctico."
-                  : "No detectamos servidores enlazados. Abre Rust en tu equipo y pulsa 'Pair with Server' para comenzar."}
+                No detectamos servidores enlazados. Abre Rust en tu equipo y pulsa 'Pair with Server' para comenzar.
               </p>
-              
-              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-                {!hasKeys && <a href="/dashboard/settings" className="btn-secondary">Configurar Identidad</a>}
-              </div>
-            </div>
-
-            {/* Manual Pairing Fallback */}
-            <div className="premium-card" style={{ maxWidth: '800px', width: '100%', padding: '2rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <PlusCircle size={18} color="var(--primary)" /> ¿FCM no responde? Emparejamiento Manual
-              </h3>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-                Si las notificaciones tardan demasiado, puedes pegar el enlace de emparejamiento (<code>rustplus://...</code>) directamente aquí.
-              </p>
-              <ManualPairingInput onPaired={fetchServers} />
+              <a href="/dashboard/settings" className="btn-secondary">Configurar Identidad</a>
             </div>
           </div>
         ) : (
           <>
-            {/* Server Hero Section */}
             <ServerHero server={selectedServer} info={serverInfo} />
 
-            {/* Server Selector Grid */}
+            {/* Selector de Servidores */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '1rem', marginBottom: '2.5rem' }}>
               {servers.map(server => (
-                <div 
-                  key={server.id} 
-                  onClick={() => setSelectedServer(server)}
-                  className={`premium-card ${selectedServer?.id === server.id ? 'active-card' : ''}`}
-                  style={{ cursor: 'pointer', padding: '1rem' }}
-                >
+                <div key={server.id} onClick={() => setSelectedServer(server)} className={`premium-card ${selectedServer?.id === server.id ? 'active-card' : ''}`} style={{ cursor: 'pointer', padding: '1rem' }}>
                   <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                    <div style={{ background: selectedServer?.id === server.id ? 'var(--primary)' : 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '10px', transition: 'var(--transition)' }}>
+                    <div style={{ background: selectedServer?.id === server.id ? 'var(--primary)' : 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '10px' }}>
                       <Server size={20} />
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <h3 style={{ fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', margin: 0 }}>{server.name}</h3>
                       <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{server.ip}</div>
                     </div>
-                    {selectedServer?.id === server.id && <div className="status-online"></div>}
                   </div>
                 </div>
               ))}
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: '2rem' }}>
-              {/* Device Control Grid */}
               <section>
+                {/* Salute de la Base */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+                  <div className="premium-card" style={{ padding: '1rem', background: 'rgba(205,65,43,0.05)', border: '1px solid rgba(205,65,43,0.1)' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Salud Energética</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Zap size={18} color="var(--primary)" /> 
+                      {entities.filter(e => e.hasCapacity).length > 0 
+                        ? `${Math.round(entities.filter(e => e.hasCapacity).reduce((acc, curr) => acc + (curr.capacity || 0), 0) / entities.filter(e => e.hasCapacity).length)}%`
+                        : "---"}
+                    </div>
+                  </div>
+                  <div className="premium-card" style={{ padding: '1rem' }}>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Sensores Activos</div>
+                    <div style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Shield size={18} color="#22c55e" /> 
+                      {entities.filter(e => e.entityType === 1).length} 
+                    </div>
+                  </div>
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h2 style={{ fontSize: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Settings size={20} className="glow" /> Dispositivos Inteligentes
+                    <Settings size={20} className="glow" /> Dispositivos en Red
                   </h2>
-                  <button onClick={() => fetchEntities(selectedServer.id)} className="btn-secondary" style={{ padding: '0.4rem', background: 'transparent', border: '1px solid var(--border)' }}>
+                  <button onClick={() => fetchEntities(selectedServer.id)} className="btn-secondary" style={{ padding: '0.4rem' }}>
                     <RefreshCw size={16} />
                   </button>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.25rem' }}>
-                  {entities.length === 0 ? (
-                    <div className="premium-card" style={{ gridColumn: '1 / -1', textAlign: 'center', opacity: 0.5, padding: '3.5rem', border: '1px dashed var(--border)' }}>
-                      No hay dispositivos inteligentes emparejados.
-                    </div>
-                  ) : (
-                    entities.map(device => (
-                      <div key={device.entityId} className="premium-card" style={{ padding: '1.25rem', borderLeft: device.value ? '3px solid var(--primary)' : '1px solid var(--border)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ background: device.value ? 'rgba(205, 65, 43, 0.1)' : 'rgba(255,255,255,0.02)', padding: '0.5rem', borderRadius: '8px', transition: 'var(--transition)' }}>
-                            <Power size={18} color={device.value ? "var(--primary)" : "var(--text-muted)"} />
-                          </div>
-                          <label className="switch">
-                            <input 
-                              type="checkbox" 
-                              checked={device.value} 
-                              onChange={() => toggleEntity(device.entityId, device.value)}
-                            />
-                            <span className="slider round"></span>
-                          </label>
-                        </div>
-                        <h4 style={{ marginTop: '1rem', fontWeight: 600, fontSize: '0.95rem' }}>{device.name}</h4>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.25rem', opacity: 0.6 }}>UUID: {device.entityId}</div>
-                      </div>
-                    ))
-                  )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    <DeviceGroup 
+                      title="⚡ Energía" 
+                      devices={entities.filter(e => e.hasCapacity || e.name?.toLowerCase().includes("bat"))} 
+                      onToggle={toggleEntity}
+                    />
+                    <DeviceGroup 
+                      title="🛡️ Seguridad" 
+                      devices={entities.filter(e => e.entityType === 1 || e.name?.toLowerCase().includes("alarm") || e.name?.toLowerCase().includes("sensor"))} 
+                      onToggle={toggleEntity}
+                    />
+                    <DeviceGroup 
+                      title="💡 Automatización" 
+                      devices={entities.filter(e => 
+                        !e.hasCapacity && 
+                        e.entityType !== 1 && 
+                        !e.name?.toLowerCase().includes("bat") && 
+                        !e.name?.toLowerCase().includes("alarm") &&
+                        !e.name?.toLowerCase().includes("sensor")
+                      )} 
+                      onToggle={toggleEntity}
+                    />
                 </div>
               </section>
 
-              {/* Status Sidebar */}
               <aside style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                {/* Seguridad Sidebar */}
                 <div className="premium-card" style={{ background: 'linear-gradient(165deg, rgba(205, 65, 43, 0.08), transparent)' }}>
                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1.5rem', color: 'var(--primary)' }}>
                     <Shield size={18} /> Seguridad de la Base
@@ -296,47 +329,31 @@ export default function DashboardPage() {
                       value={storageMonitor ? formatUpkeep(storageMonitor.protectionExpireTime) : "Sin Monitor TC"} 
                       color={storageMonitor ? (storageMonitor.protectionExpireTime - Math.floor(Date.now()/1000) > 86400 ? "#22c55e" : "#ef4444") : "#9ca3af"}
                     />
-                    {storageMonitor && (
-                      <div style={{ marginTop: '0.5rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>
-                          <span>Ocupación de Armario</span>
-                          <span>{Math.round(((storageMonitor.items?.length || 0) / (storageMonitor.capacity || 24)) * 100)}%</span>
-                        </div>
-                        <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
-                          <div style={{ width: `${((storageMonitor.items?.length || 0) / (storageMonitor.capacity || 24)) * 100}%`, height: '100%', background: 'var(--primary)' }}></div>
-                        </div>
-                      </div>
-                    )}
                     <StatusLine 
-                      label="Población Servidor" 
-                      value={serverInfo ? `${serverInfo.players || 0} / ${serverInfo.maxPlayers || 0}${serverInfo.queued ? ` (+${serverInfo.queued})` : ''}` : "---"} 
+                      label="Población" 
+                      value={serverInfo ? `${serverInfo.players || 0} / ${serverInfo.maxPlayers || 0}` : "---"} 
                       color={serverInfo?.players > 0 ? "#22c55e" : "#9ca3af"}
                     />
                   </div>
                 </div>
 
-                {/* Info real del servidor */}
+                {/* Integración Discord */}
                 <div className="premium-card">
-                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1.25rem' }}>
-                    <Activity size={18} color="var(--primary)" /> Detalles del Nodo
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1rem' }}>
+                    <MessageSquare size={18} color="#5865F2" /> Integración Discord
                   </h3>
-                  {serverInfo ? (
-                    <div style={{ fontSize: '0.8rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                      <StatusLine label="Nombre" value={serverInfo.name || selectedServer?.name || '---'} />
-                      <StatusLine label="IP" value={`${selectedServer?.ip}:${selectedServer?.port}`} />
-                      <StatusLine label="Tipo de Conexión" value={serverInfo.useProxy || selectedServer?.useProxy ? "Facepunch Proxy (Seguro)" : "Directa (Rápida)"} color="#3b82f6" />
-                      <StatusLine label="Mapa" value={serverInfo.map || 'Procedural Map'} />
-                      <StatusLine 
-                        label="Hora In-Game" 
-                        value={worldTime?.time !== undefined ? formatTime(worldTime.time) : '---'} 
-                        color="#eab308" 
-                      />
-                    </div>
-                  ) : (
-                    <div style={{ opacity: 0.4, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <RefreshCw size={14} className="animate-spin" /> Sincronizando datos...
-                    </div>
-                  )}
+                  <input type="text" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="Webhook URL..." style={{ width: '100%', padding: '0.5rem', fontSize: '0.8rem', background: 'rgba(0,0,0,0.2)', marginBottom: '0.5rem' }} />
+                  <button onClick={saveWebhook} disabled={savingWebhook} className="btn-primary" style={{ width: '100%', fontSize: '0.75rem' }}>Guardar Webhook</button>
+                </div>
+
+                {/* BattleMetrics */}
+                <div className="premium-card">
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1rem' }}>
+                    <BarChart2 size={18} color="#3b82f6" /> BattleMetrics
+                  </h3>
+                  <input type="text" value={bmId} onChange={(e) => setBmId(e.target.value)} placeholder="ID de Servidor..." style={{ width: '100%', padding: '0.5rem', fontSize: '0.8rem', background: 'rgba(0,0,0,0.2)', marginBottom: '0.5rem' }} />
+                  <button onClick={saveBmId} disabled={savingBmId} className="btn-secondary" style={{ width: '100%', fontSize: '0.75rem' }}>Vincular BM</button>
+                  {bmData && <div style={{ fontSize: '0.7rem', color: '#fbbf24', marginTop: '0.5rem' }}>Rango: #{bmData.data?.attributes?.rank}</div>}
                 </div>
               </aside>
             </div>
@@ -347,13 +364,36 @@ export default function DashboardPage() {
   );
 }
 
-function StatCard({ icon, label, value, color = "white" }: { icon: any, label: string, value: string, color?: string }) {
+function DeviceGroup({ title, devices, onToggle }: { title: string, devices: any[], onToggle: any }) {
+  if (devices.length === 0) return null;
   return (
-    <div className="premium-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1.25rem' }}>
-      <div style={{ color: 'var(--primary)', opacity: 0.8 }}>{icon}</div>
-      <div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{label}</div>
-        <div style={{ fontSize: '1.1rem', fontWeight: 800, color }}>{value}</div>
+    <div>
+      <h3 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {title} <ChevronRight size={14} />
+      </h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1.25rem' }}>
+        {devices.map(device => (
+          <div key={device.entityId} className="premium-card" style={{ padding: '1.25rem', borderLeft: device.value ? '4px solid var(--primary)' : '1px solid var(--border)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ background: device.value ? 'rgba(205, 65, 43, 0.1)' : 'rgba(255,255,255,0.02)', padding: '0.5rem', borderRadius: '8px' }}>
+                <Power size={18} color={device.value ? "var(--primary)" : "var(--text-muted)"} />
+              </div>
+              <label className="switch">
+                <input type="checkbox" checked={device.value} onChange={() => onToggle(device.entityId, device.value)} />
+                <span className="slider round"></span>
+              </label>
+            </div>
+            <h4 style={{ marginTop: '1rem', fontWeight: 600, fontSize: '0.95rem' }}>{device.name}</h4>
+            {device.hasCapacity && (
+              <div style={{ marginTop: '0.5rem' }}>
+                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{ width: `${device.capacity || 0}%`, height: '100%', background: 'var(--primary)' }}></div>
+                </div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>Carga: {Math.round(device.capacity || 0)}%</div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

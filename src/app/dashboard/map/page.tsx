@@ -25,7 +25,6 @@ class MapErrorBoundary extends React.Component<any, { hasError: boolean, error: 
         <div style={{ padding: '2rem', background: '#300', color: 'white', height: '100%' }}>
           <h3>⚠️ Error interno detectado en el Mapa</h3>
           <pre style={{ color: '#ffaaaa', textWrap: 'wrap' }}>{String(this.state.error?.message || this.state.error)}</pre>
-          <pre style={{ fontSize: '11px', marginTop: '1rem', color: '#ccc' }}>{String(this.state.error?.stack)}</pre>
           <button onClick={() => this.setState({hasError: false})} style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: 'white', color: 'black' }}>Reintentar</button>
         </div>
       );
@@ -36,12 +35,14 @@ class MapErrorBoundary extends React.Component<any, { hasError: boolean, error: 
 
 export default function MapPage() {
   const [mapInfo, setMapInfo] = useState<any>(null);
+  const [serverInfo, setServerInfo] = useState<any>(null);
   const [markers, setMarkers] = useState<any[]>([]);
   const [team, setTeam] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [mapError, setMapError] = useState<string | null>(null);
   const [selectedServer, setSelectedServer] = useState<any>(null);
   const [servers, setServers] = useState<any[]>([]);
+  const [deaths, setDeaths] = useState<any[]>([]);
 
   useEffect(() => {
     fetchServers();
@@ -52,54 +53,42 @@ export default function MapPage() {
       setMapInfo(null);
       setMapError(null);
       fetchMapBase(selectedServer.id);
+      fetchServerInfo(selectedServer.id);
       fetchLiveMarkers(selectedServer.id);
       const interval = setInterval(() => fetchLiveMarkers(selectedServer.id), 10000);
       return () => clearInterval(interval);
     }
   }, [selectedServer?.id]);
 
+  const fetchServerInfo = async (serverId: string) => {
+    try {
+      const res = await fetch(`/api/rustplus/info?serverId=${serverId}`);
+      if (res.ok) setServerInfo(await res.json());
+    } catch(err) { console.warn("err", err); }
+  };
+
   const fetchServers = async () => {
     try {
       const res = await fetch("/api/servers");
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Servidor fuera de línea (${res.status}): ${text.slice(0, 50)}...`);
+      if (res.ok) {
+        const data = await res.json();
+        setServers(data);
+        if (data.length > 0) setSelectedServer(data[0]);
       }
-      const data = await res.json();
-      setServers(data);
-      if (data.length > 0) setSelectedServer(data[0]);
-    } catch (err: any) {
-      console.error("[MapPage] Error fetchServers:", err.message);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const fetchMapBase = async (serverId: string, refresh = false) => {
     setLoading(true);
     if (!refresh) setMapError(null);
     try {
-      console.log(`[MapPage] Solicitando imagen base para ${serverId} (refresh: ${refresh})...`);
       const res = await fetch(`/api/rustplus/map?serverId=${serverId}${refresh ? '&refresh=true' : ''}`);
-      
-      if (!res.ok) {
-        const text = await res.text();
-        if (text.includes("Bad Gateway") || text.includes("Gateway Timeout")) {
-          throw new Error("El servidor de la aplicación (o el proxy) ha tardado demasiado en responder. El mapa se seguirá intentando en segundo plano.");
-        }
-        throw new Error(`Error en el servidor (${res.status}): ${text.slice(0, 50)}...`);
-      }
-
+      if (!res.ok) throw new Error("Error cargando mapa base");
       const data = await res.json();
-      
-      if (data.error) {
-        setMapError(data.error);
-        console.warn("[MapPage] Error en API de mapa:", data.error);
-      } else {
-        setMapInfo(data);
-        setMapError(null);
-      }
+      if (data.error) setMapError(data.error);
+      else setMapInfo(data);
     } catch (err: any) {
-      console.warn("[MapPage] Catch Error:", err.message);
-      setMapError(err.message || "Error de conexión con el servidor interno");
+      setMapError(err.message);
     } finally {
       setLoading(false);
     }
@@ -108,26 +97,21 @@ export default function MapPage() {
   const fetchLiveMarkers = async (serverId: string) => {
     try {
       const res = await fetch(`/api/rustplus/markers?serverId=${serverId}`);
-      if (!res.ok) return; // Silent failure for markers, keep retrying
-      const data = await res.json();
-      if (!data.error) {
-        setMarkers(data.markers || []);
-        setTeam(data.team || []);
+      if (res.ok) {
+        const data = await res.json();
+        if (!data.error) {
+          setMarkers(data.markers || []);
+          setTeam(data.team || []);
+          setDeaths(data.deaths || []);
+        }
       }
-    } catch (err: any) {
-      console.error("[MapPage] Error fetchLiveMarkers:", err.message);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const allMarkers = [
     ...(markers || []),
-    ...(team || []).map(m => ({
-      x: m.x,
-      y: m.y,
-      type: "Player",
-      name: m.name,
-      steamId: m.steamId
-    }))
+    ...(deaths || []).map(d => ({ x: d.x, y: d.y, type: "Death", name: `💀 Muerte: ${d.name}` })),
+    ...(team || []).map(m => ({ x: m.x, y: m.y, type: "Player", name: m.name, steamId: m.steamId }))
   ];
 
   return (
@@ -141,145 +125,102 @@ export default function MapPage() {
             <p style={{ color: 'var(--text-muted)' }}>Sincronización de monumentos y equipo en tiempo real.</p>
           </div>
           
-          <div style={{ display: 'flex', gap: '1rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div style={{ padding: '0.5rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.75rem', display: 'flex', gap: '1rem' }}>
+               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 5px #22c55e' }}></div>
+                 SEÑAL GPS
+               </div>
+               <div style={{ color: 'var(--text-muted)' }}>{markers.length} OBJETIVOS</div>
+            </div>
+
             <select 
               value={selectedServer?.id} 
               onChange={(e) => setSelectedServer(servers.find(s => s.id === e.target.value))}
               style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '0.5rem 1rem', borderRadius: '8px', color: 'white' }}
             >
-              <option value="" disabled>Seleccionar Servidor</option>
+              <option value="" disabled>Nodo</option>
               {servers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
-            <button 
-               onClick={() => selectedServer && fetchMapBase(selectedServer.id)} 
-               className="btn-secondary" 
-               style={{ padding: '0.5rem', background: 'transparent', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-               title="Actualizar datos en vivo"
-               disabled={loading}
-            >
-              <RefreshCw size={20} className={loading && !mapInfo ? "animate-spin" : ""} />
-            </button>
-            <button 
-               onClick={() => selectedServer && fetchMapBase(selectedServer.id, true)} 
-               className="btn-secondary" 
-               style={{ padding: '0.5rem', background: 'transparent', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}
-               title="Forzar descarga y limpiar caché"
-               disabled={loading}
-            >
-              <MapIcon size={20} />
+            
+            <button onClick={() => selectedServer && fetchMapBase(selectedServer.id, true)} className="btn-secondary" style={{ padding: '0.5rem' }} disabled={loading}>
+              <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
             </button>
           </div>
         </header>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '2rem' }}>
-          <div className="premium-card" style={{ padding: '0', height: '750px', border: '1px solid var(--border)', overflow: 'hidden', position: 'relative', background: '#0a0a0b' }}>
+          <div className="premium-card" style={{ padding: '0', height: '780px', border: '1px solid var(--border)', overflow: 'hidden', position: 'relative', background: '#0a0a0b' }}>
             {(mapInfo?.jpgImage || (mapError && selectedServer)) ? (
               <MapErrorBoundary>
                 <RustMap 
                   mapJpg={mapInfo?.jpgImage} 
-                  mapSize={mapInfo?.width || 4000} 
+                  mapSize={serverInfo?.mapSize || mapInfo?.width || 4000} 
+                  oceanMargin={mapInfo?.oceanMargin || 0}
+                  monuments={mapInfo?.monuments || []}
                   markers={allMarkers} 
                 />
               </MapErrorBoundary>
             ) : (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', textAlign: 'center', padding: '2rem' }}>
-                <div style={{ position: 'relative' }}>
-                   <MapIcon size={64} style={{ opacity: loading ? 1 : 0.2 }} className={loading ? "animate-pulse" : ""} />
-                   {loading && <div style={{ position: 'absolute', inset: -10, border: '2px solid var(--primary)', borderRadius: '50%', borderTopColor: 'transparent', animation: 'spin 1s linear infinite' }}></div>}
-                </div>
-                
-                <div style={{ maxWidth: '400px' }}>
-                  <p style={{ fontSize: '1.1rem', fontWeight: 500, marginBottom: '0.5rem' }}>
-                    {loading 
-                      ? "Estableciendo conexión satelital..." 
-                      : selectedServer 
-                        ? "Sincronizando con el servidor de Rust..." 
-                        : "Selecciona un servidor para iniciar el escaneo"}
-                  </p>
-                  
-                  {(mapError && !loading) && (
-                    <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '1rem', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                       <p style={{ color: '#f87171', fontSize: '0.85rem', lineHeight: 1.5 }}>{mapError}</p>
-                    </div>
-                  )}
-
-                  {!loading && selectedServer && (
-                    <button 
-                      onClick={() => fetchMapBase(selectedServer.id)}
-                      className="btn-primary"
-                      style={{ padding: '0.6rem 1.5rem', fontSize: '0.9rem' }}
-                    >
-                      Reintentar Conexión
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            
-            {(mapError && selectedServer) && (
-              <div style={{ position: 'absolute', bottom: '1rem', left: '1rem', zIndex: 1000, background: 'rgba(239, 68, 68, 0.8)', color: 'white', padding: '0.5rem 1rem', borderRadius: '6px', fontSize: '0.75rem', backdropFilter: 'blur(4px)' }}>
-                <strong>Modo Táctico Activo:</strong> Error al cargar imagen. Mostrando cuadrícula base.
+                <MapIcon size={64} style={{ opacity: 0.2 }} className={loading ? "animate-pulse" : ""} />
+                <p style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>
+                  {loading ? "Sincronizando topografía..." : "Selecciona un servidor para iniciar el escaneo."}
+                </p>
               </div>
             )}
             
             {loading && mapInfo?.jpgImage && (
-              <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)', padding: '0.5rem 0.75rem', borderRadius: '6px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem', border: '1px solid var(--border)' }}>
+              <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', zIndex: 1000, background: 'rgba(0,0,0,0.8)', border: '1px solid var(--primary)', padding: '0.6rem 1.2rem', borderRadius: '8px', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 <RefreshCw size={14} className="animate-spin" color="var(--primary)" /> 
-                <span>Actualizando datos en vivo...</span>
+                <span style={{ fontWeight: 700, letterSpacing: '0.05em' }}>CALIBRANDO...</span>
               </div>
             )}
           </div>
 
           <aside style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div className="premium-card">
-              <h3 style={{ fontSize: '1rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Layers size={18} color="var(--primary)" /> Capas de Inteligencia
+            <div className="premium-card" style={{ borderTop: '3px solid var(--primary)' }}>
+              <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.5rem' }}>
+                Filtros Tácticos
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <LayerToggle label="Monumentos" active color="#eab308" />
-                <LayerToggle label="Tu Equipo" active color="#22c55e" />
-                <LayerToggle label="Helicóptero / Barco" active color="var(--primary)" />
-                <LayerToggle label="Vending Machines" active color="#3b82f6" />
+                <LayerToggle label="Equipo" active color="#22c55e" />
+                <LayerToggle label="Vending" active color="#3b82f6" />
+                <LayerToggle label="Muertes" active color="#ef4444" />
               </div>
             </div>
 
-            <div className="premium-card" style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <Users size={18} /> Compañeros en Zona
+            <div className="premium-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', borderTop: '3px solid #5865F2' }}>
+              <h3 style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '1.25rem' }}>
+                Personal Activo
               </h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto' }}>
                 {team.length > 0 ? team.map((p, i) => (
-                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem', borderRadius: '6px', background: 'rgba(255,255,255,0.02)' }}>
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', borderRadius: '8px', background: p.isOnline ? 'rgba(34, 197, 94, 0.05)' : 'rgba(255,255,255,0.02)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div className={p.isOnline ? "status-online" : ""} style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.isOnline ? '#22c55e' : '#4b5563' }}></div>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{p.name}</span>
+                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.isOnline ? '#22c55e' : '#4b5563', boxShadow: p.isOnline ? '0 0 8px #22c55e' : 'none' }}></div>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{p.name}</span>
                     </div>
-                    <MapPin size={14} color={p.isOnline ? "#22c55e" : "#9ca3af"} />
                   </div>
-                )) : <p style={{ opacity: 0.5, fontSize: '0.85rem', fontStyle: 'italic', textAlign: 'center', marginTop: '2rem' }}>No hay señales de equipo activas.</p>}
+                )) : <div style={{ opacity: 0.3, textAlign: 'center', marginTop: '2rem', fontSize: '0.8rem' }}>Sin rastro</div>}
               </div>
             </div>
           </aside>
         </div>
       </div>
-
-      <style>{`
-        @keyframes spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </DashboardLayout>
   );
 }
 
 function LayerToggle({ label, active, color }: { label: string, active: boolean, color: string }) {
   return (
-    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
         <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: color }}></div>
         <span style={{ fontSize: '0.85rem', color: active ? 'white' : 'var(--text-muted)' }}>{label}</span>
       </div>
-      <input type="checkbox" checked={active} readOnly style={{ accentColor: 'var(--primary)' }} />
-    </label>
+      <div style={{ width: '12px', height: '12px', borderRadius: '2px', background: active ? color : 'transparent', border: `1px solid ${color}` }}></div>
+    </div>
   );
 }

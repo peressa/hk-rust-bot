@@ -1,8 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-// Removemos import "leaflet/dist/leaflet.css" para evitar Chunk Load Errors de Webpack en Next.js
-
+import { Layers, Users, Zap, EyeOff, Map as MapIcon, ShoppingCart } from "lucide-react";
 
 const MARKER_TYPES = {
   PLAYER: "Player",
@@ -17,14 +16,16 @@ const MARKER_TYPES = {
 interface RustMapProps {
   mapJpg?: string;
   mapSize?: number;
+  oceanMargin?: number;
+  monuments?: any[];
   markers?: any[];
 }
 
-// Leaflet necesita acceso al DOM real, por lo que usamos un wrapper
-// Este componente se carga de forma segura solo en cliente.
 export default function RustMap({ 
   mapJpg, 
   mapSize = 4000, 
+  oceanMargin = 0,
+  monuments = [],
   markers = [] 
 }: RustMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -33,24 +34,29 @@ export default function RustMap({
   const layersRef = useRef<{ [key: string]: any }>({});
   const gridLinesRef = useRef<any[]>([]);
 
+  // Toggles de Capas
+  const [showGrid, setShowGrid] = useState(true);
+  const [showMonuments, setShowMonuments] = useState(true);
+  const [showEvents, setShowEvents] = useState(true);
+  const [showPlayers, setShowPlayers] = useState(true);
+  const [showVending, setShowVending] = useState(false);
+
   const GRID_SIZE = 146.3;
+  // Factor crítico de corrección geográfica
+  const totalMapSize = mapSize + (oceanMargin * 2);
 
   useEffect(() => {
     let isMounted = true;
     import("leaflet").then((leaflet) => {
-      if (isMounted) {
-        setL(leaflet);
-      }
-    }).catch(err => {
-      console.error("No se pudo cargar Leaflet:", err);
-    });
-
+      if (isMounted) setL(leaflet);
+    }).catch(err => console.error("No se pudo cargar Leaflet:", err));
     return () => { isMounted = false; };
   }, []);
 
   const getPosition = (x: number, y: number): [number, number] => {
-    const lng = (x / mapSize) * 1000;
-    const lat = (y / mapSize) * 1000; 
+    if (totalMapSize <= 0) return [0, 0];
+    const lng = ((x + oceanMargin) / totalMapSize) * 1000;
+    const lat = ((y + oceanMargin) / totalMapSize) * 1000; 
     return [lat, lng];
   };
 
@@ -70,6 +76,12 @@ export default function RustMap({
                     <div style="background: ${color}; width: 16px; height: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 8px; font-weight: 900; z-index: 2; border: 1px solid white;">H</div>
                   </div>`;
       size = 40;
+    } else if (type === MARKER_TYPES.CH47) {
+      color = "#ef4444";
+      iconHtml = `<div class="marker-ch47" style="display: flex; align-items: center; justify-content: center; position: relative;">
+                    <div style="background: ${color}; width: 16px; height: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 8px; font-weight: 900; z-index: 2; border: 1px solid white;">CH</div>
+                  </div>`;
+      size = 16;
     } else if (type === MARKER_TYPES.CARGO) {
       color = "#3b82f6";
       iconHtml = `<div class="marker-cargo" style="display: flex; align-items: center; justify-content: center;">
@@ -85,12 +97,17 @@ export default function RustMap({
     } else if (type === MARKER_TYPES.VENDING) {
       color = "#eab308";
       iconHtml = `<div class="marker-vending" style="display: flex; align-items: center; justify-content: center; position: relative;">
-                    <div style="background: ${color}; width: 14px; height: 14px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: black; font-size: 8px; font-weight: 900; z-index: 2; border: 1px solid white;">V</div>
+                    <div style="background: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 1px solid black; box-shadow: 0 0 5px ${color}"></div>
                   </div>`;
-      size = 14;
+      size = 12;
+    } else if (type === "Death") {
+      color = "#dc2626";
+      iconHtml = `<div style="display: flex; align-items: center; justify-content: center; font-size: 16px; background: transparent; filter: drop-shadow(0px 0px 4px red);">💀</div>`;
+      size = 20;
     } else {
-        iconHtml = `<div style="background: ${color}; width: 10px; height: 10px; border-radius: 50%; border: 1px solid white;"></div>`;
-        size = 10;
+        color = "#a855f7";
+        iconHtml = `<div style="background: ${color}; width: 14px; height: 14px; border-radius: 4px; border: 1px solid white;"></div>`;
+        size = 14;
     }
 
     return leaflet.divIcon({
@@ -101,10 +118,9 @@ export default function RustMap({
     });
   };
 
-  // Inicializar o actualizar mapa subyacente
+  // Inicializar mapa subyacente
   useEffect(() => {
     if (!L || !mapRef.current) return;
-
     try {
       if (!leafletMap.current) {
         leafletMap.current = L.map(mapRef.current, {
@@ -114,110 +130,127 @@ export default function RustMap({
           zoom: -1,
           center: [500, 500],
           attributionControl: false,
+          zoomControl: false // Ocultamos el nativo para estética
         });
-
-        // Capa base táctica
-        const numCells = Math.ceil(mapSize / GRID_SIZE);
-        const step = (GRID_SIZE / mapSize) * 1000;
         
-        const gridGroup = L.layerGroup().addTo(leafletMap.current);
-        gridLinesRef.current = [];
-
-        for (let i = 0; i <= numCells; i++) {
-          const pos = i * step;
-          if (pos > 1005) break;
-
-          const opts = { color: 'white', weight: 0.5, opacity: 0.4, dashArray: '5, 10' };
-
-          // Vertical
-          gridLinesRef.current.push(L.polyline([[0, pos], [1000, pos]], opts).addTo(gridGroup));
-          // Horizontal
-          const hPos = 1000 - pos;
-          gridLinesRef.current.push(L.polyline([[hPos, 0], [hPos, 1000]], opts).addTo(gridGroup));
-
-          const charCode = 65 + (i % 26);
-          const suffix = i >= 26 ? Math.floor(i / 26) : "";
-          const vLabel = String.fromCharCode(charCode) + suffix;
-
-          L.marker([5, pos + 2], {
-            icon: L.divIcon({ className: 'grid-label', html: `<span class="grid-label-text">${vLabel}</span>`, iconSize: [20, 20] })
-          }).addTo(gridGroup);
-
-          if (i > 0) {
-            L.marker([hPos + 2, 5], {
-              icon: L.divIcon({ className: 'grid-label', html: `<span class="grid-label-text">${i}</span>`, iconSize: [20, 20] })
-            }).addTo(gridGroup);
-          }
-        }
+        // Agregar control abajo derecha
+        L.control.zoom({ position: 'bottomright' }).addTo(leafletMap.current);
       }
     } catch (err) {
       console.error("Error inicializando Leaflet:", err);
     }
-  }, [L, mapSize]);
+  }, [L]);
 
-  // Actualizar la imagen Base64 del mapa
+  // Capa Grilla Táctica
   useEffect(() => {
     if (!L || !leafletMap.current) return;
-    
-    if (mapJpg && mapJpg.length > 100) {
-      if (layersRef.current['image']) {
-        leafletMap.current.removeLayer(layersRef.current['image']);
-      }
+    if (layersRef.current['gridGroup']) {
+      leafletMap.current.removeLayer(layersRef.current['gridGroup']);
+    }
 
+    if (showGrid) {
+      const gridGroup = L.layerGroup().addTo(leafletMap.current);
+      layersRef.current['gridGroup'] = gridGroup;
+      gridLinesRef.current = [];
+
+      const numCells = Math.ceil(mapSize / GRID_SIZE);
+      const step = (GRID_SIZE / totalMapSize) * 1000;
+      const offset = (oceanMargin / totalMapSize) * 1000;
+
+      for (let i = 0; i <= numCells; i++) {
+        const pos = offset + (i * step);
+        const opts = { color: 'white', weight: 1, opacity: 0.15, dashArray: '5, 10' };
+
+        gridLinesRef.current.push(L.polyline([[0, pos], [1000, pos]], opts).addTo(gridGroup));
+        const hPos = 1000 - pos;
+        gridLinesRef.current.push(L.polyline([[hPos, 0], [hPos, 1000]], opts).addTo(gridGroup));
+
+        const charCode = 65 + (i % 26);
+        const suffix = i >= 26 ? Math.floor(i / 26) : "";
+        const vLabel = String.fromCharCode(charCode) + suffix;
+
+        L.marker([1000 - offset + 15, pos + (step/2)], {
+          icon: L.divIcon({ className: 'grid-label', html: `<span class="grid-label-text">${vLabel}</span>`, iconSize: [20, 20] })
+        }).addTo(gridGroup);
+
+        if (i < numCells) {
+          L.marker([hPos - (step/2), offset - 15], {
+            icon: L.divIcon({ className: 'grid-label', html: `<span class="grid-label-text">${i}</span>`, iconSize: [20, 20] })
+          }).addTo(gridGroup);
+        }
+      }
+    }
+  }, [L, mapSize, oceanMargin, showGrid, totalMapSize]);
+
+  // Imagen Base64
+  useEffect(() => {
+    if (!L || !leafletMap.current) return;
+    if (mapJpg && mapJpg.length > 100) {
+      if (layersRef.current['image']) leafletMap.current.removeLayer(layersRef.current['image']);
       layersRef.current['image'] = L.imageOverlay(`data:image/jpeg;base64,${mapJpg}`, [[0,0], [1000,1000]], {
         opacity: 1, zIndex: 1
       }).addTo(leafletMap.current);
-      
-      // Bajar opacidad de la grilla blanca para que se vea la imagen mejor
-      gridLinesRef.current.forEach(line => line.setStyle({ opacity: 0.15 }));
-    } else {
-      if (layersRef.current['image']) {
-        leafletMap.current.removeLayer(layersRef.current['image']);
-        layersRef.current['image'] = null;
-      }
-      gridLinesRef.current.forEach(line => line.setStyle({ opacity: 0.4 }));
     }
   }, [L, mapJpg]);
 
-  // Actualizar los Marcadores (Puntos de jugadores, máquinas expendedoras, etc.)
+  // Renderizar Monumentos
   useEffect(() => {
     if (!L || !leafletMap.current) return;
+    if (layersRef.current['monumentsGroup']) leafletMap.current.removeLayer(layersRef.current['monumentsGroup']);
     
-    if (layersRef.current['markersGroup']) {
-      leafletMap.current.removeLayer(layersRef.current['markersGroup']);
+    if (showMonuments && monuments.length > 0) {
+      const monumentsGroup = L.layerGroup().addTo(leafletMap.current);
+      layersRef.current['monumentsGroup'] = monumentsGroup;
+
+      monuments.forEach(mon => {
+        if (!mon.name) return; // Fix if it's token based
+        // Omitir cuevas y elementos basura si queremos el mapa limpio
+        if (mon.name.toLowerCase().includes("cave") || mon.name.toLowerCase().includes("swamp")) return;
+
+        const displayName = mon.name.replace(/_/g, ' ').toUpperCase();
+        const iconHtml = `<div class="monument-label">${displayName}</div>`;
+        L.marker(getPosition(mon.x, mon.y), {
+          icon: L.divIcon({ className: 'custom-div-icon', html: iconHtml })
+        }).addTo(monumentsGroup);
+      });
     }
+  }, [L, monuments, showMonuments, oceanMargin, mapSize, totalMapSize]);
+
+  // Renderizar Marcadores Interactivos (Equipos, Vending, Eventos)
+  useEffect(() => {
+    if (!L || !leafletMap.current) return;
+    if (layersRef.current['markersGroup']) leafletMap.current.removeLayer(layersRef.current['markersGroup']);
 
     const markersGroup = L.layerGroup().addTo(leafletMap.current);
     layersRef.current['markersGroup'] = markersGroup;
 
     markers
-      .filter(m => m && typeof m.x === 'number' && typeof m.y === 'number' && !isNaN(m.x) && !isNaN(m.y))
+      .filter(m => {
+        if (m.type === MARKER_TYPES.PLAYER || m.type === "Death") return showPlayers;
+        if (m.type === MARKER_TYPES.VENDING) return showVending;
+        return showEvents;
+      })
+      .filter(m => m && typeof m.x === 'number' && typeof m.y === 'number')
       .forEach(marker => {
         const popupHtml = `
           <div style="color: white; padding: 0.25rem;">
             <strong style="display: block; margin-bottom: 0.25rem; color: var(--primary);">
-              ${marker.name || `Tipo: ${marker.type || 'Desconocido'}`}
+              ${marker.name || ('Tipo: ' + (marker.type || 'Desconocido'))}
             </strong>
-            <div style="font-size: 0.75rem; opacity: 0.8; display: flex; flex-direction: column;">
-              <span>X: ${Math.round(marker.x)} | Y: ${Math.round(marker.y)}</span>
-              ${marker.grid ? `<span>Cuadrante: ${marker.grid}</span>` : ''}
-            </div>
           </div>
         `;
-
         const leafletMarker = L.marker(getPosition(marker.x, marker.y), {
           icon: getIcon(L, marker.type || marker.id, marker.name)
         }).addTo(markersGroup);
-
         leafletMarker.bindPopup(popupHtml, { className: 'custom-popup-rust' });
       });
-  }, [L, markers, mapSize]);
+  }, [L, markers, showEvents, showPlayers, showVending, oceanMargin, mapSize, totalMapSize]);
 
   if (!L) {
     return (
       <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0a0a0b', color: 'var(--text-muted)' }}>
         <div className="animate-spin" style={{ width: '30px', height: '30px', border: '3px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
-        <span style={{ marginTop: '1rem' }}>Iniciando motor de mapa HK...</span>
+        <span style={{ marginTop: '1rem' }}>Iniciando motor de radar...</span>
       </div>
     );
   }
@@ -225,15 +258,40 @@ export default function RustMap({
   return (
     <div className="rust-map-wrapper" style={{ height: '100%', width: '100%', background: '#0a0a0b', position: 'relative' }}>
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossOrigin="" />
+      
+      {/* HUD de Controles Flotantes */}
+      <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000, display: 'flex', gap: '0.5rem', background: 'rgba(10, 10, 11, 0.8)', padding: '0.5rem', borderRadius: '12px', border: '1px solid var(--border)', backdropFilter: 'blur(10px)' }}>
+        <button onClick={() => setShowPlayers(!showPlayers)} className="btn-icon" style={{ color: showPlayers ? '#22c55e' : '#555', padding: '0.5rem' }} title="Equipo">
+          <Users size={18} />
+        </button>
+        <button onClick={() => setShowEvents(!showEvents)} className="btn-icon" style={{ color: showEvents ? '#ef4444' : '#555', padding: '0.5rem' }} title="Eventos Activos">
+          <Zap size={18} />
+        </button>
+        <button onClick={() => setShowMonuments(!showMonuments)} className="btn-icon" style={{ color: showMonuments ? 'white' : '#555', padding: '0.5rem' }} title="Radtowns">
+          <MapIcon size={18} />
+        </button>
+        <button onClick={() => setShowVending(!showVending)} className="btn-icon" style={{ color: showVending ? '#eab308' : '#555', padding: '0.5rem' }} title="Máquinas Expendedoras">
+          <ShoppingCart size={18} />
+        </button>
+        <div style={{ width: '1px', background: 'var(--border)', margin: '0 0.25rem' }}></div>
+        <button onClick={() => setShowGrid(!showGrid)} className="btn-icon" style={{ color: showGrid ? 'rgba(255,255,255,0.7)' : '#555', padding: '0.5rem' }} title="Grilla Táctica">
+          <Layers size={18} />
+        </button>
+      </div>
+
       <div ref={mapRef} style={{ height: "100%", width: "100%", backgroundColor: '#0a0a0b' }} />
+      
       <style key="leaflet-overrides">{`
         .leaflet-container { background: #0a0a0b !important; }
+        .btn-icon { background: transparent; border: none; cursor: pointer; transition: 0.2s; border-radius: 8px; }
+        .btn-icon:hover { background: rgba(255,255,255,0.1); }
         .radar-pulse { animation: pulse 2s infinite; }
         .raid-pulse { animation: raid-blink 0.5s infinite; }
         @keyframes pulse { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
         @keyframes raid-blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } }
-        .custom-div-icon { background: none; border: none; }
-        .grid-label-text { color: rgba(255,255,255,0.4); font-size: 11px; font-weight: bold; text-shadow: 1px 1px 2px black; font-family: 'JetBrains Mono', monospace; }
+        .custom-div-icon { background: none; border: none; display: flex; align-items: center; justify-content: center; }
+        .grid-label-text { color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 900; text-shadow: 2px 2px 4px black; font-family: 'JetBrains Mono', monospace; }
+        .monument-label { color: rgba(255,255,255,0.85); font-size: 9px; font-weight: 800; text-shadow: 1px 1px 3px black, -1px -1px 3px black; text-align: center; white-space: nowrap; transform: translate(-50%, -50%); letter-spacing: 0.5px; }
         .custom-popup-rust .leaflet-popup-content-wrapper { background: var(--surface); color: white; border: 1px solid var(--border); border-radius: 8px; }
         .custom-popup-rust .leaflet-popup-tip { background: var(--surface); border: 1px solid var(--border); }
       `}</style>

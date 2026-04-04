@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth/authOptions";
-import db from "@/lib/db";
+import db, { getDeathMarkers, saveDeathMarker } from "@/lib/db";
 import { rustPlusManager } from "@/lib/rustplus/RustPlusManager";
 
 export async function GET(request: Request) {
@@ -27,10 +27,27 @@ export async function GET(request: Request) {
 
     const markersData = await rustPlusManager.getMapMarkers(session.user.steamId, server.ip).catch(() => ({}));
     const teamData = await rustPlusManager.getTeamInfo(session.user.steamId, server.ip).catch(() => ({}));
+    
+    const teamMembers = (teamData as any)?.response?.teamInfo?.members || [];
+    
+    // Grabar muertes silentemente
+    teamMembers.forEach((m: any) => {
+       if (m.isAlive === false && m.x !== undefined && m.y !== undefined) {
+         const isNew = saveDeathMarker(String(m.steamId), serverId, m.name, m.x, m.y);
+         if (isNew && server.discordWebhook) {
+            import("@/lib/discord/DiscordManager").then(({ DiscordManager }) => {
+               DiscordManager.sendDeath(server.discordWebhook, m.name, m.x, m.y, server.name);
+            });
+         }
+       }
+    });
+
+    const activeDeaths = getDeathMarkers(serverId);
 
     return NextResponse.json({
       markers: (markersData as any)?.response?.mapMarkers?.markers || [],
-      team: (teamData as any)?.response?.teamInfo?.members || []
+      team: teamMembers,
+      deaths: activeDeaths || []
     });
   } catch (error: any) {
     console.warn("[API Markers] Silent Fallback (200 OK with empty lists):", error.message || error);

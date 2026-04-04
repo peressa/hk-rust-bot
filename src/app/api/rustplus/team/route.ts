@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth/authOptions";
-import db from "@/lib/db";
+import db, { saveDeathMarker } from "@/lib/db";
 import { rustPlusManager } from "@/lib/rustplus/RustPlusManager";
 
 export async function GET(request: Request) {
@@ -26,7 +26,21 @@ export async function GET(request: Request) {
     });
 
     const teamData = await rustPlusManager.getTeamInfo(session.user.steamId, server.ip).catch(() => ({}));
-    return NextResponse.json((teamData as any)?.response?.teamInfo || { members: [] });
+    const teamInfo = (teamData as any)?.response?.teamInfo || { members: [] };
+
+    // Grabar muertes
+    teamInfo.members.forEach((m: any) => {
+       if (m.isAlive === false && m.x !== undefined && m.y !== undefined) {
+         const isNew = saveDeathMarker(String(m.steamId), serverId, m.name, m.x, m.y);
+         if (isNew && server.discordWebhook) {
+            import("@/lib/discord/DiscordManager").then(({ DiscordManager }) => {
+               DiscordManager.sendDeath(server.discordWebhook, m.name, m.x, m.y, server.name);
+            });
+         }
+       }
+    });
+
+    return NextResponse.json(teamInfo);
   } catch (error: any) {
     console.warn("[API Team] Silent Fallback");
     return NextResponse.json({ members: [] }, { status: 200 });

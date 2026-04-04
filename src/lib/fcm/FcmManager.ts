@@ -151,6 +151,17 @@ export class FcmManager {
         try {
           saveServer(server);
           console.log(`[FCM] SUCCESS: Server saved correctly: ${server.name}`);
+
+          // Enviar Webhook
+          const dbModule = require('@/lib/db');
+          const servers = dbModule.getServers(steamId);
+          // Find the just saved or existing server to get webhook if it existed
+          const existing = servers.find((s:any) => s.ip === ip);
+          if (existing && existing.discordWebhook) {
+            const { DiscordManager } = require('@/lib/discord/DiscordManager');
+            DiscordManager.sendPairing(existing.discordWebhook, existing.name, ip, server.port);
+          }
+
         } catch (err) {
           console.error(`[FCM] DATABASE ERROR: Failed to save server:`, err);
         }
@@ -160,16 +171,47 @@ export class FcmManager {
           serverId: ip || "unknown", 
           entityId: normalizedPayload.entityid,
           entityType: parseInt(normalizedPayload.entitytype) || 0,
-          name: normalizedPayload.entityname || normalizedPayload.name || "Dispositivo Rust+"
+          name: normalizedPayload.entityname || normalizedPayload.name || "Dispositivo Rust+",
+          value: normalizedPayload.value === "true",
+          capacity: parseFloat(normalizedPayload.capacity) || 0
         };
         
-        console.log(`[FCM] Detected Entity Pairing! Info:`, entity);
+        console.log(`[FCM] Detected Entity Update/Pairing! Info:`, entity);
 
         try {
           saveEntity(entity);
+          
+          // Alerta de Batería Baja
+          if (entity.capacity > 0 && entity.capacity < 10) {
+            const dbModule = require('@/lib/db');
+            const server = dbModule.default.prepare("SELECT * FROM servers WHERE id = ?").get(entity.serverId) as any;
+            if (server && server.discordWebhook) {
+                const { DiscordManager } = require('@/lib/discord/DiscordManager');
+                DiscordManager.sendAlarm(server.discordWebhook, "⚠️ BATERÍA CRÍTICA", `La batería "${entity.name}" está al ${Math.round(entity.capacity)}%. ¡Recarga pronto!`, server.name);
+            }
+          }
+
           console.log(`[FCM] SUCCESS: Entity saved correctly: ${entity.name}`);
         } catch (err) {
           console.error(`[FCM] DATABASE ERROR: Failed to save entity:`, err);
+        }
+      } else if (normalizedPayload.type === "alarm" || normalizedPayload.channelid === "alarm") {
+        console.log(`[FCM] Detected Smart Alarm!`);
+        try {
+          const dbModule = require('@/lib/db');
+          const servers = dbModule.getServers(steamId);
+          const serverName = normalizedPayload.servername || "Servidor Desconocido";
+          // We can try to find the server just by matching name or assuming the active one
+          const matchingServer = servers.find((s:any) => s.name === serverName) || servers[0];
+          
+          if (matchingServer && matchingServer.discordWebhook) {
+            const { DiscordManager } = require('@/lib/discord/DiscordManager');
+            const alarmTitle = payload.title || "Alarma Inteligente Activada";
+            const alarmMsg = payload.body || "Se ha activado una alarma en tu base.";
+            DiscordManager.sendAlarm(matchingServer.discordWebhook, alarmTitle, alarmMsg, matchingServer.name);
+          }
+        } catch(err) {
+          console.warn("[FCM] Error enviando alarma a Discord", err);
         }
       } else {
         console.log(`[FCM] Notification ignored. Type: ${normalizedPayload.type || 'unknown'}. Keys: ${Object.keys(normalizedPayload).join(',')}`);
