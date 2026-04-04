@@ -15,6 +15,25 @@ import {
   MapPin 
 } from "lucide-react";
 
+class MapErrorBoundary extends React.Component<any, { hasError: boolean, error: any }> {
+  constructor(props: any) { super(props); this.state = { hasError: false, error: null }; }
+  static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
+  componentDidCatch(error: any, errorInfo: any) { console.error("Map Crash:", error, errorInfo); }
+  render() { 
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '2rem', background: '#300', color: 'white', height: '100%' }}>
+          <h3>⚠️ Error interno detectado en el Mapa</h3>
+          <pre style={{ color: '#ffaaaa', textWrap: 'wrap' }}>{String(this.state.error?.message || this.state.error)}</pre>
+          <pre style={{ fontSize: '11px', marginTop: '1rem', color: '#ccc' }}>{String(this.state.error?.stack)}</pre>
+          <button onClick={() => this.setState({hasError: false})} style={{ marginTop: '1rem', padding: '0.5rem 1rem', background: 'white', color: 'black' }}>Reintentar</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 export default function MapPage() {
   const [mapInfo, setMapInfo] = useState<any>(null);
   const [markers, setMarkers] = useState<any[]>([]);
@@ -155,11 +174,13 @@ export default function MapPage() {
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: '2rem' }}>
           <div className="premium-card" style={{ padding: '0', height: '750px', border: '1px solid var(--border)', overflow: 'hidden', position: 'relative', background: '#0a0a0b' }}>
             {(mapInfo?.jpgImage || (mapError && selectedServer)) ? (
-              <RustMap 
-                mapJpg={mapInfo?.jpgImage} 
-                mapSize={mapInfo?.width || 4000} 
-                markers={allMarkers} 
-              />
+              <MapErrorBoundary>
+                <RustMap 
+                  mapJpg={mapInfo?.jpgImage} 
+                  mapSize={mapInfo?.width || 4000} 
+                  markers={allMarkers} 
+                />
+              </MapErrorBoundary>
             ) : (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', textAlign: 'center', padding: '2rem' }}>
                 <div style={{ position: 'relative' }}>

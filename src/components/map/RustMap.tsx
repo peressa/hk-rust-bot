@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-// El CSS debe importarse de forma estática pura para que el compilador de NextJS
-// lo añada al CSS global sin provocar Chunk Load Errors.
-import "leaflet/dist/leaflet.css";
+// Removemos import "leaflet/dist/leaflet.css" para evitar Chunk Load Errors de Webpack en Next.js
+
 
 const MARKER_TYPES = {
   PLAYER: "Player",
@@ -225,6 +224,7 @@ export default function RustMap({
 
   return (
     <div className="rust-map-wrapper" style={{ height: '100%', width: '100%', background: '#0a0a0b', position: 'relative' }}>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossOrigin="" />
       <div ref={mapRef} style={{ height: "100%", width: "100%", backgroundColor: '#0a0a0b' }} />
       <style key="leaflet-overrides">{`
         .leaflet-container { background: #0a0a0b !important; }
