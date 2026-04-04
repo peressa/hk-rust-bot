@@ -166,9 +166,11 @@ class RustPlusManager extends EventEmitter {
     if (!rustplus) return;
 
     const command = cmd.toLowerCase().trim();
+    console.log(`[HK Bot] Procesando comando de equipo: "${command}" desde ${steamId} en ${ip}`);
     
     try {
       if (command === "!time" || command === "!hora") {
+        console.log(`[HK Bot] Ejecutando !time...`);
         const timeResp = await this.sendRequest(steamId, ip, { getTime: {} });
         const t = timeResp.response.time;
         
@@ -180,8 +182,10 @@ class RustPlusManager extends EventEmitter {
         rustplus.sendTeamMessage(`🤖 [HK] Hora actual: ${formattedTime} (${t.dayLengthMinutes}m día / ${t.nightLengthMinutes}m noche)`);
       } 
       else if (command === "!pop" || command === "!jugadores") {
+        console.log(`[HK Bot] Ejecutando !pop...`);
         const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
         const i = infoResp.response.info;
+        console.log(`[HK Bot] Pop info obtenida: ${i.players}/${i.maxPlayers}. Enviando mensaje...`);
         rustplus.sendTeamMessage(`🤖 [HK] Población: ${i.players}/${i.maxPlayers} online (Cola: ${i.queued || 0})`);
       }
       else if (command === "!wipe") {
