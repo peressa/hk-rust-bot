@@ -179,10 +179,23 @@ class RustPlusManager extends EventEmitter {
         const mins = Math.floor((t.time - hours) * 60);
         const formattedTime = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
         
-        const dayMins = t.dayLengthMinutes ? Math.round(t.dayLengthMinutes) : 0;
-        const nightMins = t.nightLengthMinutes ? Math.round(t.nightLengthMinutes) : 0;
+        let remainingMsg = "";
+        const sunrise = t.sunrise || 8.0;
+        const sunset = t.sunset || 20.0;
+        const dayLength = t.dayLengthMinutes || 60; // default safe fallback
         
-        rustplus.sendTeamMessage(`:exclamation: Hora: ${formattedTime} (${dayMins}m día / ${nightMins}m noche)`);
+        if (t.time >= sunrise && t.time < sunset) {
+            const inGameHours = sunset - t.time;
+            const realMins = Math.round(inGameHours * (dayLength / 24));
+            remainingMsg = `Faltan ${realMins}m para la noche 🌙`;
+        } else {
+            const inGameHours = (t.time >= sunset) ? (24 - t.time) + sunrise : (sunrise - t.time);
+            // La noche comúnmente va más rápido o igual, calculamos en base proporcional:
+            const realMins = Math.round(inGameHours * (dayLength / 24));
+            remainingMsg = `Faltan ${realMins}m para el día ☀️`;
+        }
+        
+        rustplus.sendTeamMessage(`:exclamation: Hora: ${formattedTime} (${remainingMsg})`);
       } 
       else if (command === "!pop" || command === "!jugadores") {
         console.log(`[HK Bot] Ejecutando !pop...`);
