@@ -122,9 +122,9 @@ class RustPlusManager extends EventEmitter {
       });
 
       rustplus.on("message", (message: any) => {
-        if (message.broadcast?.teamChat) {
+        if (message.broadcast?.teamMessage) {
           const teamKey = `${steamId}-${connection.ip}`;
-          const chatMsg = message.broadcast.teamChat.message;
+          const chatMsg = message.broadcast.teamMessage.message;
           const history = this.chatHistory.get(teamKey) || [];
           
           history.push({ ...chatMsg, time: Date.now() });
@@ -168,17 +168,39 @@ class RustPlusManager extends EventEmitter {
     const command = cmd.toLowerCase().trim();
     
     try {
-      if (command === "!time") {
+      if (command === "!time" || command === "!hora") {
         const timeResp = await this.sendRequest(steamId, ip, { getTime: {} });
         const t = timeResp.response.time;
-        rustplus.sendTeamMessage(`🕒 Hora HK: ${t.time} (${t.dayLengthMinutes}m día / ${t.nightLengthMinutes}m noche)`);
-      } else if (command === "!pop") {
+        
+        // Formatear hora de Rust (viene en decimal 0.0 - 24.0)
+        const hours = Math.floor(t.time);
+        const mins = Math.floor((t.time - hours) * 60);
+        const formattedTime = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        
+        rustplus.sendTeamMessage(`🤖 [HK] Hora actual: ${formattedTime} (${t.dayLengthMinutes}m día / ${t.nightLengthMinutes}m noche)`);
+      } 
+      else if (command === "!pop" || command === "!jugadores") {
         const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
         const i = infoResp.response.info;
-        rustplus.sendTeamMessage(`📊 Pop HK: ${i.players}/${i.maxPlayers} (Cola: ${i.queued || 0})`);
-      } else if (command === "!upkeep") {
-        rustplus.sendTeamMessage(`🏠 Mantenimiento: Consulta el mapa interactivo de HK Rust para ver el tiempo real.`);
+        rustplus.sendTeamMessage(`🤖 [HK] Población: ${i.players}/${i.maxPlayers} online (Cola: ${i.queued || 0})`);
       }
+      else if (command === "!wipe") {
+        const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
+        const wipeTime = infoResp.response.info.wipeTime;
+        if (wipeTime) {
+          const wipeDate = new Date(wipeTime * 1000).toLocaleString('es-AR');
+          rustplus.sendTeamMessage(`🤖 [HK] Último Wipe: ${wipeDate}`);
+        } else {
+          rustplus.sendTeamMessage(`🤖 [HK] No hay datos de servidor sobre el Wipe.`);
+        }
+      }
+      else if (command === "!upkeep" || command === "!tc") {
+        rustplus.sendTeamMessage(`🤖 [HK] Utiliza el Dashboard Web para visualizar el tiempo real del TC y las cámaras.`);
+      }
+      else if (command === "!help" || command === "!ayuda") {
+        rustplus.sendTeamMessage(`🤖 Comandos HK Bot: !pop, !time, !wipe, !upkeep`);
+      }
+
     } catch (err) {
       console.error("[RustPlus Command Error]:", err);
     }
