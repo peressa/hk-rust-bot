@@ -179,30 +179,33 @@ class RustPlusManager extends EventEmitter {
         const mins = Math.floor((t.time - hours) * 60);
         const formattedTime = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
         
-        rustplus.sendTeamMessage(`🤖 [HK] Hora actual: ${formattedTime} (${t.dayLengthMinutes}m día / ${t.nightLengthMinutes}m noche)`);
+        const dayMins = t.dayLengthMinutes ? Math.round(t.dayLengthMinutes) : 0;
+        const nightMins = t.nightLengthMinutes ? Math.round(t.nightLengthMinutes) : 0;
+        
+        rustplus.sendTeamMessage(`:exclamation: Hora: ${formattedTime} (${dayMins}m día / ${nightMins}m noche)`);
       } 
       else if (command === "!pop" || command === "!jugadores") {
         console.log(`[HK Bot] Ejecutando !pop...`);
         const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
         const i = infoResp.response.info;
         console.log(`[HK Bot] Pop info obtenida: ${i.players}/${i.maxPlayers}. Enviando mensaje...`);
-        rustplus.sendTeamMessage(`🤖 [HK] Población: ${i.players}/${i.maxPlayers} online (Cola: ${i.queued || 0})`);
+        rustplus.sendTeamMessage(`:exclamation: Población: ${i.players}/${i.maxPlayers} online (Cola: ${i.queued || 0})`);
       }
       else if (command === "!wipe") {
         const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
         const wipeTime = infoResp.response.info.wipeTime;
         if (wipeTime) {
           const wipeDate = new Date(wipeTime * 1000).toLocaleString('es-AR');
-          rustplus.sendTeamMessage(`🤖 [HK] Último Wipe: ${wipeDate}`);
+          rustplus.sendTeamMessage(`:exclamation: Último Wipe: ${wipeDate}`);
         } else {
-          rustplus.sendTeamMessage(`🤖 [HK] No hay datos de servidor sobre el Wipe.`);
+          rustplus.sendTeamMessage(`:exclamation: No hay datos del Wipe.`);
         }
       }
       else if (command === "!upkeep" || command === "!tc") {
-        rustplus.sendTeamMessage(`🤖 [HK] Utiliza el Dashboard Web para visualizar el tiempo real del TC y las cámaras.`);
+        rustplus.sendTeamMessage(`:exclamation: Utiliza el Dashboard para ver el mapa y cámaras.`);
       }
       else if (command === "!help" || command === "!ayuda") {
-        rustplus.sendTeamMessage(`🤖 Comandos HK Bot: !pop, !time, !wipe, !upkeep`);
+        rustplus.sendTeamMessage(`:exclamation: Comandos: !pop, !time, !wipe, !tc`);
       }
 
     } catch (err) {
