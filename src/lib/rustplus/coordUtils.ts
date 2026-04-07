@@ -32,7 +32,7 @@ export function worldToGrid(x: number, y: number, mapSize: number): string {
     // A0 es la esquina superior izquierda.
     const gridX = Math.floor(x / GRID_SIZE);
     const gridY = Math.floor((mapSize - y) / GRID_SIZE);
-    
+
     return `${indexToLetter(gridX)}${gridY}`;
 }
 
@@ -41,9 +41,9 @@ export function worldToGrid(x: number, y: number, mapSize: number): string {
  */
 export function worldToLeaflet(x: number, y: number, mapSize: number, oceanMargin: number) {
     const totalSize = mapSize + (oceanMargin * 2);
-    
+
     const lng = ((x + oceanMargin) / totalSize) * 1000;
     const lat = ((y + oceanMargin) / totalSize) * 1000;
-    
+
     return { lat, lng };
 }

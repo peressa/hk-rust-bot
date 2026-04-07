@@ -22,12 +22,12 @@ interface RustMapProps {
   markers?: any[];
 }
 
-export default function RustMap({ 
-  mapJpg, 
-  mapSize = 4000, 
+export default function RustMap({
+  mapJpg,
+  mapSize = 4000,
   oceanMargin = 0,
   monuments = [],
-  markers = [] 
+  markers = []
 }: RustMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [L, setL] = useState<any>(null);
@@ -57,7 +57,7 @@ export default function RustMap({
   const getPosition = (x: number, y: number): [number, number] => {
     if (totalMapSize <= 0) return [0, 0];
     const lng = ((x + oceanMargin) / totalMapSize) * 1000;
-    const lat = ((y + oceanMargin) / totalMapSize) * 1000; 
+    const lat = ((y + oceanMargin) / totalMapSize) * 1000;
     return [lat, lng];
   };
 
@@ -106,9 +106,9 @@ export default function RustMap({
       iconHtml = `<div style="display: flex; align-items: center; justify-content: center; font-size: 16px; background: transparent; filter: drop-shadow(0px 0px 4px red);">💀</div>`;
       size = 20;
     } else {
-        color = "#a855f7";
-        iconHtml = `<div style="background: ${color}; width: 14px; height: 14px; border-radius: 4px; border: 1px solid white;"></div>`;
-        size = 14;
+      color = "#a855f7";
+      iconHtml = `<div style="background: ${color}; width: 14px; height: 14px; border-radius: 4px; border: 1px solid white;"></div>`;
+      size = 14;
     }
 
     return leaflet.divIcon({
@@ -133,7 +133,7 @@ export default function RustMap({
           attributionControl: false,
           zoomControl: false // Ocultamos el nativo para estética
         });
-        
+
         // Agregar control abajo derecha
         L.control.zoom({ position: 'bottomright' }).addTo(leafletMap.current);
       }
@@ -155,7 +155,7 @@ export default function RustMap({
       gridLinesRef.current = [];
 
       // El estándar oficial de Rust para el MAPA UI es 150m por cuadrante. 
-      const CUSTOM_GRID_SIZE = 150; 
+      const CUSTOM_GRID_SIZE = 150;
       const numCells = Math.ceil(mapSize / CUSTOM_GRID_SIZE);
       const step = (CUSTOM_GRID_SIZE / totalMapSize) * 1000;
       const offset = (oceanMargin / totalMapSize) * 1000;
@@ -163,38 +163,38 @@ export default function RustMap({
       // Dibujar líneas y etiquetas centrales por celda
       for (let i = 0; i < numCells; i++) {
         for (let j = 0; j < numCells; j++) {
-           const xPos = offset + (i * step);
-           const yPos = offset + (j * step); 
-           
-           // Líneas (solo en el borde para evitar repetición en el loop doble)
-           const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
-           
-           if (j === 0) { // Líneas Verticales
-             gridLinesRef.current.push(L.polyline([[offset, xPos], [1000 - offset, xPos]], opts).addTo(gridGroup));
-             if (i === numCells - 1) {
-                gridLinesRef.current.push(L.polyline([[offset, xPos + step], [1000 - offset, xPos + step]], opts).addTo(gridGroup));
-             }
-           }
-           if (i === 0) { // Líneas Horizontales
-             const yLine = 1000 - yPos;
-             gridLinesRef.current.push(L.polyline([[yLine, offset], [yLine, 1000 - offset]], opts).addTo(gridGroup));
-             if (j === numCells - 1) {
-                gridLinesRef.current.push(L.polyline([[1000 - (yPos + step), offset], [1000 - (yPos + step), 1000 - offset]], opts).addTo(gridGroup));
-             }
-           }
+          const xPos = offset + (i * step);
+          const yPos = offset + (j * step);
 
-           // Etiqueta del cuadrante (Ej: A0, B1...)
-           // J=0 es la parte SUPERIOR (Row 0), por lo que j es directamente el número oficial
-           const gridLabel = `${indexToLetter(i)}${j}`;
+          // Líneas (solo en el borde para evitar repetición en el loop doble)
+          const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
 
-           L.marker([1000 - (yPos + step/2), xPos + (step/2)], {
-             icon: L.divIcon({ 
-               className: 'grid-cell-label', 
-               html: `<div class="grid-cell-text" style="opacity: 0.05">${gridLabel}</div>`, 
-               iconSize: [30, 30] 
-             }),
-             interactive: false
-           }).addTo(gridGroup);
+          if (j === 0) { // Líneas Verticales
+            gridLinesRef.current.push(L.polyline([[offset, xPos], [1000 - offset, xPos]], opts).addTo(gridGroup));
+            if (i === numCells - 1) {
+              gridLinesRef.current.push(L.polyline([[offset, xPos + step], [1000 - offset, xPos + step]], opts).addTo(gridGroup));
+            }
+          }
+          if (i === 0) { // Líneas Horizontales
+            const yLine = 1000 - yPos;
+            gridLinesRef.current.push(L.polyline([[yLine, offset], [yLine, 1000 - offset]], opts).addTo(gridGroup));
+            if (j === numCells - 1) {
+              gridLinesRef.current.push(L.polyline([[1000 - (yPos + step), offset], [1000 - (yPos + step), 1000 - offset]], opts).addTo(gridGroup));
+            }
+          }
+
+          // Etiqueta del cuadrante (Ej: A0, B1...)
+          // J=0 es la parte SUPERIOR (Row 0), por lo que j es directamente el número oficial
+          const gridLabel = `${indexToLetter(i)}${j}`;
+
+          L.marker([1000 - (yPos + step / 2), xPos + (step / 2)], {
+            icon: L.divIcon({
+              className: 'grid-cell-label',
+              html: `<div class="grid-cell-text" style="opacity: 0.05">${gridLabel}</div>`,
+              iconSize: [30, 30]
+            }),
+            interactive: false
+          }).addTo(gridGroup);
         }
       }
 
@@ -204,12 +204,12 @@ export default function RustMap({
         const yPos = offset + (i * step);
 
         // Letras arriba (X)
-        L.marker([1000 - offset + 15, xPos + (step/2)], {
+        L.marker([1000 - offset + 15, xPos + (step / 2)], {
           icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${indexToLetter(i)}</span>`, iconSize: [20, 20] })
         }).addTo(gridGroup);
 
         // Números izquierda (Y) - J=0 (arriba) es 0
-        L.marker([1000 - (yPos + step/2), offset - 15], {
+        L.marker([1000 - (yPos + step / 2), offset - 15], {
           icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${i}</span>`, iconSize: [20, 20] })
         }).addTo(gridGroup);
       }
@@ -221,7 +221,7 @@ export default function RustMap({
     if (!L || !leafletMap.current) return;
     if (mapJpg && mapJpg.length > 100) {
       if (layersRef.current['image']) leafletMap.current.removeLayer(layersRef.current['image']);
-      layersRef.current['image'] = L.imageOverlay(`data:image/jpeg;base64,${mapJpg}`, [[0,0], [1000,1000]], {
+      layersRef.current['image'] = L.imageOverlay(`data:image/jpeg;base64,${mapJpg}`, [[0, 0], [1000, 1000]], {
         opacity: 1, zIndex: 1
       }).addTo(leafletMap.current);
     }
@@ -231,7 +231,7 @@ export default function RustMap({
   useEffect(() => {
     if (!L || !leafletMap.current) return;
     if (layersRef.current['monumentsGroup']) leafletMap.current.removeLayer(layersRef.current['monumentsGroup']);
-    
+
     if (showMonuments && monuments.length > 0) {
       const monumentsGroup = L.layerGroup().addTo(leafletMap.current);
       layersRef.current['monumentsGroup'] = monumentsGroup;
@@ -292,7 +292,7 @@ export default function RustMap({
   return (
     <div className="rust-map-wrapper" style={{ height: '100%', width: '100%', background: '#0a0a0b', position: 'relative' }}>
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossOrigin="" />
-      
+
       {/* HUD de Controles Flotantes */}
       <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000, display: 'flex', gap: '0.5rem', background: 'rgba(10, 10, 11, 0.8)', padding: '0.5rem', borderRadius: '12px', border: '1px solid var(--border)', backdropFilter: 'blur(10px)' }}>
         <button onClick={() => setShowPlayers(!showPlayers)} className="btn-icon" style={{ color: showPlayers ? '#22c55e' : '#555', padding: '0.5rem' }} title="Equipo">
@@ -314,7 +314,7 @@ export default function RustMap({
       </div>
 
       <div ref={mapRef} style={{ height: "100%", width: "100%", backgroundColor: '#0a0a0b' }} />
-      
+
       <style key="leaflet-overrides">{`
         .leaflet-container { background: #0a0a0b !important; }
         .btn-icon { background: transparent; border: none; cursor: pointer; transition: 0.2s; border-radius: 8px; }
