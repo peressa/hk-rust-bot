@@ -158,40 +158,37 @@ export default function RustMap({
       const step = (GRID_SIZE / totalMapSize) * 1000;
       const offset = (oceanMargin / totalMapSize) * 1000;
 
-      // Dibujar líneas y etiquetas centrales
+      // Dibujar líneas y etiquetas centrales por celda
       for (let i = 0; i < numCells; i++) {
         for (let j = 0; j < numCells; j++) {
            const xPos = offset + (i * step);
-           const yPos = offset + (j * step);
+           const yPos = offset + (j * step); 
            
-           // Líneas (solo en el primer j para no repetir lineas de columna)
-           if (j === 0) {
-             const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
-             gridLinesRef.current.push(L.polyline([[0, xPos], [1000, xPos]], opts).addTo(gridGroup));
-             if (i === numCells - 1) { // Linea final derecha
-                gridLinesRef.current.push(L.polyline([[0, xPos + step], [1000, xPos + step]], opts).addTo(gridGroup));
+           // Líneas (solo en el borde para evitar repetición en el loop doble)
+           const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
+           
+           if (j === 0) { // Líneas Verticales
+             gridLinesRef.current.push(L.polyline([[offset, xPos], [1000 - offset, xPos]], opts).addTo(gridGroup));
+             if (i === numCells - 1) {
+                gridLinesRef.current.push(L.polyline([[offset, xPos + step], [1000 - offset, xPos + step]], opts).addTo(gridGroup));
              }
            }
-           if (i === 0) {
-             const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
-             const hLinePos = 1000 - yPos;
-             gridLinesRef.current.push(L.polyline([[hLinePos, 0], [hLinePos, 1000]], opts).addTo(gridGroup));
-             if (j === numCells - 1) { // Linea final inferior
-                gridLinesRef.current.push(L.polyline([[1000 - (yPos + step), 0], [1000 - (yPos + step), 1000]], opts).addTo(gridGroup));
+           if (i === 0) { // Líneas Horizontales
+             const yLine = 1000 - yPos;
+             gridLinesRef.current.push(L.polyline([[yLine, offset], [yLine, 1000 - offset]], opts).addTo(gridGroup));
+             if (j === numCells - 1) {
+                gridLinesRef.current.push(L.polyline([[1000 - (yPos + step), offset], [1000 - (yPos + step), 1000 - offset]], opts).addTo(gridGroup));
              }
            }
 
-           // Etiqueta del cuadrante (ej: M14)
-           const vLabel = indexToLetter(i);
-           const hLabel = (numCells - 1) - j;
-           const gridLabel = `${vLabel}${hLabel}`;
+           // Etiqueta del cuadrante (Ej: A0, B1...)
+           // J=0 es la parte SUPERIOR (Row 0), por lo que j es directamente el número oficial
+           const gridLabel = `${indexToLetter(i)}${j}`;
 
-           // Cambiamos coordenadas Lat/Lng a Leaflet [0, 1000]
-           // El centro del cuadrante es (xPos + step/2, 1000 - (yPos + step/2))
            L.marker([1000 - (yPos + step/2), xPos + (step/2)], {
              icon: L.divIcon({ 
                className: 'grid-cell-label', 
-               html: `<div class="grid-cell-text">${gridLabel}</div>`, 
+               html: `<div class="grid-cell-text" style="opacity: 0.05">${gridLabel}</div>`, 
                iconSize: [30, 30] 
              }),
              interactive: false
@@ -199,19 +196,18 @@ export default function RustMap({
         }
       }
 
-      // Etiquetas Exteriores (Bordes)
+      // Etiquetas Exteriores en Bordes (A-Z arriba, 0-N izquierda)
       for (let i = 0; i < numCells; i++) {
-        const pos = offset + (i * step);
-        const vLabel = indexToLetter(i);
-        const hLabel = (numCells - 1) - i;
+        const xPos = offset + (i * step);
+        const yPos = offset + (i * step);
 
-        // Columnas
-        L.marker([1000 - offset + 20, pos + (step/2)], {
-          icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${vLabel}</span>`, iconSize: [20, 20] })
+        // Letras arriba (X)
+        L.marker([1000 - offset + 15, xPos + (step/2)], {
+          icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${indexToLetter(i)}</span>`, iconSize: [20, 20] })
         }).addTo(gridGroup);
 
-        // Filas
-        L.marker([1000 - (pos + step/2), offset - 20], {
+        // Números izquierda (Y) - J=0 (arriba) es 0
+        L.marker([1000 - (yPos + step/2), offset - 15], {
           icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${i}</span>`, iconSize: [20, 20] })
         }).addTo(gridGroup);
       }
