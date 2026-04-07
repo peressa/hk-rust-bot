@@ -96,6 +96,12 @@ try {
 export default db;
 
 export function saveServer(server: any) {
+  // Validación crítica: No guardar si faltan tokens (notificaciones de muerte, etc.)
+  if (!server.playerId || !server.playerToken || String(server.playerId) === "undefined") {
+    console.warn(`[DB] Ignorando grabación de servidor incompleto (Death/Event notification) para ${server.ip}`);
+    return;
+  }
+
   const stmt = db.prepare(`
     INSERT OR REPLACE INTO servers (id, steamId, ip, port, playerId, playerToken, name, useProxy, discordWebhook, bmId)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -105,8 +111,8 @@ export function saveServer(server: any) {
     server.steamId, 
     server.ip, 
     server.port, 
-    server.playerId, 
-    server.playerToken, 
+    String(server.playerId), 
+    String(server.playerToken), 
     server.name,
     server.useProxy ? 1 : 0,
     server.discordWebhook || null,

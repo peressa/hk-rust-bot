@@ -85,11 +85,17 @@ class RustPlusManager extends EventEmitter {
     return new Promise<any>((resolve, reject) => {
       console.log(`[RustPlus] Attempting ${connection.useProxy ? 'PROXY' : 'DIRECT'} connection to ${connection.ip}`);
       
+      // Validación defensiva contra datos corruptos en DB
+      if (!connection.playerId || !connection.playerToken) {
+        console.error(`[RustPlus] ABORT: Invalid credentials for ${connection.ip}. PlayerID: ${connection.playerId}, Token: ${connection.playerToken}`);
+        return reject(new Error("Credenciales de servidor inválidas o incompletas en la base de datos."));
+      }
+
       const rustplus = new RustPlus(
         connection.ip,
         parseInt(connection.port), 
-        connection.playerId.toString(), 
-        parseInt(connection.playerToken),
+        String(connection.playerId), 
+        parseInt(String(connection.playerToken)),
         connection.useProxy || false
       );
 
@@ -506,13 +512,14 @@ class RustPlusManager extends EventEmitter {
     // Diagnostic logging of all potential locations
     const routes = [
       path.resolve(__dirname, '../../node_modules/@liamcottle/rustplus.js/rustplus.proto'),
+      path.resolve(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
       '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
       '/ROOT/.next/standalone/node_modules/@liamcottle/rustplus.js/rustplus.proto',
-      path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto')
+      path.join(libPath || '', 'rustplus.proto')
     ];
 
     routes.forEach(r => {
-      results.files[r] = fs.existsSync(r);
+      if (r) results.files[r] = fs.existsSync(r);
     });
 
     console.log("[RustPlus Diagnostic Final]:", JSON.stringify(results, null, 2));
@@ -521,13 +528,10 @@ class RustPlusManager extends EventEmitter {
 }
 
 // Singleton for the whole app (persists across requests in Next.js)
-declare global {
-  var _rustPlusManager: RustPlusManager | undefined;
-}
+const globalStore = global as any;
 
-export const rustPlusManager: RustPlusManager = global._rustPlusManager ?? (global._rustPlusManager = new RustPlusManager());
+export const rustPlusManager: RustPlusManager = globalStore._rustPlusManager || (globalStore._rustPlusManager = new RustPlusManager());
 
-// Initial check on load - this will run as soon as the manager is imported
 if (typeof window === 'undefined') {
   rustPlusManager.checkProtos().catch(err => console.error("[RustPlus Startup Error]:", err));
 }

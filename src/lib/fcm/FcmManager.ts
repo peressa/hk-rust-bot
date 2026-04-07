@@ -133,10 +133,20 @@ export class FcmManager {
       
       const ip = normalizedPayload.ip || normalizedPayload.serverip;
       const port = normalizedPayload.port || normalizedPayload.serverport;
-      const isServerPairing = normalizedPayload.type === "server" || (ip && port);
+      
+      // Solo es pairing si tiene PLAYERTOKEN. Si no, es una notificación normal (muerte, evento, etc)
+      const isServerPairing = 
+        (normalizedPayload.type === "server" || (ip && port)) && 
+        normalizedPayload.playertoken && 
+        normalizedPayload.playertoken !== "undefined";
+      
       const isEntityPairing = normalizedPayload.type === "entity" || normalizedPayload.entityid;
+      const isDeathNotify = normalizedPayload.type === "death" || normalizedPayload.gcm_notification_title?.toLowerCase().includes("killed");
 
-      if (isServerPairing) {
+      // Si es muerte, NO es pairing de servidor aunque traiga IP/Port (a menos que traiga token explícito)
+      if (isDeathNotify && !normalizedPayload.playertoken) {
+         // Continuar a la lógica de muerte
+      } else if (isServerPairing) {
         const server = {
           ip: ip,
           port: port?.toString(),
@@ -164,6 +174,23 @@ export class FcmManager {
 
         } catch (err) {
           console.error(`[FCM] DATABASE ERROR: Failed to save server:`, err);
+        }
+      } else if (isDeathNotify) {
+        console.log(`[FCM] Detected Death Notification!`);
+        try {
+          const dbModule = require('@/lib/db');
+          const x = parseFloat(normalizedPayload.x) || 0;
+          const y = parseFloat(normalizedPayload.y) || 0;
+          const killer = normalizedPayload.targetname || "Unknown";
+          
+          if (ip) {
+            const isNew = dbModule.saveDeathMarker(steamId, ip, killer, x, y);
+            if (isNew) {
+               console.log(`[FCM] Muerte registrada en ${ip} por ${killer}`);
+            }
+          }
+        } catch(err) {
+          console.warn("[FCM] Error procesando notificación de muerte", err);
         }
       } else if (isEntityPairing) {
         const entity = {
