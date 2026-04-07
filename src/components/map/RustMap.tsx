@@ -154,8 +154,10 @@ export default function RustMap({
       layersRef.current['gridGroup'] = gridGroup;
       gridLinesRef.current = [];
 
-      const numCells = Math.ceil(mapSize / GRID_SIZE);
-      const step = (GRID_SIZE / totalMapSize) * 1000;
+      // El estándar oficial de Rust para el MAPA UI es 150m por cuadrante. 
+      const CUSTOM_GRID_SIZE = 150; 
+      const numCells = Math.ceil(mapSize / CUSTOM_GRID_SIZE);
+      const step = (CUSTOM_GRID_SIZE / totalMapSize) * 1000;
       const offset = (oceanMargin / totalMapSize) * 1000;
 
       // Dibujar líneas y etiquetas centrales por celda

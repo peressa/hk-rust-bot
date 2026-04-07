@@ -457,7 +457,7 @@ class RustPlusManager extends EventEmitter {
         ]);
 
         if (teamResp) this.processTeamMonitor(steamId, ip, teamResp.response.teamInfo, infoResp?.response?.info);
-        if (markersResp) this.processMarkersMonitor(steamId, ip, markersResp.response.mapMarkers.markers);
+        if (markersResp) this.processMarkersMonitor(steamId, ip, markersResp.response.mapMarkers.markers, infoResp?.response?.info);
 
       } catch (err) {
         // Silencioso para no ensuciar logs de monitoreo cada 15s
@@ -515,10 +515,11 @@ class RustPlusManager extends EventEmitter {
     });
   }
 
-  private processMarkersMonitor(steamId: string, ip: string, markers: any[]) {
+  private processMarkersMonitor(steamId: string, ip: string, markers: any[], serverInfo: any) {
     const key = `${steamId}-${ip}`;
     const rustplus = this.connections.get(key);
     const lastMarkers = this.lastMarkerStates.get(key) || [];
+    const mapSize = serverInfo?.mapSize || 4000;
     
     // Solo nos interesan eventos globales
     const currentEventIds = markers
@@ -529,11 +530,22 @@ class RustPlusManager extends EventEmitter {
 
     // Detectar nuevos eventos
     markers.forEach(m => {
-      if ([4, 5, 8].includes(m.type) && !lastEventIds.includes(m.id)) {
+      if ([4, 5, 6, 8].includes(m.type) && !lastEventIds.includes(m.id)) {
+        const grid = worldToGrid(m.x, m.y, mapSize);
         let msg = "";
-        if (m.type === 5) msg = ":exclamation: ¡Cargo Ship detectado!";
-        else if (m.type === 4) msg = ":exclamation: ¡Chinook (CH47) en curso!";
-        else if (m.type === 8) msg = ":exclamation: ¡Helicóptero de Patrulla activo!";
+        
+        if (m.type === 5) msg = `:exclamation: ¡Cargo Ship detectado en ${grid}!`;
+        else if (m.type === 4) msg = `:exclamation: ¡Chinook (CH47) en curso hacia ${grid}!`;
+        else if (m.type === 8) msg = `:exclamation: ¡Helicóptero de Patrulla activo en ${grid}!`;
+        else if (m.type === 6) {
+           // Si está muy lejos del centro, es probable que sea Oil Rig
+           const isFar = Math.abs(m.x - mapSize/2) > mapSize/3 || Math.abs(m.y - mapSize/2) > mapSize/3;
+           if (isFar) {
+              msg = `:exclamation: ¡Evento en Oil Rig / Mar detectado en ${grid}! (Caja fuerte activa)`;
+           } else {
+              msg = `:exclamation: ¡Caja Fuerte (Locked Crate) detectada en ${grid}!`;
+           }
+        }
         
         if (msg) rustplus.sendTeamMessage(msg);
       }
