@@ -55,12 +55,12 @@ export default function RustMap({
   }, []);
 
   const getPosition = (x: number, y: number): [number, number] => {
-    if (totalMapSize <= 0) return [0, 0];
-    const worldHalf = mapSize / 2;
-    // En Rust+, las coordenadas son centradas en (0,0). 
-    // Mapeamos a la imagen que incluye el mar.
-    const lng = ((x + worldHalf + oceanMargin) / totalMapSize) * 1000;
-    const lat = ((y + worldHalf + oceanMargin) / totalMapSize) * 1000;
+    if (mapSize <= 0) return [0, 0];
+    const PAD_WORLD = 2000;
+    const halfPad = PAD_WORLD / 2;
+    const totalSize = mapSize + PAD_WORLD;
+    const lng = ((x + halfPad) / totalSize) * 1000;
+    const lat = ((y + halfPad) / totalSize) * 1000;
     return [lat, lng];
   };
 
@@ -158,9 +158,11 @@ export default function RustMap({
       gridLinesRef.current = [];
 
       // FÓRMULA DE PRECISIÓN DINÁMICA: Ajustamos la rejilla para que encaje 
-      // un número entero de celdas en el mapa.
+      // un número entero de celdas en el mapa navegable.
       const totalCells = Math.max(1, Math.round(mapSize / 150));
-      const offset = (oceanMargin / totalMapSize) * 1000;
+      const PAD_WORLD = 2000;
+      const totalSize = mapSize + PAD_WORLD;
+      const offset = (1000 / totalSize) * 1000; 
       const effectiveStep = (1000 - (offset * 2)) / totalCells;
 
       // Dibujar líneas y etiquetas centrales por celda

@@ -528,6 +528,19 @@ class RustPlusManager extends EventEmitter {
 
     const lastEventIds = lastMarkers.map(m => m.id);
 
+    // Detectar Deepsea Event (Casino Bar Shopkeeper en tiendas)
+    const deepSeaVendor = markers.find(m => 
+        m.type === 3 && m.name && m.name.includes("Casino Bar Shopkeeper")
+    );
+    const prevDeepSeaVendor = lastMarkers.find(m => 
+        m.type === 3 && m.name && m.name.includes("Casino Bar Shopkeeper")
+    );
+
+    if (deepSeaVendor && !prevDeepSeaVendor) {
+      const grid = worldToGrid(deepSeaVendor.x, deepSeaVendor.y, mapSize);
+      rustplus.sendTeamMessage(`:exclamation: ¡Deepsea Event iniciado en ${grid}! Vendedor detectado.`);
+    }
+
     // Detectar nuevos eventos
     markers.forEach(m => {
       if ([4, 5, 6, 8].includes(m.type) && !lastEventIds.includes(m.id)) {
@@ -538,10 +551,10 @@ class RustPlusManager extends EventEmitter {
         else if (m.type === 4) msg = `:exclamation: ¡Chinook (CH47) en curso hacia ${grid}!`;
         else if (m.type === 8) msg = `:exclamation: ¡Helicóptero de Patrulla activo en ${grid}!`;
         else if (m.type === 6) {
-           // Si está muy lejos del centro, es probable que sea Oil Rig
+           // Heurística de Oil Rig (Petro): Si está lejos del centro o cerca de los bordes típicos
            const isFar = Math.abs(m.x - mapSize/2) > mapSize/3 || Math.abs(m.y - mapSize/2) > mapSize/3;
            if (isFar) {
-              msg = `:exclamation: ¡Evento en Oil Rig / Mar detectado en ${grid}! (Caja fuerte activa)`;
+              msg = `:exclamation: ¡Oil Rig (Petro) activo en ${grid}! Caja fuerte detectada.`;
            } else {
               msg = `:exclamation: ¡Caja Fuerte (Locked Crate) detectada en ${grid}!`;
            }
