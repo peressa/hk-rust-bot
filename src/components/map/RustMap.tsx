@@ -56,8 +56,11 @@ export default function RustMap({
 
   const getPosition = (x: number, y: number): [number, number] => {
     if (totalMapSize <= 0) return [0, 0];
-    const lng = ((x + oceanMargin) / totalMapSize) * 1000;
-    const lat = ((y + oceanMargin) / totalMapSize) * 1000;
+    const worldHalf = mapSize / 2;
+    // En Rust+, las coordenadas son centradas en (0,0). 
+    // Mapeamos a la imagen que incluye el mar.
+    const lng = ((x + worldHalf + oceanMargin) / totalMapSize) * 1000;
+    const lat = ((y + worldHalf + oceanMargin) / totalMapSize) * 1000;
     return [lat, lng];
   };
 
@@ -154,43 +157,41 @@ export default function RustMap({
       layersRef.current['gridGroup'] = gridGroup;
       gridLinesRef.current = [];
 
-      // El estándar oficial de Rust para el MAPA UI es 150m por cuadrante. 
-      const CUSTOM_GRID_SIZE = 150;
-      const numCells = Math.ceil(mapSize / CUSTOM_GRID_SIZE);
-      const step = (CUSTOM_GRID_SIZE / totalMapSize) * 1000;
+      // FÓRMULA DE PRECISIÓN DINÁMICA: Ajustamos la rejilla para que encaje 
+      // un número entero de celdas en el mapa.
+      const totalCells = Math.max(1, Math.round(mapSize / 150));
       const offset = (oceanMargin / totalMapSize) * 1000;
+      const effectiveStep = (1000 - (offset * 2)) / totalCells;
 
       // Dibujar líneas y etiquetas centrales por celda
-      for (let i = 0; i < numCells; i++) {
-        for (let j = 0; j < numCells; j++) {
-          const xPos = offset + (i * step);
-          const yPos = offset + (j * step);
+      for (let i = 0; i < totalCells; i++) {
+        for (let j = 0; j < totalCells; j++) {
+          const xPos = offset + (i * effectiveStep);
+          const yPos = offset + (j * effectiveStep);
 
-          // Líneas (solo en el borde para evitar repetición en el loop doble)
           const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
 
           if (j === 0) { // Líneas Verticales
             gridLinesRef.current.push(L.polyline([[offset, xPos], [1000 - offset, xPos]], opts).addTo(gridGroup));
-            if (i === numCells - 1) {
-              gridLinesRef.current.push(L.polyline([[offset, xPos + step], [1000 - offset, xPos + step]], opts).addTo(gridGroup));
+            if (i === totalCells - 1) {
+              gridLinesRef.current.push(L.polyline([[offset, xPos + effectiveStep], [1000 - offset, xPos + effectiveStep]], opts).addTo(gridGroup));
             }
           }
           if (i === 0) { // Líneas Horizontales
             const yLine = 1000 - yPos;
             gridLinesRef.current.push(L.polyline([[yLine, offset], [yLine, 1000 - offset]], opts).addTo(gridGroup));
-            if (j === numCells - 1) {
-              gridLinesRef.current.push(L.polyline([[1000 - (yPos + step), offset], [1000 - (yPos + step), 1000 - offset]], opts).addTo(gridGroup));
+            if (j === totalCells - 1) {
+              gridLinesRef.current.push(L.polyline([[1000 - (yPos + effectiveStep), offset], [1000 - (yPos + effectiveStep), 1000 - offset]], opts).addTo(gridGroup));
             }
           }
 
-          // Etiqueta del cuadrante (Ej: A0, B1...)
-          // J=0 es la parte SUPERIOR (Row 0), por lo que j es directamente el número oficial
-          const gridLabel = `${indexToLetter(i)}${j}`;
+          // En Rust in-game, el primer cuadrante es A1.
+          const gridLabel = `${indexToLetter(i)}${j + 1}`;
 
-          L.marker([1000 - (yPos + step / 2), xPos + (step / 2)], {
+          L.marker([1000 - (yPos + effectiveStep / 2), xPos + (effectiveStep / 2)], {
             icon: L.divIcon({
               className: 'grid-cell-label',
-              html: `<div class="grid-cell-text" style="opacity: 0.05">${gridLabel}</div>`,
+              html: `<div class="grid-cell-text" style="opacity: 0.1">${gridLabel}</div>`,
               iconSize: [30, 30]
             }),
             interactive: false
@@ -198,19 +199,19 @@ export default function RustMap({
         }
       }
 
-      // Etiquetas Exteriores en Bordes (A-Z arriba, 0-N izquierda)
-      for (let i = 0; i < numCells; i++) {
-        const xPos = offset + (i * step);
-        const yPos = offset + (i * step);
+      // Etiquetas Exteriores en Bordes
+      for (let i = 0; i < totalCells; i++) {
+        const xPos = offset + (i * effectiveStep);
+        const yPos = offset + (i * effectiveStep);
 
         // Letras arriba (X)
-        L.marker([1000 - offset + 15, xPos + (step / 2)], {
+        L.marker([1000 - offset + 15, xPos + (effectiveStep / 2)], {
           icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${indexToLetter(i)}</span>`, iconSize: [20, 20] })
         }).addTo(gridGroup);
 
-        // Números izquierda (Y) - J=0 (arriba) es 0
-        L.marker([1000 - (yPos + step / 2), offset - 15], {
-          icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${i}</span>`, iconSize: [20, 20] })
+        // Números izquierda (Y) - Empieza en 1
+        L.marker([1000 - (yPos + effectiveStep / 2), offset - 15], {
+          icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${i + 1}</span>`, iconSize: [20, 20] })
         }).addTo(gridGroup);
       }
     }

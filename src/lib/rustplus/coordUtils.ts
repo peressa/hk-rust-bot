@@ -26,14 +26,25 @@ export function indexToLetter(index: number): string {
  * @returns String formateado (ej: "A0", "B1")
  */
 export function worldToGrid(x: number, y: number, mapSize: number): string {
-    // En Rust oficial: 
+    // FÓRMULA DE PRECISIÓN (Referencia RustPlus-Desktop):
+    // 1. Calculamos cuántas celdas de ~150 metros caben en el mapa (redondeando).
+    const numCells = Math.max(1, Math.round(mapSize / 150));
+    // 2. El tamaño real de cada celda se escala para cubrir el mapSize exacto.
+    const cellSize = mapSize / numCells;
+    
+    const worldHalf = mapSize / 2;
+    // 3. Mapeamos la posición relativa al centro (x,y) al índice de la cuadrícula.
     // X (Letras) aumenta de izquierda a derecha.
-    // Y (Números) aumenta de ARRIBA hacia ABAJO.
-    // A0 es la esquina superior izquierda.
-    const gridX = Math.floor(x / GRID_SIZE);
-    const gridY = Math.floor((mapSize - y) / GRID_SIZE);
-
-    return `${indexToLetter(gridX)}${gridY}`;
+    // Y (Números) aumenta de arriba (1) hacia abajo.
+    const gridX = Math.floor((x + worldHalf) / cellSize);
+    const gridY = Math.floor((worldHalf - y) / cellSize);
+    
+    // Aseguramos que los índices estén dentro del rango válido
+    const safeX = Math.max(0, Math.min(gridX, numCells - 1));
+    const safeY = Math.max(0, Math.min(gridY, numCells - 1));
+    
+    // En Rust in-game, la numeración empieza en 1 (A1, B2...).
+    return `${indexToLetter(safeX)}${safeY + 1}`;
 }
 
 /**
