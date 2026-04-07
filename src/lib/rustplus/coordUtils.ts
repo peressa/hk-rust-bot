@@ -22,14 +22,11 @@ export function indexToLetter(index: number): string {
  * @returns String formateado (ej: "A0", "B1")
  */
 export function worldToGrid(x: number, y: number, mapSize: number): string {
-    // Rust usa (0,0) en el centro. La cuadrícula escala desde el borde inferior izquierdo.
-    const halfSize = mapSize / 2;
-    const gridX = Math.floor((x + halfSize) / GRID_SIZE);
-    const gridY = Math.floor((y + halfSize) / GRID_SIZE);
+    // RustPlus para marcadores/team suele usar ya coordenadas en base 0 respecto al área jugable.
+    const gridX = Math.floor(x / GRID_SIZE);
+    const gridY = Math.floor(y / GRID_SIZE);
     
-    // Invertimos Y porque en Rust la cuadrícula 0 suele estar al norte en algunas representaciones, 
-    // pero internamente Y aumenta hacia arriba. 
-    // Los números de cuadrícula en el juego suelen empezar desde 0 en la parte superior.
+    // Invertimos Y porque en Rust la cuadrícula 0 suele estar al norte (superior).
     const numCells = Math.ceil(mapSize / GRID_SIZE);
     const invertedY = (numCells - 1) - gridY;
     
@@ -41,10 +38,9 @@ export function worldToGrid(x: number, y: number, mapSize: number): string {
  */
 export function worldToLeaflet(x: number, y: number, mapSize: number, oceanMargin: number) {
     const totalSize = mapSize + (oceanMargin * 2);
-    const halfSize = mapSize / 2;
     
-    const lng = ((x + halfSize + oceanMargin) / totalSize) * 1000;
-    const lat = ((y + halfSize + oceanMargin) / totalSize) * 1000;
+    const lng = ((x + oceanMargin) / totalSize) * 1000;
+    const lat = ((y + oceanMargin) / totalSize) * 1000;
     
     return { lat, lng };
 }

@@ -485,16 +485,16 @@ class RustPlusManager extends EventEmitter {
       if (last) {
         // 1. Detección de Desconexión
         if (last.isOnline && !m.isOnline) {
-          rustplus.sendTeamMessage(`:x: ${m.name} se ha desconectado.`);
+          rustplus.sendTeamMessage(`:exclamation: ${m.name} se ha desconectado.`);
         }
         // 2. Detección de Re-conexión
         else if (!last.isOnline && m.isOnline) {
-          rustplus.sendTeamMessage(`:white_check_mark: ${m.name} ha vuelto.`);
+          rustplus.sendTeamMessage(`:exclamation: ${m.name} ha vuelto.`);
         }
 
         // 3. Detección de Muerte (Solo si estaba vivo)
         if (last.isAlive && !m.isAlive) {
-          rustplus.sendTeamMessage(`:skull: ¡${m.name} ha muerto en ${grid}!`);
+          rustplus.sendTeamMessage(`:exclamation: ¡${m.name} ha muerto en ${grid}!`);
         }
 
         // 4. Lógica de AFK simplificada (No se movió en 15s, guardamos timestamp)
@@ -502,12 +502,10 @@ class RustPlusManager extends EventEmitter {
         if (m.isOnline && !hasMoved) {
           if (!last.afkSince) m.afkSince = Date.now();
           else m.afkSince = last.afkSince;
-          
-          // Opcional: Podríamos avisar si lleva > 10 min AFK
         } else if (m.isOnline && hasMoved && last.afkSince) {
           const afkDuration = Math.round((Date.now() - last.afkSince) / 60000);
           if (afkDuration >= 5) { // Solo avisar si estuvo > 5 min quieto
-            rustplus.sendTeamMessage(`:runner: ${m.name} ha dejado de estar AFK (estuvo quieto ${afkDuration}m).`);
+            rustplus.sendTeamMessage(`:exclamation: ${m.name} ha dejado de estar AFK (estuvo quieto ${afkDuration}m).`);
           }
           m.afkSince = null;
         }
@@ -533,9 +531,9 @@ class RustPlusManager extends EventEmitter {
     markers.forEach(m => {
       if ([4, 5, 8].includes(m.type) && !lastEventIds.includes(m.id)) {
         let msg = "";
-        if (m.type === 5) msg = ":ship: ¡Cargo Ship detectado!";
-        else if (m.type === 4) msg = ":helicopter: ¡Chinook (CH47) en curso!";
-        else if (m.type === 8) msg = ":helicopter: ¡Helicóptero de Patrulla activo!";
+        if (m.type === 5) msg = ":exclamation: ¡Cargo Ship detectado!";
+        else if (m.type === 4) msg = ":exclamation: ¡Chinook (CH47) en curso!";
+        else if (m.type === 8) msg = ":exclamation: ¡Helicóptero de Patrulla activo!";
         
         if (msg) rustplus.sendTeamMessage(msg);
       }

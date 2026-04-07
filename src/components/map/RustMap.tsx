@@ -56,9 +56,8 @@ export default function RustMap({
 
   const getPosition = (x: number, y: number): [number, number] => {
     if (totalMapSize <= 0) return [0, 0];
-    const halfSize = mapSize / 2;
-    const lng = ((x + halfSize + oceanMargin) / totalMapSize) * 1000;
-    const lat = ((y + halfSize + oceanMargin) / totalMapSize) * 1000; 
+    const lng = ((x + oceanMargin) / totalMapSize) * 1000;
+    const lat = ((y + oceanMargin) / totalMapSize) * 1000; 
     return [lat, lng];
   };
 
