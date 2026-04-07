@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { Layers, Users, Zap, EyeOff, Map as MapIcon, ShoppingCart } from "lucide-react";
+import { GRID_SIZE, indexToLetter } from "@/lib/rustplus/coordUtils";
 
 const MARKER_TYPES = {
   PLAYER: "Player",
@@ -55,8 +56,9 @@ export default function RustMap({
 
   const getPosition = (x: number, y: number): [number, number] => {
     if (totalMapSize <= 0) return [0, 0];
-    const lng = ((x + oceanMargin) / totalMapSize) * 1000;
-    const lat = ((y + oceanMargin) / totalMapSize) * 1000; 
+    const halfSize = mapSize / 2;
+    const lng = ((x + halfSize + oceanMargin) / totalMapSize) * 1000;
+    const lat = ((y + halfSize + oceanMargin) / totalMapSize) * 1000; 
     return [lat, lng];
   };
 
@@ -157,27 +159,62 @@ export default function RustMap({
       const step = (GRID_SIZE / totalMapSize) * 1000;
       const offset = (oceanMargin / totalMapSize) * 1000;
 
-      for (let i = 0; i <= numCells; i++) {
+      // Dibujar líneas y etiquetas centrales
+      for (let i = 0; i < numCells; i++) {
+        for (let j = 0; j < numCells; j++) {
+           const xPos = offset + (i * step);
+           const yPos = offset + (j * step);
+           
+           // Líneas (solo en el primer j para no repetir lineas de columna)
+           if (j === 0) {
+             const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
+             gridLinesRef.current.push(L.polyline([[0, xPos], [1000, xPos]], opts).addTo(gridGroup));
+             if (i === numCells - 1) { // Linea final derecha
+                gridLinesRef.current.push(L.polyline([[0, xPos + step], [1000, xPos + step]], opts).addTo(gridGroup));
+             }
+           }
+           if (i === 0) {
+             const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
+             const hLinePos = 1000 - yPos;
+             gridLinesRef.current.push(L.polyline([[hLinePos, 0], [hLinePos, 1000]], opts).addTo(gridGroup));
+             if (j === numCells - 1) { // Linea final inferior
+                gridLinesRef.current.push(L.polyline([[1000 - (yPos + step), 0], [1000 - (yPos + step), 1000]], opts).addTo(gridGroup));
+             }
+           }
+
+           // Etiqueta del cuadrante (ej: M14)
+           const vLabel = indexToLetter(i);
+           const hLabel = (numCells - 1) - j;
+           const gridLabel = `${vLabel}${hLabel}`;
+
+           // Cambiamos coordenadas Lat/Lng a Leaflet [0, 1000]
+           // El centro del cuadrante es (xPos + step/2, 1000 - (yPos + step/2))
+           L.marker([1000 - (yPos + step/2), xPos + (step/2)], {
+             icon: L.divIcon({ 
+               className: 'grid-cell-label', 
+               html: `<div class="grid-cell-text">${gridLabel}</div>`, 
+               iconSize: [30, 30] 
+             }),
+             interactive: false
+           }).addTo(gridGroup);
+        }
+      }
+
+      // Etiquetas Exteriores (Bordes)
+      for (let i = 0; i < numCells; i++) {
         const pos = offset + (i * step);
-        const opts = { color: 'white', weight: 1, opacity: 0.15, dashArray: '5, 10' };
+        const vLabel = indexToLetter(i);
+        const hLabel = (numCells - 1) - i;
 
-        gridLinesRef.current.push(L.polyline([[0, pos], [1000, pos]], opts).addTo(gridGroup));
-        const hPos = 1000 - pos;
-        gridLinesRef.current.push(L.polyline([[hPos, 0], [hPos, 1000]], opts).addTo(gridGroup));
-
-        const charCode = 65 + (i % 26);
-        const suffix = i >= 26 ? Math.floor(i / 26) : "";
-        const vLabel = String.fromCharCode(charCode) + suffix;
-
-        L.marker([1000 - offset + 15, pos + (step/2)], {
-          icon: L.divIcon({ className: 'grid-label', html: `<span class="grid-label-text">${vLabel}</span>`, iconSize: [20, 20] })
+        // Columnas
+        L.marker([1000 - offset + 20, pos + (step/2)], {
+          icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${vLabel}</span>`, iconSize: [20, 20] })
         }).addTo(gridGroup);
 
-        if (i < numCells) {
-          L.marker([hPos - (step/2), offset - 15], {
-            icon: L.divIcon({ className: 'grid-label', html: `<span class="grid-label-text">${i}</span>`, iconSize: [20, 20] })
-          }).addTo(gridGroup);
-        }
+        // Filas
+        L.marker([1000 - (pos + step/2), offset - 20], {
+          icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${i}</span>`, iconSize: [20, 20] })
+        }).addTo(gridGroup);
       }
     }
   }, [L, mapSize, oceanMargin, showGrid, totalMapSize]);
@@ -292,6 +329,9 @@ export default function RustMap({
         .custom-div-icon { background: none; border: none; display: flex; align-items: center; justify-content: center; }
         .grid-label-text { color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 900; text-shadow: 2px 2px 4px black; font-family: 'JetBrains Mono', monospace; }
         .monument-label { color: rgba(255,255,255,0.85); font-size: 9px; font-weight: 800; text-shadow: 1px 1px 3px black, -1px -1px 3px black; text-align: center; white-space: nowrap; transform: translate(-50%, -50%); letter-spacing: 0.5px; }
+        .grid-cell-label { background: none; border: none; pointer-events: none; }
+        .grid-cell-text { color: rgba(255,255,255,0.03); font-size: 10px; font-weight: 900; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-family: 'JetBrains Mono', monospace; }
+        .grid-label-outer { color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 800; text-shadow: 2px 2px 4px black; }
         .custom-popup-rust .leaflet-popup-content-wrapper { background: var(--surface); color: white; border: 1px solid var(--border); border-radius: 8px; }
         .custom-popup-rust .leaflet-popup-tip { background: var(--surface); border: 1px solid var(--border); }
       `}</style>

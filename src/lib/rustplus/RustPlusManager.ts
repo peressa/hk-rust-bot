@@ -2,6 +2,7 @@ import RustPlus from "@liamcottle/rustplus.js";
 import * as protobuf from "protobufjs";
 import { EventEmitter } from "events";
 import * as db from "../db";
+import { worldToGrid } from "./coordUtils";
 
 // =====================================================================
 // MONKEY PATCH: Forzar campos Opcionales en Protobufjs
@@ -34,6 +35,9 @@ class RustPlusManager extends EventEmitter {
   private connecting: Map<string, Promise<any>> = new Map(); // Prevent double-connect
   private chatHistory: Map<string, any[]> = new Map(); // steamId-ip -> messages[]
   private ready: Map<string, boolean> = new Map(); // Track if connection is ready
+  private monitorIntervals: Map<string, NodeJS.Timeout> = new Map();
+  private lastMemberStates: Map<string, Map<string, any>> = new Map(); // key -> steamId -> state
+  private lastMarkerStates: Map<string, any[]> = new Map(); // key -> markerIds[]
 
   constructor() {
     super();
@@ -123,6 +127,7 @@ class RustPlusManager extends EventEmitter {
         this.ready.set(key, true);
         this.connections.set(key, rustplus);
         this.connecting.delete(key);
+        this.startMonitoring(steamId, connection.ip);
         this.emit("connected", { steamId, ip: connection.ip, useProxy: !!connection.useProxy });
         resolve(rustplus);
       });
@@ -430,6 +435,113 @@ class RustPlusManager extends EventEmitter {
 
   async toggleGroup(steamId: string, ip: string, entityIds: string[], value: boolean) {
     return Promise.all(entityIds.map(id => this.setEntityValue(steamId, ip, id, value)));
+  }
+
+  // =====================================================================
+  // SERVICIO DE MONITOREO Y ALERTAS AUTOMÁTICAS
+  // =====================================================================
+  private async startMonitoring(steamId: string, ip: string) {
+    const key = `${steamId}-${ip}`;
+    if (this.monitorIntervals.has(key)) return;
+
+    console.log(`[Monitor] Iniciando vigilancia activa para ${ip}...`);
+
+    const interval = setInterval(async () => {
+      if (!this.ready.get(key)) return;
+
+      try {
+        const [teamResp, markersResp, infoResp] = await Promise.all([
+          this.getTeamInfo(steamId, ip).catch(() => null),
+          this.getMapMarkers(steamId, ip).catch(() => null),
+          this.sendRequest(steamId, ip, { getInfo: {} }).catch(() => null)
+        ]);
+
+        if (teamResp) this.processTeamMonitor(steamId, ip, teamResp.response.teamInfo, infoResp?.response?.info);
+        if (markersResp) this.processMarkersMonitor(steamId, ip, markersResp.response.mapMarkers.markers);
+
+      } catch (err) {
+        // Silencioso para no ensuciar logs de monitoreo cada 15s
+      }
+    }, 15000); // Revisar cada 15 seg
+
+    this.monitorIntervals.set(key, interval);
+  }
+
+  private processTeamMonitor(steamId: string, ip: string, teamInfo: any, serverInfo: any) {
+    const key = `${steamId}-${ip}`;
+    const members = teamInfo.members || [];
+    const mapSize = serverInfo?.mapSize || 4000;
+    const rustplus = this.connections.get(key);
+    
+    if (!this.lastMemberStates.has(key)) {
+      this.lastMemberStates.set(key, new Map());
+    }
+    const states = this.lastMemberStates.get(key)!;
+
+    members.forEach((m: any) => {
+      const last = states.get(m.steamId);
+      const grid = worldToGrid(m.x, m.y, mapSize);
+
+      if (last) {
+        // 1. Detección de Desconexión
+        if (last.isOnline && !m.isOnline) {
+          rustplus.sendTeamMessage(`:x: ${m.name} se ha desconectado.`);
+        }
+        // 2. Detección de Re-conexión
+        else if (!last.isOnline && m.isOnline) {
+          rustplus.sendTeamMessage(`:white_check_mark: ${m.name} ha vuelto.`);
+        }
+
+        // 3. Detección de Muerte (Solo si estaba vivo)
+        if (last.isAlive && !m.isAlive) {
+          rustplus.sendTeamMessage(`:skull: ¡${m.name} ha muerto en ${grid}!`);
+        }
+
+        // 4. Lógica de AFK simplificada (No se movió en 15s, guardamos timestamp)
+        const hasMoved = Math.abs(last.x - m.x) > 1 || Math.abs(last.y - m.y) > 1;
+        if (m.isOnline && !hasMoved) {
+          if (!last.afkSince) m.afkSince = Date.now();
+          else m.afkSince = last.afkSince;
+          
+          // Opcional: Podríamos avisar si lleva > 10 min AFK
+        } else if (m.isOnline && hasMoved && last.afkSince) {
+          const afkDuration = Math.round((Date.now() - last.afkSince) / 60000);
+          if (afkDuration >= 5) { // Solo avisar si estuvo > 5 min quieto
+            rustplus.sendTeamMessage(`:runner: ${m.name} ha dejado de estar AFK (estuvo quieto ${afkDuration}m).`);
+          }
+          m.afkSince = null;
+        }
+      }
+
+      states.set(m.steamId, { ...m, grid });
+    });
+  }
+
+  private processMarkersMonitor(steamId: string, ip: string, markers: any[]) {
+    const key = `${steamId}-${ip}`;
+    const rustplus = this.connections.get(key);
+    const lastMarkers = this.lastMarkerStates.get(key) || [];
+    
+    // Solo nos interesan eventos globales
+    const currentEventIds = markers
+      .filter(m => [4, 5, 6, 8].includes(m.type)) // Chinook, Cargo, Crate, Heli
+      .map(m => m.id);
+
+    const lastEventIds = lastMarkers.map(m => m.id);
+
+    // Detectar nuevos eventos
+    markers.forEach(m => {
+      if ([4, 5, 8].includes(m.type) && !lastEventIds.includes(m.id)) {
+        let msg = "";
+        if (m.type === 5) msg = ":ship: ¡Cargo Ship detectado!";
+        else if (m.type === 4) msg = ":helicopter: ¡Chinook (CH47) en curso!";
+        else if (m.type === 8) msg = ":helicopter: ¡Helicóptero de Patrulla activo!";
+        
+        if (msg) rustplus.sendTeamMessage(msg);
+      }
+    });
+
+    this.lastMarkerStates.set(key, markers);
   }
 
 
