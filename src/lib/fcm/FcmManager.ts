@@ -17,6 +17,8 @@ const FCM_CONFIG = {
 };
 
 import { listenerRegistry } from "./ListenerRegistry";
+import { rustPlusManager } from "../rustplus/RustPlusManager";
+import { worldToGrid } from "../rustplus/coordUtils";
 
 export class FcmManager {
   public static debugLogs: any[] = [];
@@ -187,6 +189,16 @@ export class FcmManager {
             const isNew = dbModule.saveDeathMarker(steamId, ip, killer, x, y);
             if (isNew) {
                console.log(`[FCM] Muerte registrada en ${ip} por ${killer}`);
+               
+               // Alerta en el Chat de Equipo
+               const servers = dbModule.getServers(steamId);
+               const server = servers.find((s: any) => s.ip === ip);
+               const mapSize = server?.mapSize || 4000;
+               const grid = worldToGrid(x, y, mapSize);
+               
+               rustPlusManager.sendTeamMessage(steamId, ip, 
+                 `:exclamation: ¡${killer} te ha eliminado en ${grid}! (Coord: ${Math.round(x)},${Math.round(y)})`
+               ).catch(e => console.warn("[FCM] No se pudo enviar el chat de muerte", e));
             }
           }
         } catch(err) {

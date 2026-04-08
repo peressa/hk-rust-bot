@@ -45,7 +45,15 @@ export default function VendingTrackerPage() {
       
       const markers = data.markers || [];
       // Type 3 is Vending Machine
-      const vms = markers.filter((m: any) => m.type === 3 && m.sellOrders && m.sellOrders.length > 0);
+      // Soportar tanto 'sellOrders' como 'sell_orders' para compatibilidad modded
+      const vms = markers.filter((m: any) => 
+        m.type === 3 && 
+        ((m.sellOrders && m.sellOrders.length > 0) || (m.sell_orders && m.sell_orders.length > 0))
+      ).map((m: any) => ({
+        ...m,
+        sellOrders: m.sellOrders || m.sell_orders // Uniformizar
+      }));
+      
       setVendingMachines(vms);
     } catch (err) {
       console.error(err);
