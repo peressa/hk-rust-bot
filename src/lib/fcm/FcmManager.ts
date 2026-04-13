@@ -122,7 +122,7 @@ export class FcmManager {
       []
     );
 
-    client.on("ON_DATA_RECEIVED", (data: any) => {
+    client.on("ON_DATA_RECEIVED", async (data: any) => {
       console.log(`[FCM RAW] Received raw data for ${steamId}:`, JSON.stringify(data));
       
       // Blackbox for Live Debugging
