@@ -1,13 +1,24 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ShieldAlert, ChevronRight, ArrowLeft, Check, Zap, Rocket, Radio } from "lucide-react";
+import { ShieldAlert, ChevronRight, ArrowLeft, Radio } from "lucide-react";
+import { dictionaries, Language } from "@/lib/i18n/dictionaries";
 
 function UnauthorizedPageContent() {
   const searchParams = useSearchParams();
   const steamId = searchParams.get("steamId");
+  const [lang, setLang] = useState<Language>('en');
+  const t = dictionaries[lang].unauthorized;
+  const tp = dictionaries[lang].pricing;
+
+  useEffect(() => {
+    const savedLang = localStorage.getItem('hk-ops-lang') as Language;
+    if (savedLang && ['en', 'es', 'pt'].includes(savedLang)) {
+      setLang(savedLang);
+    }
+  }, []);
 
   const handleBuy = (mode: string) => {
     const checkoutUrls: any = {
@@ -53,9 +64,9 @@ function UnauthorizedPageContent() {
             <div style={{ background: 'var(--primary)', width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
               <ShieldAlert size={32} color="white" />
             </div>
-            <h1 style={{ fontSize: '5rem', lineHeight: 0.9, marginBottom: '1.5rem' }}>OFFLINE <br/> <span style={{ color: 'var(--primary)' }}>OPERATIONS</span></h1>
+            <h1 style={{ fontSize: '5rem', lineHeight: 0.9, marginBottom: '1.5rem', fontFamily: 'Bebas Neue' }}>{t.title}</h1>
             <p style={{ color: '#aaa', fontSize: '1.2rem', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
-              ID-64 <span style={{ color: '#fff' }}>[{steamId || 'TERMINAL'}]</span> HAS NO ACTIVE CONTRACT.
+              {t.desc.replace('{id}', steamId || 'TERMINAL')}
             </p>
           </div>
 
@@ -63,9 +74,9 @@ function UnauthorizedPageContent() {
             
             {/* Monthly Plan */}
             <div className="premium-card" style={{ textAlign: 'left', border: '1px solid #333' }}>
-              <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.75rem', marginBottom: '1rem' }}>RECURRING OP-SEC</div>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>TACTICAL MONTH</h2>
-              <div style={{ fontSize: '3.5rem', marginBottom: '2rem' }}>$9.99 <span style={{ fontSize: '1rem', color: '#555' }}>/ MO</span></div>
+              <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.75rem', marginBottom: '1rem' }}>{tp.monthly.type}</div>
+              <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{tp.monthly.title}</h2>
+              <div style={{ fontSize: '3.5rem', marginBottom: '2rem' }}>{tp.monthly.price} <span style={{ fontSize: '1rem', color: '#555' }}>{tp.monthly.price_sub}</span></div>
               <ul style={{ listStyle: 'none', padding: 0, marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', color: '#888', fontWeight: 700, fontSize: '0.9rem' }}>
                 <li>[+] FULL MODULE ACCESS</li>
                 <li>[+] REAL-TIME DISCORD ALERTS</li>
@@ -73,15 +84,15 @@ function UnauthorizedPageContent() {
                 <li>[+] CANCEL ANYTIME</li>
               </ul>
               <button onClick={() => handleBuy('monthly')} className="btn-secondary" style={{ width: '100%', justifyContent: 'center' }}>
-                SELECT PLAN <ChevronRight size={18} />
+                {tp.monthly.cta} <ChevronRight size={18} />
               </button>
             </div>
 
             {/* Annual Plan */}
             <div className="premium-card" style={{ textAlign: 'left', border: '1px solid var(--primary)', background: 'rgba(206, 66, 43, 0.05)' }}>
-              <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.75rem', marginBottom: '1rem' }}>BEST VALUE (25% SAVINGS)</div>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>ANNUAL STRATEGIC</h2>
-              <div style={{ fontSize: '3.5rem', marginBottom: '2rem' }}>$89.99 <span style={{ fontSize: '1rem', color: '#555' }}>/ YR</span></div>
+              <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.75rem', marginBottom: '1rem' }}>{tp.annual.type}</div>
+              <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>{tp.annual.title}</h2>
+              <div style={{ fontSize: '3.5rem', marginBottom: '2rem' }}>{tp.annual.price} <span style={{ fontSize: '1rem', color: '#555' }}>{tp.annual.price_sub}</span></div>
               <ul style={{ listStyle: 'none', padding: 0, marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', color: '#ccc', fontWeight: 700, fontSize: '0.9rem' }}>
                 <li>[+] EVERYTHING IN MONTHLY</li>
                 <li>[+] PRIORITY ALPHA SUPPORT</li>
@@ -89,7 +100,7 @@ function UnauthorizedPageContent() {
                 <li>[+] 12 MONTHS OF DOMINANCE</li>
               </ul>
               <button onClick={() => handleBuy('annual')} className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                GET ANNUAL PASS <ChevronRight size={18} />
+                {tp.annual.cta} <ChevronRight size={18} />
               </button>
             </div>
 
@@ -97,10 +108,10 @@ function UnauthorizedPageContent() {
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem', alignItems: 'center' }}>
             <Link href="/" style={{ color: '#555', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ArrowLeft size={16} /> RETURN TO MAIN TERMINAL
+              <ArrowLeft size={16} /> {t.return}
             </Link>
             <div style={{ opacity: 0.2, display: 'flex', alignItems: 'center', gap: '1rem' }}>
-               <Radio size={24} /> <div style={{ fontWeight: 900, fontFamily: 'Roboto' }}>HK SENTINEL</div>
+               <Radio size={24} /> <div style={{ fontWeight: 900, fontFamily: 'Roboto' }}>RUST OPS // GLOBAL</div>
             </div>
           </div>
 
