@@ -29,7 +29,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div style={{ background: 'var(--primary)', padding: '2px' }}>
             <Radio color="white" size={28} />
           </div>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 400, fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>SENTINEL // PROTOCOL</h2>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>RUST <span style={{ color: 'var(--primary)' }}>OPS</span></h2>
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
