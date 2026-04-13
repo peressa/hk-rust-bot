@@ -1,22 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Roboto+Condensed:wght@300;400;700&display=swap');
 
 :root {
-  --background: #0a0a0b;
-  --foreground: #f0f0f0;
-  --primary: #cd412b; /* Rust Orange */
+  --background: #080808;
+  --foreground: #e4e4e4;
+  --primary: #ce422b; /* Official Rust Orange */
   --primary-hover: #e04a32;
   --secondary: #1a1a1c;
-  --accent: #ff9d00;
-  --surface: #141416;
-  --border: rgba(255, 255, 255, 0.08);
-  --glass: rgba(20, 20, 22, 0.8);
-  --text-muted: #9ca3af;
+  --accent: #f3a933; /* Rust yellow */
+  --surface: #121214;
+  --border: rgba(255, 255, 255, 0.05);
+  --glass: rgba(0, 0, 0, 0.85);
+  --text-muted: #737373;
   
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.2);
   
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -28,7 +28,7 @@
 }
 
 *::-webkit-scrollbar {
-  width: 6px;
+  width: 4px;
 }
 
 *::-webkit-scrollbar-track {
@@ -37,7 +37,7 @@
 
 *::-webkit-scrollbar-thumb {
   background-color: var(--primary);
-  border-radius: 20px;
+  border-radius: 0;
 }
 
 html,
@@ -46,7 +46,7 @@ body {
   overflow-x: hidden;
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Roboto Condensed', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -55,28 +55,71 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* Global Rust Texture Overlay */
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url("https://www.transparenttextures.com/patterns/carbon-fibre.png"); /* Subtle industrial texture */
+  opacity: 0.03;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Scanline Effect */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.2) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.02), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.02));
+  background-size: 100% 3px, 3px 100%;
+  z-index: 10000;
+  pointer-events: none;
+  opacity: 0.15;
 }
 
 .glass-panel {
   background: var(--glass);
-  backdrop-filter: blur(12px);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 0; /* Sharp edges */
 }
 
 .premium-card {
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 0; /* Sharp edges */
   padding: 1.5rem;
   transition: var(--transition);
   box-shadow: var(--shadow);
+  position: relative;
+}
+
+.premium-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2px;
+  height: 0;
+  background: var(--primary);
+  transition: var(--transition);
 }
 
 .premium-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(205, 65, 43, 0.3);
-  box-shadow: var(--shadow-lg);
+  border-color: rgba(205, 65, 43, 0.4);
+}
+
+.premium-card:hover::before {
+  height: 100%;
 }
 
 .btn-primary {
@@ -84,8 +127,10 @@ body {
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
-  border-radius: 8px;
-  font-weight: 600;
+  border-radius: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
   transition: var(--transition);
   display: inline-flex;
@@ -96,80 +141,68 @@ body {
 
 .btn-primary:hover {
   background: var(--primary-hover);
-  transform: scale(1.02);
+  box-shadow: 0 0 15px rgba(205, 65, 43, 0.3);
 }
 
-.btn-primary:active {
-  transform: scale(0.98);
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
+  border-radius: 0;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-decoration: none;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--text-muted);
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Bebas Neue', cursiva;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
 }
 
 input, select, textarea {
-  background: #1e1e20;
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid var(--border);
   color: white;
   padding: 0.75rem 1rem;
-  border-radius: 8px;
+  border-radius: 0;
   outline: none;
   transition: var(--transition);
 }
 
 input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(205, 65, 43, 0.1);
-}
-
-/* Effects */
-.active-card {
-  border-color: var(--primary) !important;
-  box-shadow: 0 0 20px rgba(205, 65, 43, 0.2);
-  background: linear-gradient(135deg, rgba(205, 65, 43, 0.05), transparent);
-  transform: translateY(-2px);
-}
-
-.glow {
-  filter: drop-shadow(0 0 8px var(--primary));
-}
-
-.status-online {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #22c55e;
-  box-shadow: 0 0 8px #22c55e;
-}
-
-.server-header-bg {
-  position: relative;
-  width: 100%;
-  height: 180px;
-  border-radius: 16px;
-  overflow: hidden;
-  background-size: cover;
-  background-position: center;
-  transition: var(--transition);
-  margin-bottom: 2rem;
-}
-
-.server-header-overlay {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(0deg, rgba(10, 10, 11, 0.95) 0%, rgba(10, 10, 11, 0.4) 60%, transparent 100%);
-  display: flex;
-  align-items: flex-end;
-  padding: 2rem;
 }
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.5s ease-out forwards;
+  animation: fadeIn 0.4s ease-out forwards;
 }
 
-h1, h2, h3, h4 {
-  font-weight: 700;
-  letter-spacing: -0.02em;
+/* Industrial Stamped Effect */
+.text-stamped {
+  text-transform: uppercase;
+  font-weight: 800;
+  opacity: 0.8;
+  letter-spacing: 0.1em;
+  border-left: 3px solid var(--primary);
+  padding-left: 0.5rem;
 }
