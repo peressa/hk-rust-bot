@@ -48,22 +48,22 @@ export default async function LandingPage() {
             <div style={{ width: '24px', height: '24px', background: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Radio size={16} color="white" />
             </div>
-            RUST<span>SENTINEL</span>
+            RUST<span style={{ color: 'var(--primary)' }}>OPS</span>
           </div>
           <div style={{ display: 'flex', gap: '1.5rem', marginLeft: '2rem' }}>
-            <NavLink label="NEWS" href="#news" />
-            <NavLink label="COMPANION" href="/dashboard" />
-            <NavLink label="SUPPORT" href="https://discord.gg/yourserver" />
+            <NavLink label="OPERATIONS" href="#news" />
+            <NavLink label="INTEL" href="/dashboard" />
+            <NavLink label="COMMS" href="https://discord.gg/yourserver" />
           </div>
         </div>
         <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
           <Link href="/api/auth/signin" className="btn-primary" style={{ padding: '0.6rem 2rem', fontSize: '0.8rem' }}>
-            LOGIN WITH STEAM
+            DEPLOY TERMINAL
           </Link>
         </div>
       </nav>
 
-      {/* Hero with Video Background */}
+      {/* Hero with EXACT Official Video Background */}
       <section style={{ 
         height: '100vh', 
         position: 'relative', 
@@ -71,7 +71,7 @@ export default async function LandingPage() {
         alignItems: 'center', 
         justifyContent: 'center',
         textAlign: 'center',
-        background: '#0a0a0a'
+        background: '#000'
       }}>
         <video 
           autoPlay 
@@ -85,31 +85,34 @@ export default async function LandingPage() {
             width: '100%', 
             height: '100%', 
             objectFit: 'cover',
-            opacity: 0.6,
+            opacity: 0.5,
             zIndex: 0
           }}
         >
-          <source src="https://files.facepunch.com/rust/companion/hero-video.mp4" type="video/mp4" />
+          <source src="https://files.facepunch.com/paddy/20210324/rust_site2021_hero_v002.mp4" type="video/mp4" />
         </video>
         
         <div style={{ 
           position: 'absolute', 
           inset: 0, 
-          background: 'linear-gradient(to top, #000 0%, transparent 60%, rgba(0,0,0,0.4) 100%)',
+          background: 'linear-gradient(to top, #000 0%, transparent 60%, rgba(0,0,0,0.6) 100%)',
           zIndex: 1
         }}></div>
 
-        <div className="animate-fade-in" style={{ position: 'relative', zIndex: 2, maxWidth: '1000px', padding: '0 2rem' }}>
-          <h1 style={{ fontSize: '10vw', lineHeight: 0.8, marginBottom: '2rem' }}>
-            WATCH OVER <br/> <span style={{ color: 'var(--primary)' }}>YOUR CLAN</span>
+        <div className="animate-fade-in" style={{ position: 'relative', zIndex: 2, maxWidth: '1200px', padding: '0 2rem' }}>
+          <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '0.3em', marginBottom: '1.5rem', textTransform: 'uppercase' }}>
+            // CLAN INTELLIGENCE SUITE
+          </div>
+          <h1 style={{ fontSize: '12vw', lineHeight: 0.8, marginBottom: '2.5rem', letterSpacing: '-0.04em' }}>
+            RUST <br/> OPS
           </h1>
-          <p style={{ fontSize: '1.25rem', color: '#ccc', maxWidth: '600px', margin: '0 auto 3rem', textTransform: 'uppercase', fontWeight: 700 }}>
-            The ultimate tactical advantage for Rust survivors. <br/>
-            Real-time intelligence directly from the island.
+          <p style={{ fontSize: '1.1rem', color: '#888', maxWidth: '600px', margin: '0 auto 3.5rem', textTransform: 'uppercase', fontWeight: 900, letterSpacing: '0.1em', lineHeight: 1.5 }}>
+            Total tactical dominance. <br/>
+            Real-time server data for high-tier operations.
           </p>
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
             <Link href="/api/auth/signin" className="btn-primary" style={{ padding: '1.5rem 3rem' }}>
-              REDEEM ACCESS
+              RECLAIM ACCESS
             </Link>
           </div>
         </div>
@@ -117,20 +120,20 @@ export default async function LandingPage() {
 
       {/* Features Grid - Clean Industrial */}
       <section id="news" style={{ padding: '10rem 4rem', maxWidth: '1400px', margin: '0 auto' }}>
-        <h2 className="section-title">SYSTEM MODULES</h2>
+        <h2 className="section-title">MISSION MODULES</h2>
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
-          gap: '2rem'
+          gap: '2.5rem'
         }}>
           <RustGridItem 
-            title="TACTICAL RADAR"
-            desc="Track team movements and enemy signatures on a clean, real-time map interface."
+            title="FIELD RADAR"
+            desc="Triangulate member positions and enemy signatures via secure satellite uplink."
             icon={<MapIcon size={32} />}
           />
           <RustGridItem 
-            title="DEATH PROTOCOL"
-            desc="Receive instant satellite alerts via Discord when members fall, including enemy vectors."
+            title="KIA ALERTS"
+            desc="Instant Discord notifications on member casualties with precise enemy coordinates."
             icon={<ShieldAlert size={32} />}
           />
           <RustGridItem 
