@@ -18,7 +18,8 @@ import {
   ShieldCheck,
   ChevronRight
 } from "lucide-react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
+import BrandLogo from "./BrandLogo";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -54,14 +55,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         top: 0,
         zIndex: 50
       }}>
-        {/* Brand Terminal Head */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0 1rem', marginBottom: '1rem' }}>
-          <div style={{ background: 'var(--primary)', padding: '4px', display: 'flex' }}>
-            <Radio color="white" size={24} />
-          </div>
-          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-barlow)', letterSpacing: '-0.02em', lineHeight: 1 }}>
-            RUST <span style={{ color: 'var(--primary)', fontStyle: 'italic' }}>SENTINEL</span>
-          </h2>
+        <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
+          <BrandLogo size="md" />
         </div>
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '2rem', flex: 1, overflowY: 'auto', padding: '0 0.5rem' }}>

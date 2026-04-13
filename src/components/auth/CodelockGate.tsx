@@ -1,7 +1,7 @@
-"use client";
+ï»¿"use client";
 
 import React, { useState } from "react";
-import { Lock, Unlock, X, ShieldAlert } from "lucide-react";
+import { Lock, Unlock, X, ShieldAlert } from "lucide-react";`nimport BrandLogo from "@/components/layout/BrandLogo";
 
 interface CodelockGateProps {
   onSuccess: (code: string) => void;
@@ -139,7 +139,7 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
       </div>
 
       <div style={{ marginTop: '3rem', color: '#222', fontSize: '0.6rem', letterSpacing: '0.5em', fontWeight: 900 }}>
-         Encriptación AES-256 Activa
+         Encriptaciï¿½n AES-256 Activa
       </div>
     </div>
   );
