@@ -76,11 +76,9 @@ export default function RustMap({
 
   const getPosition = (x: number, y: number): [number, number] => {
     if (mapSize <= 0) return [0, 0];
-    const PAD_WORLD = 2000;
-    const halfPad = PAD_WORLD / 2;
-    const totalSize = mapSize + PAD_WORLD;
-    const lng = ((x + halfPad) / totalSize) * 1000;
-    const lat = ((y + halfPad) / totalSize) * 1000;
+    const totalSize = mapSize + (oceanMargin * 2);
+    const lng = ((x + oceanMargin) / totalSize) * 1000;
+    const lat = ((y + oceanMargin) / totalSize) * 1000;
     return [lat, lng];
   };
 
@@ -173,7 +171,7 @@ export default function RustMap({
         for (let j = 0; j < totalCells; j++) {
           const xPos = offset + (i * effectiveStep);
           const yPos = offset + (j * effectiveStep);
-          const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
+          const opts = { color: 'white', weight: 1, opacity: 0.15, dashArray: '5, 10' };
 
           if (j === 0) L.polyline([[offset, xPos], [1000 - offset, xPos]], opts).addTo(gridGroup);
           if (i === 0) L.polyline([[1000 - yPos, offset], [1000 - yPos, 1000 - offset]], opts).addTo(gridGroup);
@@ -182,27 +180,15 @@ export default function RustMap({
           L.marker([1000 - (yPos + effectiveStep / 2), xPos + (effectiveStep / 2)], {
             icon: L.divIcon({
               className: 'grid-cell-label',
-              html: `<div class="grid-cell-text" style="color: rgba(255,255,255,0.08); font-size: 9px; font-weight: 900; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">${gridLabel}</div>`,
-              iconSize: [20, 20]
+              html: `<div class="grid-cell-text" style="color: rgba(255,255,255,0.15); font-size: 14px; font-weight: 700; font-family: 'Barlow', sans-serif; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">${gridLabel}</div>`,
+              iconSize: [40, 40]
             }),
             interactive: false
           }).addTo(gridGroup);
         }
       }
 
-      // Etiquetas Exteriores (Bordes)
-      for (let i = 0; i < totalCells; i++) {
-        const xPos = offset + (i * effectiveStep);
-        const yPos = offset + (i * effectiveStep);
-
-        L.marker([1000 - offset + 15, xPos + (effectiveStep / 2)], {
-          icon: L.divIcon({ className: 'grid-label-outer', html: `<span style="color: var(--primary); font-family: Bebas Neue; font-size: 14px;">${indexToLetter(i)}</span>`, iconSize: [20, 20] })
-        }).addTo(gridGroup);
-
-        L.marker([1000 - (yPos + effectiveStep / 2), offset - 15], {
-          icon: L.divIcon({ className: 'grid-label-outer', html: `<span style="color: var(--primary); font-family: Bebas Neue; font-size: 14px;">${i + 1}</span>`, iconSize: [20, 20] })
-        }).addTo(gridGroup);
-      }
+      // Etiquetas Exteriores (Removidas por petición del usuario para mayor limpieza)
     }
   }, [L, mapSize, showGrid]);
 
