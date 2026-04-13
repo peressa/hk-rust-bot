@@ -1,20 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Share2, Plus, Trash2, Copy, ShieldCheck, ShieldAlert, Pencil, Link as LinkIcon, Check } from "lucide-react";
+import { Share2, Plus, Trash2, Clock, Shield, Key } from "lucide-react";
 
-interface InviteManagerProps {
+interface Invite {
+  id: string;
+  name: string;
+  code: string;
+  expiresAt: string;
+  canDraw: boolean;
   serverId: string;
 }
 
-export default function InviteManager({ serverId }: InviteManagerProps) {
-  const [invites, setInvites] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-
-  // Form states
-  const [pincode, setPincode] = useState("");
+export default function InviteManager({ serverId }: { serverId: string }) {
+  const [invites, setInvites] = useState<Invite[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [name, setName] = useState("");
+  const [expires, setExpires] = useState("7d");
   const [canDraw, setCanDraw] = useState(false);
 
   useEffect(() => {
@@ -25,144 +27,125 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
     try {
       const res = await fetch(`/api/rustplus/invites?serverId=${serverId}`);
       const data = await res.json();
-      setInvites(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+      if (data.invites) setInvites(data.invites);
+    } catch (err) { console.error(err); }
   };
 
-  const handleCreate = async () => {
-    if (pincode.length !== 4) return;
-    setCreating(true);
+  const createInvite = async () => {
+    if (!name.trim() || loading) return;
+    setLoading(true);
     try {
-      const res = await fetch("/api/rustplus/invites", {
+      const res = await fetch(`/api/rustplus/invites`, {
         method: "POST",
-        body: JSON.stringify({ serverId, code: pincode, canDraw })
+        body: JSON.stringify({ serverId, name, expires, canDraw })
       });
       if (res.ok) {
-        setPincode("");
-        setCanDraw(false);
+        setName("");
         fetchInvites();
       }
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setCreating(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   };
 
-  const handleDelete = async (id: string) => {
+  const deleteInvite = async (id: string) => {
     try {
       await fetch(`/api/rustplus/invites?id=${id}`, { method: "DELETE" });
       fetchInvites();
-    } catch (e) {}
+    } catch (err) { console.error(err); }
   };
 
-  const copyLink = (id: string) => {
-    const url = `${window.location.origin}/share/${id}`;
-    navigator.clipboard.writeText(url);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
+  const getShareLink = (id: string) => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/share/${id}`;
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.5rem', paddingTop: '6rem' }}>
-       <h2 style={{ fontSize: '3.5rem', fontFamily: 'var(--font-barlow)', lineHeight: 1, marginBottom: '0.5rem' }}>Gesti�n de Invitados</h2>
-       <div style={{ color: 'var(--primary)', letterSpacing: '0.4em', fontSize: '0.7rem', marginBottom: '2rem' }}>GESTIÓN_DE_ACCESOS_TÁCTICOS_V3</div>
+    <div className="premium-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.25rem', gap: '1.5rem', background: '#050505' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ fontFamily: 'var(--font-barlow)', fontSize: '1.25rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'white' }}>
+          <Share2 size={18} /> Gestión de Accesos
+        </h3>
+        <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase' }}>
+          Enlaces de Invitado
+        </span>
+      </div>
 
-       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', flex: 1 }}>
-          
-          {/* Create Section */}
-          <section>
-             <div className="premium-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                <h3 style={{ fontFamily: 'var(--font-barlow)', letterSpacing: '0.1em', marginBottom: '1.5rem', color: 'var(--primary)' }}>GENERAR_NUEVA_AUTORIZACIÓN</h3>
-                
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                   <div>
-                      <label style={{ display: 'block', fontSize: '0.65rem', fontWeight: 900, color: '#666', marginBottom: '0.5rem' }}>CÓDIGO_PIN_4_DÍGITOS</label>
-                      <input 
-                        type="text" 
-                        maxLength={4}
-                        placeholder="EJ: 1234"
-                        value={pincode}
-                        onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))}
-                        style={{ width: '100%', background: '#000', border: '1px solid var(--border)', padding: '1rem', color: 'white', fontFamily: 'var(--font-barlow)', fontSize: '1.5rem', letterSpacing: '0.2em' }}
-                      />
-                   </div>
+      {/* Creation UI */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', border: '1px solid #111' }}>
+        <input 
+          type="text" 
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Nombre del enlace (ej: Clan Aliado)"
+          style={{ width: '100%', background: '#000', border: '1px solid #222', padding: '0.6rem', color: 'white', fontSize: '0.8rem' }}
+        />
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <select 
+            value={expires} 
+            onChange={(e) => setExpires(e.target.value)}
+            style={{ flex: 1, background: '#000', border: '1px solid #222', padding: '0.6rem', color: 'white', fontSize: '0.8rem' }}
+          >
+            <option value="12h">Cierra en 12 horas</option>
+            <option value="1d">Cierra en 1 día</option>
+            <option value="2d">Cierra en 2 días</option>
+            <option value="3d">Cierra en 3 días</option>
+            <option value="7d">Cierra en 7 días</option>
+          </select>
+          <button 
+            onClick={createInvite}
+            disabled={loading || !name.trim()}
+            style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '0 1.5rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', fontWeight: 900 }}
+          >
+            <Plus size={16} /> GENERAR
+          </button>
+        </div>
+      </div>
 
-                   <label style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={canDraw} 
-                        onChange={(e) => setCanDraw(e.target.checked)} 
-                        style={{ width: '20px', height: '20px', accentColor: 'var(--primary)' }}
-                      />
-                      <div style={{ flex: 1 }}>
-                         <div style={{ fontSize: '0.8rem', fontWeight: 900, fontFamily: 'var(--font-barlow)' }}>HABILITAR_DIBUJO_TÁCTICO</div>
-                         <div style={{ fontSize: '0.6rem', color: '#555' }}>El invitado podrá realizar trazos en el Radar Global.</div>
-                      </div>
-                   </label>
-
-                   <button 
-                      onClick={handleCreate}
-                      disabled={creating || pincode.length !== 4}
-                      style={{ 
-                        background: pincode.length === 4 ? 'var(--primary)' : '#222', 
-                        color: 'white', 
-                        border: 'none', 
-                        padding: '1.25rem', 
-                        fontFamily: 'var(--font-barlow)', 
-                        fontSize: '1.2rem', 
-                        letterSpacing: '0.1em',
-                        cursor: 'pointer',
-                        transition: '0.2s'
-                      }}
-                   >
-                      {creating ? "Autorizando..." : "Crear Invitaci�n"}
-                   </button>
+      {/* Invites List */}
+      <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+        {invites.map((invite) => (
+          <div key={invite.id} style={{ 
+            padding: '1rem', 
+            background: '#0a0a0b', 
+            border: '1px solid #151515',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--primary)', textTransform: 'uppercase', fontFamily: 'var(--font-barlow)' }}>{invite.name}</div>
+                <div style={{ display: 'flex', gap: '1rem', marginTop: '0.2rem', fontSize: '0.65rem', color: '#666', fontWeight: 700 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Clock size={10} /> {new Date(invite.expiresAt).toLocaleDateString()}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Key size={10} /> PIN: {invite.code}</span>
                 </div>
-             </div>
-
-             <div style={{ marginTop: '2rem', opacity: 0.3, fontSize: '0.6rem', letterSpacing: '0.2em', lineHeight: 1.6 }}>
-                [INFO]: LAS INVITACIONES SE INVALIDAN AUTOMÁTICAMENTE TRAS UN WIPE DEL SERVIDOR PARA GARANTIZAR LA SEGURIDAD DE LA INTELIGENCIA TÁCTICA.
-             </div>
-          </section>
-
-          {/* List Section */}
-          <section style={{ overflowY: 'auto' }}>
-             <h3 style={{ fontFamily: 'var(--font-barlow)', letterSpacing: '0.1em', marginBottom: '1.5rem', color: '#666' }}>Invitaciones Activas ({invites.length})</h3>
-             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {invites.length === 0 ? (
-                   <div style={{ textAlign: 'center', padding: '3rem', border: '1px dashed #222', opacity: 0.3 }}>Sin invitaciones</div>
-                ) : (
-                   invites.map((invite) => (
-                      <div key={invite.id} className="premium-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem' }}>
-                         <div style={{ background: 'rgba(255,255,255,0.05)', padding: '0.75rem' }}>
-                            <LinkIcon size={20} color="var(--primary)" />
-                         </div>
-                         <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '0.7rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', color: 'white' }}>Identificador: {invite.id}</div>
-                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.6rem', color: '#555', marginTop: '0.25rem' }}>
-                               <span>PIN: {invite.code}</span>
-                               <span>DIBUJO: {invite.canDraw ? "SÍ" : "NO"}</span>
-                            </div>
-                         </div>
-                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button onClick={() => copyLink(invite.id)} style={{ background: '#333', border: 'none', padding: '0.5rem', cursor: 'pointer', color: 'white' }}>
-                               {copiedId === invite.id ? <Check size={16} color="#22c55e" /> : <Copy size={16} />}
-                            </button>
-                            <button onClick={() => handleDelete(invite.id)} style={{ background: 'rgba(239, 68, 68, 0.1)', border: 'none', padding: '0.5rem', cursor: 'pointer', color: '#ef4444' }}>
-                               <Trash2 size={16} />
-                            </button>
-                         </div>
-                      </div>
-                   ))
-                )}
-             </div>
-          </section>
-       </div>
+              </div>
+              <button onClick={() => deleteInvite(invite.id)} style={{ padding: '0.25rem', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', opacity: 0.6 }} onMouseOver={(e) => e.currentTarget.style.opacity = '1'} onMouseOut={(e) => e.currentTarget.style.opacity = '0.6'}>
+                <Trash2 size={16} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <input 
+                 readOnly 
+                 value={getShareLink(invite.id)} 
+                 style={{ flex: 1, background: '#000', border: '1px solid #1a1a1a', padding: '0.4rem', color: '#666', fontSize: '0.65rem', cursor: 'pointer' }}
+                 onClick={(e) => {
+                   (e.target as HTMLInputElement).select();
+                   document.execCommand('copy');
+                   alert("Enlace copiado");
+                 }} 
+              />
+            </div>
+          </div>
+        ))}
+        {invites.length === 0 && (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.2, flexDirection: 'column', gap: '1rem' }}>
+             <Share2 size={32} />
+             <span style={{ fontSize: '0.7rem', fontWeight: 900 }}>SIN ENLACES ACTIVOS</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

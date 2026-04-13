@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
-import { Lock, Unlock, X, ShieldAlert } from "lucide-react";`nimport BrandLogo from "@/components/layout/BrandLogo";
+import { Lock, Unlock, X, ShieldAlert } from "lucide-react";
+import BrandLogo from "@/components/layout/BrandLogo";
 
 interface CodelockGateProps {
   onSuccess: (code: string) => void;
@@ -40,12 +41,9 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
       fontFamily: 'Roboto, sans-serif'
     }}>
       
-      <div style={{ marginBottom: '3rem', textAlign: 'center' }}>
-         <div style={{ background: 'var(--primary)', padding: '12px', display: 'inline-block', marginBottom: '1rem' }}>
-            <Lock size={40} color="white" />
-         </div>
-         <h1 style={{ fontFamily: 'var(--font-barlow)', fontSize: '3rem', letterSpacing: '0.1em' }}>Acceso Seguro</h1>
-         <p style={{ color: '#444', fontSize: '0.8rem', letterSpacing: '0.2rem', textTransform: 'uppercase', fontWeight: 900 }}>Identificación Requerida para Mando Central</p>
+      <div style={{ marginBottom: '3rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+         <BrandLogo size="lg" />
+         <p style={{ marginTop: '1.5rem', color: '#444', fontSize: '0.8rem', letterSpacing: '0.2rem', textTransform: 'uppercase', fontWeight: 900 }}>Identificación Requerida para Mando Central</p>
       </div>
 
       <div style={{ 
@@ -60,7 +58,7 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
         <div style={{ 
             background: '#050505', 
             padding: '1.5rem', 
-            marginBottom: '2rem', 
+            marginBottom: '2rem',
             textAlign: 'center',
             border: '2px solid #222',
             height: '80px',
@@ -73,7 +71,7 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
               <div key={i} style={{ 
                   width: '12px', 
                   height: '12px', 
-                  borderRadius: '50%', 
+                  borderRadius: '50%',
                   background: pin.length > i ? 'var(--primary)' : '#222',
                   boxShadow: pin.length > i ? '0 0 10px var(--primary)' : 'none',
                   transition: 'all 0.1s'
@@ -84,8 +82,8 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
         {/* Keypad */}
         <div style={{ 
             display: 'grid', 
-            gridTemplateColumns: 'repeat(3, 1fr)', 
-            gap: '0.75rem' 
+            gridTemplateColumns: 'repeat(3, 1fr)',
+            gap: '0.75rem'
         }}>
            {keypad.map((key, idx) => (
               <button 
@@ -93,7 +91,7 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
                 onClick={() => key === "C" ? clear() : (key ? handlePress(key) : null)}
                 disabled={loading || (!key && key !== "0")}
                 style={{ 
-                    height: '60px', 
+                    height: '60px',
                     background: key === "C" ? '#333' : (key ? '#252527' : 'transparent'),
                     border: key ? '1px solid #444' : 'none',
                     color: '#fff',
@@ -103,7 +101,7 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
                     transition: 'all 0.05s',
                     opacity: key ? 1 : 0
                 }}
-                onMouseDown={(e) => key && (e.currentTarget.style.transform = 'scale(0.95)', e.currentTarget.style.background = 'var(--primary)')}
+                onMouseDown={(e) => key && (e.currentTarget.style.transform = 'scale(0.95)', e.currentTarget.style.background = '#444')}
                 onMouseUp={(e) => key && (e.currentTarget.style.transform = 'scale(1)', e.currentTarget.style.background = key === "C" ? '#333' : '#252527')}
               >
                 {key}
@@ -115,8 +113,8 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
             onClick={submit}
             disabled={pin.length < 4 || loading}
             style={{ 
-                width: '100%', 
-                marginTop: '1.5rem', 
+                width: '100%',
+                marginTop: '1.5rem',
                 background: pin.length === 4 ? 'var(--primary)' : '#222',
                 color: '#fff',
                 border: 'none',
@@ -132,14 +130,14 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
         </button>
 
         {error && (
-            <div style={{ marginTop: '1.5rem', color: '#ef4444', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', padding: '0.75rem', fontWeight: 900 }}>
-                <ShieldAlert size={16} /> {error.toUpperCase()}
+            <div style={{ marginTop: '1.5rem', color: '#ef4444', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+                <ShieldAlert size={16} /> {error}
             </div>
         )}
       </div>
 
-      <div style={{ marginTop: '3rem', color: '#222', fontSize: '0.6rem', letterSpacing: '0.5em', fontWeight: 900 }}>
-         Encriptaci�n AES-256 Activa
+      <div style={{ marginTop: '3rem', color: '#222', fontSize: '0.6rem', letterSpacing: '0.2rem', textTransform: 'uppercase', fontWeight: 900 }}>
+         Encriptación AES-256 Activa
       </div>
     </div>
   );

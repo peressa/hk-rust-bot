@@ -44,7 +44,7 @@ export default function TeamRoster({ members }: { members: TeamMember[] }) {
             <Users size={18} /> Miembros del Clan
         </h3>
         <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-muted)' }}>
-            ONLINE: {members.filter(m => m.isOnline).length} / {members.length}
+            CONECTADOS: {members.filter(m => m.isOnline).length} / {members.length}
         </span>
       </div>
 
@@ -83,7 +83,7 @@ export default function TeamRoster({ members }: { members: TeamMember[] }) {
                         {member.name}
                     </span>
                     {!member.isAlive && (
-                        <span style={{ fontSize: '0.6rem', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '0.1rem 0.3rem', fontWeight: 900 }}>CAÕDO</span>
+                        <span style={{ fontSize: '0.6rem', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '0.1rem 0.3rem', fontWeight: 900 }}>CA√çDO</span>
                     )}
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.2rem', fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)' }}>

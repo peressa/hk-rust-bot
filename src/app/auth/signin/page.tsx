@@ -1,9 +1,10 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { Radio, ShieldCheck, ChevronLeft, Lock } from "lucide-react";
-import { dictionaries, Language } from "@/lib/i18n/dictionaries";`nimport BrandLogo from "@/components/layout/BrandLogo";
+import { dictionaries, Language } from "@/lib/i18n/dictionaries";
+import BrandLogo from "@/components/layout/BrandLogo";
 
 export default function SignInPage() {
   const [lang, setLang] = useState<Language>('en');
@@ -74,18 +75,8 @@ export default function SignInPage() {
         padding: '2rem'
       }}>
         
-        <div style={{ marginBottom: '4rem' }} className="animate-fade-in">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.5rem', marginBottom: '1.5rem' }}>
-            <div style={{ background: 'var(--primary)', padding: '8px', display: 'flex' }}>
-              <Radio color="white" size={40} />
-            </div>
-            <h1 style={{ fontSize: '4.5rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', letterSpacing: '0.05em', lineHeight: 1 }}>
-              RUST <span style={{ color: 'var\(--primary\)', fontStyle: 'italic' }}>SENTINEL</span>
-            </h1>
-          </div>
-          <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.8rem', letterSpacing: '0.4em', textTransform: 'uppercase', textShadow: '0 0 10px rgba(206, 66, 43, 0.5)' }}>
-            {t.login.terminal}
-          </div>
+        <div style={{ marginBottom: '4rem', display: 'flex', justifyContent: 'center' }} className="animate-fade-in">
+           <BrandLogo size="lg" />
         </div>
 
         <div className="premium-card" style={{ 
@@ -102,7 +93,7 @@ export default function SignInPage() {
             color: '#fff', 
             marginBottom: '2.5rem', 
             fontSize: '1.25rem', 
-            fontWeight: 900, 
+            fontWeight: 800, 
             textTransform: 'uppercase', 
             letterSpacing: '0.05em',
             lineHeight: 1.4,
@@ -119,7 +110,7 @@ export default function SignInPage() {
               color: 'white',
               border: 'none',
               padding: '1.75rem',
-              fontWeight: 900,
+              fontWeight: 800,
               fontSize: '1.1rem',
               letterSpacing: '0.1em',
               textTransform: 'uppercase',
@@ -137,13 +128,13 @@ export default function SignInPage() {
             <ShieldCheck size={28} /> {t.login.btn}
           </button>
           
-          <div style={{ marginTop: '2.5rem', fontSize: '0.65rem', color: '#444', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1.5 }}>
+          <div style={{ marginTop: '2.5rem', fontSize: '0.65rem', color: '#444', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', lineHeight: 1.5 }}>
             {t.login.disclaimer}
           </div>
         </div>
 
         <div style={{ marginTop: '3.5rem' }}>
-          <a href="/" style={{ color: '#444', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.1em' }} onMouseOver={(e) => e.currentTarget.style.color = '#888'} onMouseOut={(e) => e.currentTarget.style.color = '#444'}>
+          <a href="/" style={{ color: '#444', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-barlow)' }} onMouseOver={(e) => e.currentTarget.style.color = '#888'} onMouseOut={(e) => e.currentTarget.style.color = '#444'}>
             <ChevronLeft size={16} /> {t.login.return}
           </a>
         </div>
@@ -151,10 +142,10 @@ export default function SignInPage() {
       
       {/* Visual Tech Decals */}
       <div style={{ position: 'absolute', bottom: '2rem', left: '2rem', fontSize: '0.6rem', color: '#222', fontWeight: 900, fontFamily: 'monospace' }}>
-         Conexi�n Segura // Sentinel v3
+         Conexión Segura // Sentinel v3
       </div>
       <div style={{ position: 'absolute', top: '2rem', right: '2rem', fontSize: '0.6rem', color: '#222', fontWeight: 900, fontFamily: 'monospace' }}>
-         Sistema: Activo // Encriptaci�n AES-256
+         Sistema: Activo // Encriptación AES-256
       </div>
     </div>
   );

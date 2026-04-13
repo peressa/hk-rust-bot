@@ -1,22 +1,25 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { MessageSquare, Send, RefreshCw, Shield } from "lucide-react";
+import { Radio, Send, Users, Shield, MessageSquare } from "lucide-react";
 
-interface CommsModuleProps {
-  serverId: string;
+interface Message {
+  id: string;
+  sender: string;
+  text: string;
+  timestamp: number;
+  steamId?: string;
 }
 
-export default function CommsModule({ serverId }: CommsModuleProps) {
-  const [messages, setMessages] = useState<any[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export default function CommsModule({ serverId }: { serverId: string }) {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchChat();
-    const interval = setInterval(fetchChat, 3000);
+    fetchMessages();
+    const interval = setInterval(fetchMessages, 3000);
     return () => clearInterval(interval);
   }, [serverId]);
 
@@ -26,90 +29,93 @@ export default function CommsModule({ serverId }: CommsModuleProps) {
     }
   }, [messages]);
 
-  const fetchChat = async () => {
+  const fetchMessages = async () => {
     try {
-      const res = await fetch(`/api/rustplus/chat?serverId=${serverId}`);
+      const res = await fetch(`/api/rustplus/comms?serverId=${serverId}`);
       const data = await res.json();
-      if (!data.error) {
-        setMessages(data);
-      }
+      if (data.messages) setMessages(data.messages);
     } catch (err) {
-      console.error(err);
+      console.error("Comms fetch error:", err);
     }
   };
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || sending) return;
-
-    setSending(true);
-    setError(null);
+  const sendMessage = async () => {
+    if (!input.trim() || loading) return;
+    setLoading(true);
     try {
-      const res = await fetch("/api/rustplus/chat", {
+      await fetch(`/api/rustplus/comms`, {
         method: "POST",
-        body: JSON.stringify({
-          serverId,
-          message: newMessage
-        })
+        body: JSON.stringify({ serverId, message: input })
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Error al enviar");
-      } else {
-        setNewMessage("");
-        fetchChat();
-      }
+      setInput("");
+      fetchMessages();
     } catch (err) {
-      setError("Error de red");
+      console.error(err);
     } finally {
-      setSending(false);
+      setLoading(false);
     }
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.5rem', paddingTop: '6rem' }}>
-       <h2 style={{ fontSize: '3.5rem', fontFamily: 'var(--font-barlow)', lineHeight: 1, marginBottom: '0.5rem' }}>Canal de Radio</h2>
-       <div style={{ color: 'var(--primary)', letterSpacing: '0.4em', fontSize: '0.7rem', marginBottom: '2rem' }}>Transmisi�n Segura</div>
+    <div className="premium-card" style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: 0, background: '#050505' }}>
+      <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h3 style={{ fontFamily: 'var(--font-barlow)', fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--primary)' }}>
+          <Radio size={18} /> Canal de Radio
+        </h3>
+        <span style={{ fontSize: '0.65rem', color: '#444', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+          Encriptado End-To-End
+        </span>
+      </div>
 
-       <div className="premium-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', background: 'rgba(5,5,5,0.8)' }}>
-          <div 
-            ref={scrollRef}
-            style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}
-          >
-            {messages.length === 0 ? (
-               <div style={{ textAlign: 'center', opacity: 0.2, marginTop: '20%' }}>
-                  <MessageSquare size={48} style={{ margin: '0 auto 1rem' }} />
-                  <p style={{ fontFamily: 'var(--font-barlow)', letterSpacing: '0.1em' }}>SIN_SEÑAL_DETECTADA</p>
-               </div>
-            ) : (
-               messages.map((msg, i) => (
-                  <div key={i} style={{ borderLeft: '2px solid rgba(255,255,255,0.1)', paddingLeft: '1rem' }}>
-                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'baseline', marginBottom: '0.2rem' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-barlow)' }}>{msg.name?.toUpperCase()}</span>
-                        <span style={{ fontSize: '0.6rem', opacity: 0.3 }}>[{new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}]</span>
-                     </div>
-                     <div style={{ fontSize: '0.9rem', color: '#ccc' }}>{msg.message}</div>
-                  </div>
-               ))
-            )}
+      <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {messages.map((msg) => (
+          <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-barlow)' }}>
+                {msg.sender.toUpperCase()}
+              </span>
+              <span style={{ fontSize: '0.6rem', color: '#333' }}>
+                {new Date(msg.timestamp).toLocaleTimeString()}
+              </span>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.8rem', borderLeft: '2px solid #222', fontSize: '0.85rem', color: '#ccc', lineHeight: 1.4 }}>
+              {msg.text}
+            </div>
           </div>
+        ))}
+        {messages.length === 0 && (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0.1, flexDirection: 'column', gap: '1rem' }}>
+             <MessageSquare size={48} />
+             <span style={{ fontSize: '0.7rem', fontWeight: 900 }}>TRANSMISIÓN VACÍA</span>
+          </div>
+        )}
+      </div>
 
-          <form onSubmit={handleSend} style={{ padding: '1.5rem', borderTop: '1px solid var(--border)', background: 'rgba(5,5,5,0.9)' }}>
-             <div style={{ display: 'flex', gap: '1rem' }}>
-                <input 
-                  type="text" 
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Transmitir mensaje..."
-                  style={{ flex: 1, background: '#000', border: '1px solid var(--border)', color: 'white', fontFamily: 'var(--font-barlow)', fontSize: '1.1rem', padding: '0.75rem 1rem' }}
-                />
-                <button type="submit" disabled={sending || !newMessage.trim()} style={{ background: 'var(--primary)', border: 'none', padding: '0 1.5rem', color: 'white', cursor: 'pointer', transition: '0.1s' }}>
-                   {sending ? <RefreshCw size={20} className="animate-spin" /> : <Send size={20} />}
-                </button>
-             </div>
-             {error && <div style={{ color: '#ef4444', fontSize: '0.6rem', marginTop: '0.5rem', fontWeight: 900 }}>[ERROR]: {error.toUpperCase()}</div>}
-          </form>
-       </div>
+      <div style={{ padding: '1rem', background: '#0a0a0b', borderTop: '1px solid var(--border)', display: 'flex', gap: '0.5rem' }}>
+        <input 
+          type="text" 
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+          placeholder="Transmitir mensaje..."
+          style={{ 
+            flex: 1, 
+            background: '#000', 
+            border: '1px solid #222', 
+            padding: '0.75rem', 
+            color: 'white', 
+            fontSize: '0.8rem',
+            fontFamily: 'var(--font-roboto)'
+          }}
+        />
+        <button 
+          onClick={sendMessage}
+          disabled={loading}
+          style={{ background: 'var(--primary)', color: 'white', border: 'none', padding: '0 1.25rem', cursor: 'pointer' }}
+        >
+          <Send size={18} />
+        </button>
+      </div>
     </div>
   );
 }

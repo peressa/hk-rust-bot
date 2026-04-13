@@ -78,7 +78,7 @@ export default function SettingsPage() {
                 {/* Manual Pairing Section */}
                 <section className="premium-card" style={{ borderLeft: '4px solid var(--primary)' }}>
                     <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'var(--font-barlow)', fontSize: '1.5rem' }}>
-                    <ExternalLink size={20} /> VINCULACIÓN MANUAL
+                    <ExternalLink size={20} /> Vinculación Manual
                     </h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', fontWeight: 700 }}>
                     Si el bot no detecta automáticamente tu servidor, pega el enlace de Rust+ aquí.
@@ -89,7 +89,7 @@ export default function SettingsPage() {
                 {/* Registration Section */}
                 <section className="premium-card">
                     <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'var(--font-barlow)', fontSize: '1.5rem' }}>
-                    <Cpu size={20} /> IDENTIDAD VIRTUAL (FCM)
+                    <Cpu size={20} /> Identidad Virtual (FCM)
                     </h3>
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem', fontWeight: 700 }}>
                     Necesitas registrar este navegador para recibir señales de emparejamiento.
@@ -117,7 +117,7 @@ export default function SettingsPage() {
                             target="_blank" 
                             style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 900, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}
                         >
-                            ¿D�nde consigo el token? <ExternalLink size={10} />
+                            ¿Dónde consigo el token? <ExternalLink size={10} />
                         </a>
                     </div>
                 </section>
@@ -127,10 +127,10 @@ export default function SettingsPage() {
                 {/* Status Section */}
                 <div className="premium-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
                     <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-barlow)', color: '#aaa' }}>
-                    <ShieldCheck size={20} /> Estado de Conexi�n
+                    <ShieldCheck size={20} /> Estado de Conexión
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        <StatusLine label="Escucha de Se�ales" value={status?.listening ? "Activo" : "Inactivo"} color={status?.listening ? "#22c55e" : "#ef4444"} />
+                        <StatusLine label="Escucha de Señales" value={status?.listening ? "Activo" : "Inactivo"} color={status?.listening ? "#22c55e" : "#ef4444"} />
                         <StatusLine label="Estado de Cifrado" value={status?.hasKeys ? "Cifrado" : "Pendiente"} color={status?.hasKeys ? "#22c55e" : "#ef4444"} />
                     </div>
                     
