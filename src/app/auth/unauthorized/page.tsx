@@ -43,7 +43,7 @@ function UnauthorizedPageContent() {
           zIndex: 0
         }}
       >
-        <source src="https://files.facepunch.com/rust/companion/hero-video.mp4" type="video/mp4" />
+        <source src="https://files.facepunch.com/paddy/20210324/rust_site2021_hero_v002.mp4" type="video/mp4" />
       </video>
 
       <div style={{ position: 'relative', zIndex: 1, minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '4rem 2rem' }}>
@@ -53,9 +53,9 @@ function UnauthorizedPageContent() {
             <div style={{ background: 'var(--primary)', width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
               <ShieldAlert size={32} color="white" />
             </div>
-            <h1 style={{ fontSize: '5rem', lineHeight: 0.9, marginBottom: '1.5rem' }}>UNAUTHORIZED <br/> <span style={{ color: 'var(--primary)' }}>ACCESS</span></h1>
+            <h1 style={{ fontSize: '5rem', lineHeight: 0.9, marginBottom: '1.5rem' }}>OFFLINE <br/> <span style={{ color: 'var(--primary)' }}>OPERATIONS</span></h1>
             <p style={{ color: '#aaa', fontSize: '1.2rem', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
-              Account {steamId && <span style={{ color: '#fff' }}>[{steamId}]</span>} has no active surveillance contract.
+              ID-64 <span style={{ color: '#fff' }}>[{steamId || 'TERMINAL'}]</span> HAS NO ACTIVE CONTRACT.
             </p>
           </div>
 
@@ -63,8 +63,8 @@ function UnauthorizedPageContent() {
             
             {/* Monthly Plan */}
             <div className="premium-card" style={{ textAlign: 'left', border: '1px solid #333' }}>
-              <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.75rem', marginBottom: '1rem' }}>RECURRING CONTRACT</div>
-              <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>MONTHLY TACTICAL</h2>
+              <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.75rem', marginBottom: '1rem' }}>RECURRING OP-SEC</div>
+              <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>TACTICAL MONTH</h2>
               <div style={{ fontSize: '3.5rem', marginBottom: '2rem' }}>$9.99 <span style={{ fontSize: '1rem', color: '#555' }}>/ MO</span></div>
               <ul style={{ listStyle: 'none', padding: 0, marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', color: '#888', fontWeight: 700, fontSize: '0.9rem' }}>
                 <li>[+] FULL MODULE ACCESS</li>
