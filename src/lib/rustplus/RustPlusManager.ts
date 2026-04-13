@@ -3,6 +3,7 @@ import * as protobuf from "protobufjs";
 import { EventEmitter } from "events";
 import * as db from "../db";
 import { worldToGrid } from "./coordUtils";
+import { FcmManager } from "../fcm/FcmManager";
 
 // =====================================================================
 // MONKEY PATCH: Forzar campos Opcionales en Protobufjs
@@ -685,11 +686,9 @@ class RustPlusManager extends EventEmitter {
 
     // 2. Definir donde DEBERÍAN estar los protos (en el root o en data)
     const sourceProtos = [
-      path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
       path.join(process.cwd(), 'rustplus.proto'),
+      path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
       path.join(process.cwd(), 'resources/rustplus.proto'),
-      '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
-      '/app/node_modules/@liamcottle/rustplus.js/rustplus.proto'
     ];
 
     // 3. Intentar parchear la librería COPIANDO el archivo a su lado
@@ -739,4 +738,6 @@ export const rustPlusManager: RustPlusManager = globalStore._rustPlusManager || 
 
 if (typeof window === 'undefined') {
   rustPlusManager.checkProtos().catch(err => console.error("[RustPlus Startup Error]:", err));
+  // Auto-activación de Inteligencia Persistente
+  FcmManager.initAllListeners().catch(err => console.error("[FCM Startup Error]:", err));
 }

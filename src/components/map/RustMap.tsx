@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { Layers, Users, Zap, EyeOff, Map as MapIcon, ShoppingCart } from "lucide-react";
-import { GRID_SIZE, indexToLetter } from "@/lib/rustplus/coordUtils";
+import { Layers, Users, Zap, EyeOff, Map as MapIcon, ShoppingCart, Pencil, Trash2 } from "lucide-react";
+import { indexToLetter } from "@/lib/rustplus/coordUtils";
 
 const MARKER_TYPES = {
   PLAYER: "Player",
@@ -20,6 +20,8 @@ interface RustMapProps {
   oceanMargin?: number;
   monuments?: any[];
   markers?: any[];
+  serverId?: string;
+  allowDrawing?: boolean;
 }
 
 export default function RustMap({
@@ -27,32 +29,50 @@ export default function RustMap({
   mapSize = 4000,
   oceanMargin = 0,
   monuments = [],
-  markers = []
+  markers = [],
+  serverId,
+  allowDrawing = true
 }: RustMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [L, setL] = useState<any>(null);
   const leafletMap = useRef<any>(null);
   const layersRef = useRef<{ [key: string]: any }>({});
-  const gridLinesRef = useRef<any[]>([]);
-
+  
   // Toggles de Capas
   const [showGrid, setShowGrid] = useState(true);
   const [showMonuments, setShowMonuments] = useState(true);
   const [showEvents, setShowEvents] = useState(true);
   const [showPlayers, setShowPlayers] = useState(true);
   const [showVending, setShowVending] = useState(false);
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
 
-  const GRID_SIZE = 146.3;
-  // Factor crítico de corrección geográfica
-  const totalMapSize = mapSize + (oceanMargin * 2);
+  const [drawings, setDrawings] = useState<any[]>([]);
+  const lastDrawingsRef = useRef<string>("");
 
   useEffect(() => {
     let isMounted = true;
     import("leaflet").then((leaflet) => {
       if (isMounted) setL(leaflet);
-    }).catch(err => console.error("No se pudo cargar Leaflet:", err));
+    });
     return () => { isMounted = false; };
   }, []);
+
+  // Sync Drawings from DB
+  useEffect(() => {
+    if (!serverId) return;
+    const interval = setInterval(async () => {
+       try {
+         const res = await fetch(`/api/rustplus/drawings?serverId=${serverId}`);
+         const data = await res.json();
+         const dataStr = JSON.stringify(data);
+         if (dataStr !== lastDrawingsRef.current) {
+            setDrawings(data);
+            lastDrawingsRef.current = dataStr;
+         }
+       } catch (e) {}
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [serverId]);
 
   const getPosition = (x: number, y: number): [number, number] => {
     if (mapSize <= 0) return [0, 0];
@@ -80,33 +100,26 @@ export default function RustMap({
                     <div style="background: ${color}; width: 16px; height: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 8px; font-weight: 900; z-index: 2; border: 1px solid white;">H</div>
                   </div>`;
       size = 40;
-    } else if (type === MARKER_TYPES.CH47) {
-      color = "#ef4444";
-      iconHtml = `<div class="marker-ch47" style="display: flex; align-items: center; justify-content: center; position: relative;">
-                    <div style="background: ${color}; width: 16px; height: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 8px; font-weight: 900; z-index: 2; border: 1px solid white;">CH</div>
-                  </div>`;
-      size = 16;
     } else if (type === MARKER_TYPES.CARGO) {
       color = "#3b82f6";
       iconHtml = `<div class="marker-cargo" style="display: flex; align-items: center; justify-content: center;">
                     <div style="background: ${color}; width: 24px; height: 12px; border-radius: 4px; border: 2px solid white; box-shadow: 0 0 10px ${color}; display: flex; align-items: center; justify-content: center; color: white; font-size: 6px; font-weight: 900;">CARGO</div>
                   </div>`;
       size = 24;
+    } else if (type === MARKER_TYPES.CH47) {
+        color = "#ef4444";
+        iconHtml = `<div style="background: ${color}; width: 16px; height: 16px; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: white; font-size: 8px; font-weight: 900; border: 1px solid white;">CH</div>`;
+        size = 16;
     } else if (type === MARKER_TYPES.EXPLOSION) {
       color = "#ef4444";
-      iconHtml = `<div class="marker-raid" style="display: flex; align-items: center; justify-content: center;">
-                    <div class="raid-pulse" style="background: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>
-                  </div>`;
+      iconHtml = `<div class="raid-pulse" style="background: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white;"></div>`;
       size = 20;
     } else if (type === MARKER_TYPES.VENDING) {
       color = "#eab308";
-      iconHtml = `<div class="marker-vending" style="display: flex; align-items: center; justify-content: center; position: relative;">
-                    <div style="background: ${color}; width: 12px; height: 12px; border-radius: 50%; border: 1px solid black; box-shadow: 0 0 5px ${color}"></div>
-                  </div>`;
-      size = 12;
+      iconHtml = `<div style="background: ${color}; width: 10px; height: 10px; border-radius: 50%; border: 1px solid black; box-shadow: 0 0 5px ${color}"></div>`;
+      size = 10;
     } else if (type === "Death") {
-      color = "#dc2626";
-      iconHtml = `<div style="display: flex; align-items: center; justify-content: center; font-size: 16px; background: transparent; filter: drop-shadow(0px 0px 4px red);">💀</div>`;
+      iconHtml = `<div style="font-size: 16px; filter: drop-shadow(0px 0px 4px red);">💀</div>`;
       size = 20;
     } else {
       color = "#a855f7";
@@ -125,8 +138,7 @@ export default function RustMap({
   // Inicializar mapa subyacente
   useEffect(() => {
     if (!L || !mapRef.current) return;
-    try {
-      if (!leafletMap.current) {
+    if (!leafletMap.current) {
         leafletMap.current = L.map(mapRef.current, {
           crs: L.CRS.Simple,
           minZoom: -2,
@@ -134,18 +146,13 @@ export default function RustMap({
           zoom: -1,
           center: [500, 500],
           attributionControl: false,
-          zoomControl: false // Ocultamos el nativo para estética
+          zoomControl: false
         });
-
-        // Agregar control abajo derecha
         L.control.zoom({ position: 'bottomright' }).addTo(leafletMap.current);
-      }
-    } catch (err) {
-      console.error("Error inicializando Leaflet:", err);
     }
   }, [L]);
 
-  // Capa Grilla Táctica
+  // Capa Grilla Táctica con ETIQUETAS PERMANENTES
   useEffect(() => {
     if (!L || !leafletMap.current) return;
     if (layersRef.current['gridGroup']) {
@@ -155,105 +162,78 @@ export default function RustMap({
     if (showGrid) {
       const gridGroup = L.layerGroup().addTo(leafletMap.current);
       layersRef.current['gridGroup'] = gridGroup;
-      gridLinesRef.current = [];
 
-      // FÓRMULA DE PRECISIÓN DINÁMICA: Ajustamos la rejilla para que encaje 
-      // un número entero de celdas en el mapa navegable.
       const totalCells = Math.max(1, Math.round(mapSize / 150));
       const PAD_WORLD = 2000;
       const totalSize = mapSize + PAD_WORLD;
       const offset = (1000 / totalSize) * 1000; 
       const effectiveStep = (1000 - (offset * 2)) / totalCells;
 
-      // Dibujar líneas y etiquetas centrales por celda
       for (let i = 0; i < totalCells; i++) {
         for (let j = 0; j < totalCells; j++) {
           const xPos = offset + (i * effectiveStep);
           const yPos = offset + (j * effectiveStep);
-
           const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
 
-          if (j === 0) { // Líneas Verticales
-            gridLinesRef.current.push(L.polyline([[offset, xPos], [1000 - offset, xPos]], opts).addTo(gridGroup));
-            if (i === totalCells - 1) {
-              gridLinesRef.current.push(L.polyline([[offset, xPos + effectiveStep], [1000 - offset, xPos + effectiveStep]], opts).addTo(gridGroup));
-            }
-          }
-          if (i === 0) { // Líneas Horizontales
-            const yLine = 1000 - yPos;
-            gridLinesRef.current.push(L.polyline([[yLine, offset], [yLine, 1000 - offset]], opts).addTo(gridGroup));
-            if (j === totalCells - 1) {
-              gridLinesRef.current.push(L.polyline([[1000 - (yPos + effectiveStep), offset], [1000 - (yPos + effectiveStep), 1000 - offset]], opts).addTo(gridGroup));
-            }
-          }
+          if (j === 0) L.polyline([[offset, xPos], [1000 - offset, xPos]], opts).addTo(gridGroup);
+          if (i === 0) L.polyline([[1000 - yPos, offset], [1000 - yPos, 1000 - offset]], opts).addTo(gridGroup);
 
-          // En Rust in-game, el primer cuadrante es A1.
           const gridLabel = `${indexToLetter(i)}${j + 1}`;
-
           L.marker([1000 - (yPos + effectiveStep / 2), xPos + (effectiveStep / 2)], {
             icon: L.divIcon({
               className: 'grid-cell-label',
-              html: `<div class="grid-cell-text" style="opacity: 0.1">${gridLabel}</div>`,
-              iconSize: [30, 30]
+              html: `<div class="grid-cell-text" style="color: rgba(255,255,255,0.08); font-size: 9px; font-weight: 900; font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">${gridLabel}</div>`,
+              iconSize: [20, 20]
             }),
             interactive: false
           }).addTo(gridGroup);
         }
       }
 
-      // Etiquetas Exteriores en Bordes
+      // Etiquetas Exteriores (Bordes)
       for (let i = 0; i < totalCells; i++) {
         const xPos = offset + (i * effectiveStep);
         const yPos = offset + (i * effectiveStep);
 
-        // Letras arriba (X)
         L.marker([1000 - offset + 15, xPos + (effectiveStep / 2)], {
-          icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${indexToLetter(i)}</span>`, iconSize: [20, 20] })
+          icon: L.divIcon({ className: 'grid-label-outer', html: `<span style="color: var(--primary); font-family: Bebas Neue; font-size: 14px;">${indexToLetter(i)}</span>`, iconSize: [20, 20] })
         }).addTo(gridGroup);
 
-        // Números izquierda (Y) - Empieza en 1
         L.marker([1000 - (yPos + effectiveStep / 2), offset - 15], {
-          icon: L.divIcon({ className: 'grid-label-outer', html: `<span>${i + 1}</span>`, iconSize: [20, 20] })
+          icon: L.divIcon({ className: 'grid-label-outer', html: `<span style="color: var(--primary); font-family: Bebas Neue; font-size: 14px;">${i + 1}</span>`, iconSize: [20, 20] })
         }).addTo(gridGroup);
       }
     }
-  }, [L, mapSize, oceanMargin, showGrid, totalMapSize]);
+  }, [L, mapSize, showGrid]);
 
   // Imagen Base64
   useEffect(() => {
-    if (!L || !leafletMap.current) return;
-    if (mapJpg && mapJpg.length > 100) {
-      if (layersRef.current['image']) leafletMap.current.removeLayer(layersRef.current['image']);
-      layersRef.current['image'] = L.imageOverlay(`data:image/jpeg;base64,${mapJpg}`, [[0, 0], [1000, 1000]], {
+    if (!L || !leafletMap.current || !mapJpg) return;
+    if (layersRef.current['image']) leafletMap.current.removeLayer(layersRef.current['image']);
+    layersRef.current['image'] = L.imageOverlay(`data:image/jpeg;base64,${mapJpg}`, [[0, 0], [1000, 1000]], {
         opacity: 1, zIndex: 1
-      }).addTo(leafletMap.current);
-    }
+    }).addTo(leafletMap.current);
   }, [L, mapJpg]);
 
-  // Renderizar Monumentos
+  // Renderizar Dibujos Tácticos
   useEffect(() => {
     if (!L || !leafletMap.current) return;
-    if (layersRef.current['monumentsGroup']) leafletMap.current.removeLayer(layersRef.current['monumentsGroup']);
+    if (layersRef.current['drawingsGroup']) leafletMap.current.removeLayer(layersRef.current['drawingsGroup']);
+    
+    const drawingsGroup = L.layerGroup().addTo(leafletMap.current);
+    layersRef.current['drawingsGroup'] = drawingsGroup;
 
-    if (showMonuments && monuments.length > 0) {
-      const monumentsGroup = L.layerGroup().addTo(leafletMap.current);
-      layersRef.current['monumentsGroup'] = monumentsGroup;
+    drawings.forEach((d: any) => {
+       try {
+         const points = JSON.parse(d.data);
+         if (Array.isArray(points)) {
+            L.polyline(points, { color: d.color || '#ce422b', weight: 4, opacity: 0.8 }).addTo(drawingsGroup);
+         }
+       } catch(e) {}
+    });
+  }, [L, drawings]);
 
-      monuments.forEach(mon => {
-        if (!mon.name) return; // Fix if it's token based
-        // Omitir cuevas y elementos basura si queremos el mapa limpio
-        if (mon.name.toLowerCase().includes("cave") || mon.name.toLowerCase().includes("swamp")) return;
-
-        const displayName = mon.name.replace(/_/g, ' ').toUpperCase();
-        const iconHtml = `<div class="monument-label">${displayName}</div>`;
-        L.marker(getPosition(mon.x, mon.y), {
-          icon: L.divIcon({ className: 'custom-div-icon', html: iconHtml })
-        }).addTo(monumentsGroup);
-      });
-    }
-  }, [L, monuments, showMonuments, oceanMargin, mapSize, totalMapSize]);
-
-  // Renderizar Marcadores Interactivos (Equipos, Vending, Eventos)
+  // Renderizar Marcadores (Jugadores, Equipos, Eventos)
   useEffect(() => {
     if (!L || !leafletMap.current) return;
     if (layersRef.current['markersGroup']) leafletMap.current.removeLayer(layersRef.current['markersGroup']);
@@ -267,74 +247,94 @@ export default function RustMap({
         if (m.type === MARKER_TYPES.VENDING) return showVending;
         return showEvents;
       })
-      .filter(m => m && typeof m.x === 'number' && typeof m.y === 'number')
       .forEach(marker => {
-        const popupHtml = `
-          <div style="color: white; padding: 0.25rem;">
-            <strong style="display: block; margin-bottom: 0.25rem; color: var(--primary);">
-              ${marker.name || ('Tipo: ' + (marker.type || 'Desconocido'))}
-            </strong>
-          </div>
-        `;
-        const leafletMarker = L.marker(getPosition(marker.x, marker.y), {
+        const popupHtml = `<div style="padding: 0.5rem; color: white;"><strong style="color: var(--primary)">${marker.name || 'MARCADOR_VINCULADO'}</strong></div>`;
+        L.marker(getPosition(marker.x, marker.y), {
           icon: getIcon(L, marker.type || marker.id, marker.name)
-        }).addTo(markersGroup);
-        leafletMarker.bindPopup(popupHtml, { className: 'custom-popup-rust' });
+        }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
       });
-  }, [L, markers, showEvents, showPlayers, showVending, oceanMargin, mapSize, totalMapSize]);
+  }, [L, markers, showEvents, showPlayers, showVending, mapSize]);
 
-  if (!L) {
-    return (
-      <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0a0a0b', color: 'var(--text-muted)' }}>
-        <div className="animate-spin" style={{ width: '30px', height: '30px', border: '3px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%' }}></div>
-        <span style={{ marginTop: '1rem' }}>Iniciando motor de radar...</span>
-      </div>
-    );
-  }
+  // Manejador de Dibujo
+  useEffect(() => {
+    if (!L || !leafletMap.current || !isDrawingMode) return;
+    
+    let currentPath: any[] = [];
+    let polyline: any = null;
+
+    const onMouseDown = (e: any) => {
+        currentPath = [e.latlng];
+        polyline = L.polyline(currentPath, { color: 'var(--primary)', weight: 4, opacity: 0.8 }).addTo(leafletMap.current);
+    };
+
+    const onMouseMove = (e: any) => {
+        if (!polyline) return;
+        currentPath.push(e.latlng);
+        polyline.setLatLngs(currentPath);
+    };
+
+    const onMouseUp = async () => {
+        if (!polyline) return;
+        const finalPath = currentPath;
+        polyline.remove();
+        polyline = null;
+        currentPath = [];
+        
+        // Save to DB
+        if (serverId) {
+           await fetch('/api/rustplus/drawings', {
+              method: 'POST',
+              body: JSON.stringify({ serverId, data: finalPath, color: '#ce422b' })
+           });
+        }
+    };
+
+    leafletMap.current.on('mousedown', onMouseDown);
+    leafletMap.current.on('mousemove', onMouseMove);
+    leafletMap.current.on('mouseup', onMouseUp);
+
+    return () => {
+        leafletMap.current.off('mousedown', onMouseDown);
+        leafletMap.current.off('mousemove', onMouseMove);
+        leafletMap.current.off('mouseup', onMouseUp);
+    };
+  }, [L, isDrawingMode, serverId]);
+
+  if (!L) return null;
 
   return (
     <div className="rust-map-wrapper" style={{ height: '100%', width: '100%', background: '#0a0a0b', position: 'relative' }}>
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossOrigin="" />
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
-      {/* HUD de Controles Flotantes */}
-      <div style={{ position: 'absolute', top: '1rem', right: '1rem', zIndex: 1000, display: 'flex', gap: '0.5rem', background: 'rgba(10, 10, 11, 0.8)', padding: '0.5rem', borderRadius: '12px', border: '1px solid var(--border)', backdropFilter: 'blur(10px)' }}>
-        <button onClick={() => setShowPlayers(!showPlayers)} className="btn-icon" style={{ color: showPlayers ? '#22c55e' : '#555', padding: '0.5rem' }} title="Equipo">
-          <Users size={18} />
-        </button>
-        <button onClick={() => setShowEvents(!showEvents)} className="btn-icon" style={{ color: showEvents ? '#ef4444' : '#555', padding: '0.5rem' }} title="Eventos Activos">
-          <Zap size={18} />
-        </button>
-        <button onClick={() => setShowMonuments(!showMonuments)} className="btn-icon" style={{ color: showMonuments ? 'white' : '#555', padding: '0.5rem' }} title="Radtowns">
-          <MapIcon size={18} />
-        </button>
-        <button onClick={() => setShowVending(!showVending)} className="btn-icon" style={{ color: showVending ? '#eab308' : '#555', padding: '0.5rem' }} title="Máquinas Expendedoras">
-          <ShoppingCart size={18} />
-        </button>
-        <div style={{ width: '1px', background: 'var(--border)', margin: '0 0.25rem' }}></div>
-        <button onClick={() => setShowGrid(!showGrid)} className="btn-icon" style={{ color: showGrid ? 'rgba(255,255,255,0.7)' : '#555', padding: '0.5rem' }} title="Grilla Táctica">
-          <Layers size={18} />
-        </button>
-      </div>
+        <div style={{ position: 'absolute', bottom: '2rem', left: '2rem', zIndex: 1000, display: 'flex', gap: '0.5rem', background: 'rgba(5, 5, 5, 0.9)', padding: '0.5rem', border: '1px solid var(--border)' }}>
+            <MapControlButton active={showGrid} icon={<Layers size={18} />} onClick={() => setShowGrid(!showGrid)} title="Grilla Táctica" />
+            <MapControlButton active={showPlayers} icon={<Users size={18} />} onClick={() => setShowPlayers(!showPlayers)} title="Equipo" />
+            <MapControlButton active={showVending} icon={<ShoppingCart size={18} />} onClick={() => setShowVending(!showVending)} title="Vending" />
+            <div style={{ width: '1px', background: 'var(--border)', margin: '0 0.5rem' }}></div>
+            <MapControlButton active={isDrawingMode} icon={<Pencil size={18} />} onClick={() => setIsDrawingMode(!isDrawingMode)} title="Dibujo Táctico" highlight />
+            <MapControlButton active={false} icon={<Trash2 size={18} />} onClick={() => serverId && fetch(`/api/rustplus/drawings?serverId=${serverId}`, { method: 'DELETE' })} title="Limpiar Mapa" />
+        </div>
 
-      <div ref={mapRef} style={{ height: "100%", width: "100%", backgroundColor: '#0a0a0b' }} />
+        <div ref={mapRef} style={{ height: "100%", width: "100%", cursor: isDrawingMode ? 'crosshair' : 'grab' }} />
 
-      <style key="leaflet-overrides">{`
-        .leaflet-container { background: #0a0a0b !important; }
-        .btn-icon { background: transparent; border: none; cursor: pointer; transition: 0.2s; border-radius: 8px; }
-        .btn-icon:hover { background: rgba(255,255,255,0.1); }
-        .radar-pulse { animation: pulse 2s infinite; }
-        .raid-pulse { animation: raid-blink 0.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
-        @keyframes raid-blink { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.5); } }
-        .custom-div-icon { background: none; border: none; display: flex; align-items: center; justify-content: center; }
-        .grid-label-text { color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 900; text-shadow: 2px 2px 4px black; font-family: 'JetBrains Mono', monospace; }
-        .monument-label { color: rgba(255,255,255,0.85); font-size: 9px; font-weight: 800; text-shadow: 1px 1px 3px black, -1px -1px 3px black; text-align: center; white-space: nowrap; transform: translate(-50%, -50%); letter-spacing: 0.5px; }
-        .grid-cell-label { background: none; border: none; pointer-events: none; }
-        .grid-cell-text { color: rgba(255,255,255,0.03); font-size: 10px; font-weight: 900; letter-spacing: 1px; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-family: 'JetBrains Mono', monospace; }
-        .grid-label-outer { color: rgba(255,255,255,0.6); font-size: 14px; font-weight: 800; text-shadow: 2px 2px 4px black; }
-        .custom-popup-rust .leaflet-popup-content-wrapper { background: var(--surface); color: white; border: 1px solid var(--border); border-radius: 8px; }
-        .custom-popup-rust .leaflet-popup-tip { background: var(--surface); border: 1px solid var(--border); }
-      `}</style>
+        <style jsx global>{`
+           .map-control-btn { background: transparent; border: none; color: #555; cursor: pointer; padding: 0.5rem; transition: 0.1s; display: flex; align-items: center; justify-content: center; }
+           .map-control-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+           .map-control-btn.active { color: #fff; }
+           .map-control-btn.highlight.active { color: var(--primary); }
+           .grid-cell-label { background: none; border: none; pointer-events: none; }
+           .custom-popup-rust .leaflet-popup-content-wrapper { background: #050505; color: white; border: 1px solid var(--border); border-radius: 0; }
+           .radar-pulse { animation: pulse 2s infinite; }
+           @keyframes pulse { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
+        `}</style>
     </div>
+  );
+}
+
+function MapControlButton({ active, icon, onClick, title, highlight = false }: any) {
+  return (
+    <button onClick={onClick} title={title} className={`map-control-btn ${active ? 'active' : ''} ${highlight ? 'highlight' : ''}`}>
+       {icon}
+    </button>
   );
 }

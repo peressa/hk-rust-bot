@@ -38,7 +38,7 @@ export default function ServerCard({ server }: ServerCardProps) {
       </div>
 
       <div style={{ marginTop: 'auto', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
-        <Link href={`/dashboard/${server.id}`} className="btn-primary" style={{ width: '100%', justifyContent: 'center', fontSize: '1rem' }}>
+        <Link href={`/war-room/${server.id}`} className="btn-primary" style={{ width: '100%', justifyContent: 'center', fontSize: '1rem' }}>
           INGRESAR AL MANDO CENTRAL <ChevronRight size={20} />
         </Link>
       </div>

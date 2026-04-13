@@ -7,16 +7,16 @@
   --primary-hover: #ffffff;
   --secondary: #0a0a0a;
   --accent: #ce422b;
-  --surface: #000000;
+  --surface: #0a0a0a;
   --border: rgba(255, 255, 255, 0.08);
-  --glass: rgba(0, 0, 0, 0.95);
+  --glass: rgba(0, 0, 0, 0.98);
   --text-muted: #666;
   
   --shadow-sm: none;
   --shadow: none;
   --shadow-lg: none;
   
-  --transition: all 0.1s ease-out;
+  --transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 * {
@@ -49,6 +49,11 @@ body {
   font-family: 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(206, 66, 43, 0.02) 0%, transparent 100%),
+    linear-gradient(rgba(255, 255, 255, 0.01) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.01) 1px, transparent 1px);
+  background-size: 100% 100%, 40px 40px, 40px 40px;
 }
 
 body {

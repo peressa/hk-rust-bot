@@ -58,5 +58,12 @@ export const pt = {
     desc: 'ID-64 {id} NÃO TEM UM CONTRATO ACTIVO.',
     return: 'VOLTAR AO TERMINAL PRINCIPAL',
     loading: 'INICIALIZANDO LINK SEGURO...'
+  },
+  login: {
+    terminal: 'ACESSO AO TERMINAL REQUISITADO',
+    authenticate: 'AUTENTIQUE-SE VIA STEAM PARA IMPLANTAR SUA INTERFACE TÁCTICA',
+    btn: 'ENTRAR COM STEAM',
+    disclaimer: 'AO ENTRAR, VOCÊ CONCORDA COM OS PROTOCOLOS DE MISSÃO.',
+    return: 'VOLTAR AO CENTRO DE COMANDO'
   }
 };

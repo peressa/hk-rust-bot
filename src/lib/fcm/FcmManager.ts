@@ -62,6 +62,33 @@ export class FcmManager {
     return listenerRegistry.isListening(steamId);
   }
 
+  /**
+   * Carga y activa todos los listeners de FCM guardados en la base de datos.
+   * Esto permite que la inteligencia se reanude automáticamente tras un despliegue
+   * sin intervención del usuario.
+   */
+  static async initAllListeners() {
+    console.log("[FCM] Iniciando recuperación masiva de listeners tácticos...");
+    try {
+      const rows = db.prepare("SELECT steamId FROM fcm_keys").all() as any[];
+      console.log(`[FCM] Se encontraron ${rows.length} identidades registradas.`);
+
+      for (const row of rows) {
+        try {
+          // Ya hay validación de duplicados dentro de listen()
+          await this.listen(row.steamId, (data) => {
+            console.log(`[FCM AutoStart] Señal recibida para ${row.steamId}`);
+          });
+        } catch (err: any) {
+          console.error(`[FCM AutoStart] Error iniciando listener para ${row.steamId}:`, err.message);
+        }
+      }
+      console.log("[FCM] Recuperación de inteligencia completada.");
+    } catch (err) {
+      console.error("[FCM] Error crítico en initAllListeners:", err);
+    }
+  }
+
   private static async getExpoPushToken(fcmToken: string) {
     const response = await axios.post("https://exp.host/--/api/v2/push/getExpoPushToken", {
       type: "fcm",

@@ -31,6 +31,8 @@ export default function LandingContent() {
   const changeLang = (l: Language) => {
     setLang(l);
     localStorage.setItem('hk-ops-lang', l);
+    // Establecer cookie para que sea legible en el servidor (login, etc)
+    document.cookie = `NEXT_LOCALE=${l}; path=/; max-age=31536000; SameSite=Lax`;
   };
 
   return (

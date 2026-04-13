@@ -58,5 +58,12 @@ export const en = {
     desc: 'ID-64 {id} HAS NO ACTIVE CONTRACT.',
     return: 'RETURN TO MAIN TERMINAL',
     loading: 'INITIALIZING SECURE LINK...'
+  },
+  login: {
+    terminal: 'TERMINAL ACCESS REQUIRED',
+    authenticate: 'AUTHENTICATE VIA STEAM TO DEPLOY YOUR TACTICAL INTERFACE',
+    btn: 'SIGN IN WITH STEAM',
+    disclaimer: 'BY SIGNING IN, YOU ACKNOWLEDGE THE MISSION PROTOCOLS.',
+    return: 'RETURN TO COMMAND CENTER'
   }
 };

@@ -43,11 +43,13 @@ export async function GET(request: Request) {
     });
 
     const activeDeaths = getDeathMarkers(serverId);
+    const intelData = rustPlusManager.getIntelLog(session.user.steamId, server.ip);
 
     return NextResponse.json({
       markers: (markersData as any)?.response?.mapMarkers?.markers || [],
       team: teamMembers,
-      deaths: activeDeaths || []
+      deaths: activeDeaths || [],
+      intel: intelData
     });
   } catch (error: any) {
     console.warn("[API Markers] Silent Fallback (200 OK with empty lists):", error.message || error);

@@ -76,6 +76,24 @@ db.exec(`
     expiresAt TEXT,
     createdAt TEXT
   );
+
+  CREATE TABLE IF NOT EXISTS war_room_invites (
+    id TEXT PRIMARY KEY,
+    serverId TEXT,
+    code TEXT,
+    targetWipeTime INTEGER, -- Invalida el link tras Wipe
+    canDraw INTEGER DEFAULT 0,
+    createdAt TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS map_drawings (
+    id TEXT PRIMARY KEY,
+    serverId TEXT,
+    steamId TEXT,
+    data TEXT, -- JSON con puntos del trazo
+    color TEXT,
+    createdAt TEXT
+  );
 `);
 
 // Patcheo dinámico de esquema por si la DB ya existía sin estas columnas (Migración silente)
@@ -283,5 +301,31 @@ export function addToWhitelist(steamId: string, name: string = "User", role: str
 export function removeFromWhitelist(steamId: string) {
   const stmt = db.prepare("DELETE FROM whitelist WHERE steamId = ? AND role != 'admin'");
   stmt.run(steamId);
+}
+
+// === War Room Invites ===
+export function createInvite(serverId: string, code: string, targetWipeTime: number, canDraw: boolean) {
+    const id = Math.random().toString(36).substring(2, 11);
+    const stmt = db.prepare(`
+        INSERT INTO war_room_invites (id, serverId, code, targetWipeTime, canDraw, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(id, serverId, code, targetWipeTime, canDraw ? 1 : 0, new Date().toISOString());
+    return id;
+}
+
+export function getInvite(id: string) {
+    const stmt = db.prepare("SELECT * FROM war_room_invites WHERE id = ?");
+    return stmt.get(id);
+}
+
+export function deleteInvite(id: string) {
+    const stmt = db.prepare("DELETE FROM war_room_invites WHERE id = ?");
+    stmt.run(id);
+}
+
+export function getInvitesByServer(serverId: string) {
+    const stmt = db.prepare("SELECT * FROM war_room_invites WHERE serverId = ?");
+    return stmt.all(serverId);
 }
 
