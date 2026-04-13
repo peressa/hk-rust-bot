@@ -233,7 +233,6 @@ export default function WarRoomPage() {
             </div>
           </aside>
         )}
-)}
 
         {/* CONTENT AREA */}
         <div style={{ flex: 1, position: 'relative' }}>
