@@ -169,9 +169,12 @@ export class FcmManager {
           const servers = dbModule.getServers(steamId);
           // Find the just saved or existing server to get webhook if it existed
           const existing = servers.find((s:any) => s.ip === ip);
-          if (existing && existing.discordWebhook) {
+          if (existing && (existing.discordWebhook || existing.discordChannelId)) {
             const { DiscordManager } = require('@/lib/discord/DiscordManager');
-            DiscordManager.sendPairing(existing.discordWebhook, existing.name, ip, server.port);
+            DiscordManager.sendPairing({ 
+              webhookUrl: existing.discordWebhook, 
+              channelId: existing.discordChannelId 
+            }, existing.name, ip, server.port);
           }
 
         } catch (err) {
@@ -199,6 +202,15 @@ export class FcmManager {
                rustPlusManager.sendTeamMessage(steamId, ip, 
                  `:exclamation: ¡${killer} te ha eliminado en ${grid}! (Coord: ${Math.round(x)},${Math.round(y)})`
                ).catch(e => console.warn("[FCM] No se pudo enviar el chat de muerte", e));
+
+               // Alerta en Discord
+               if (server && (server.discordWebhook || server.discordChannelId)) {
+                 const { DiscordManager } = require('@/lib/discord/DiscordManager');
+                 DiscordManager.sendDeath({
+                   webhookUrl: server.discordWebhook,
+                   channelId: server.discordChannelId
+                 }, killer === "Unknown" ? "Un enemigo" : killer, x, y, server.name, "Ti mismo");
+               }
             }
           }
         } catch(err) {
@@ -224,9 +236,12 @@ export class FcmManager {
           if (entity.capacity > 0 && entity.capacity < 10) {
             const dbModule = require('@/lib/db');
             const server = dbModule.default.prepare("SELECT * FROM servers WHERE id = ?").get(entity.serverId) as any;
-            if (server && server.discordWebhook) {
+            if (server && (server.discordWebhook || server.discordChannelId)) {
                 const { DiscordManager } = require('@/lib/discord/DiscordManager');
-                DiscordManager.sendAlarm(server.discordWebhook, "⚠️ BATERÍA CRÍTICA", `La batería "${entity.name}" está al ${Math.round(entity.capacity)}%. ¡Recarga pronto!`, server.name);
+                DiscordManager.sendAlarm({
+                  webhookUrl: server.discordWebhook,
+                  channelId: server.discordChannelId
+                }, "⚠️ BATERÍA CRÍTICA", `La batería "${entity.name}" está al ${Math.round(entity.capacity)}%. ¡Recarga pronto!`, server.name);
             }
           }
 
@@ -243,11 +258,14 @@ export class FcmManager {
           // We can try to find the server just by matching name or assuming the active one
           const matchingServer = servers.find((s:any) => s.name === serverName) || servers[0];
           
-          if (matchingServer && matchingServer.discordWebhook) {
+          if (matchingServer && (matchingServer.discordWebhook || matchingServer.discordChannelId)) {
             const { DiscordManager } = require('@/lib/discord/DiscordManager');
             const alarmTitle = payload.title || "Alarma Inteligente Activada";
             const alarmMsg = payload.body || "Se ha activado una alarma en tu base.";
-            DiscordManager.sendAlarm(matchingServer.discordWebhook, alarmTitle, alarmMsg, matchingServer.name);
+            DiscordManager.sendAlarm({
+              webhookUrl: matchingServer.discordWebhook,
+              channelId: matchingServer.discordChannelId
+            }, alarmTitle, alarmMsg, matchingServer.name);
           }
         } catch(err) {
           console.warn("[FCM] Error enviando alarma a Discord", err);

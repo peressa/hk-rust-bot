@@ -3,10 +3,13 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, MessageSquare, Map as MapIcon, Video, Settings, LogOut, Radio, Terminal, ShoppingCart, Calculator, Zap } from "lucide-react";
+import { LayoutDashboard, MessageSquare, Map as MapIcon, Video, Settings, LogOut, Radio, Terminal, ShoppingCart, Calculator, Zap, ShieldCheck } from "lucide-react";
+import { useSession } from "next-auth/react";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+  const isAdmin = (session?.user as any)?.role === "admin";
 
   return (
     <div className="dashboard-container" style={{ display: 'flex', minHeight: '100vh', background: 'var(--background)' }}>
@@ -49,6 +52,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <SidebarItem icon={<MessageSquare size={20} />} label="Chat de equipo" href="/dashboard/chat" active={pathname === "/dashboard/chat"} />
             </div>
           </section>
+
+          {isAdmin && (
+            <section>
+              <div style={{ fontSize: '0.65rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.5rem', paddingLeft: '1rem' }}>Administración</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <SidebarItem icon={<ShieldCheck size={20} />} label="Consola Admin" href="/dashboard/admin" active={pathname === "/dashboard/admin"} />
+              </div>
+            </section>
+          )}
         </nav>
 
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>

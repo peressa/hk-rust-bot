@@ -27,7 +27,7 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { serverId, discordWebhook, bmId } = body;
+    const { serverId, discordWebhook, discordChannelId, bmId } = body;
     
     // Import db internally or fetch from top
     const dbModule = await import("@/lib/db");
@@ -36,9 +36,10 @@ export async function POST(request: Request) {
     // Verify ownership
     const server = db.prepare("SELECT * FROM servers WHERE id = ? AND steamId = ?").get(serverId, session.user.steamId) as any;
     if (!server) return NextResponse.json({ error: "Server not found" }, { status: 404 });
-
+|
     // Update
     if (discordWebhook !== undefined) server.discordWebhook = discordWebhook;
+    if (discordChannelId !== undefined) server.discordChannelId = discordChannelId;
     if (bmId !== undefined) server.bmId = bmId;
     
     dbModule.saveServer(server);

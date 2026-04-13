@@ -33,7 +33,8 @@ export default function DashboardPage() {
   const [fcmStatus, setFcmStatus] = useState("Inactivo");
   const [hasKeys, setHasKeys] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
-  const [savingWebhook, setSavingWebhook] = useState(false);
+  const [discordChannelId, setDiscordChannelId] = useState("");
+  const [savingDiscord, setSavingDiscord] = useState(false);
   const [bmId, setBmId] = useState("");
   const [savingBmId, setSavingBmId] = useState(false);
   const [bmData, setBmData] = useState<any>(null);
@@ -49,6 +50,7 @@ export default function DashboardPage() {
       setStorageMonitor(null);
       setBmData(null);
       setWebhookUrl(selectedServer.discordWebhook || "");
+      setDiscordChannelId(selectedServer.discordChannelId || "");
       setBmId(selectedServer.bmId || "");
       fetchEntities(selectedServer.id);
       fetchServerData(selectedServer.id);
@@ -145,17 +147,22 @@ export default function DashboardPage() {
     }
   };
 
-  const saveWebhook = async () => {
+  const saveDiscordSettings = async () => {
     if (!selectedServer) return;
-    setSavingWebhook(true);
+    setSavingDiscord(true);
     try {
       await fetch("/api/servers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serverId: selectedServer.id, discordWebhook: webhookUrl })
+        body: JSON.stringify({ 
+          serverId: selectedServer.id, 
+          discordWebhook: webhookUrl,
+          discordChannelId: discordChannelId
+        })
       });
       fetchServers();
-    } catch (err) { console.error(err); } finally { setSavingWebhook(false); }
+      alert("Ajustes de Discord guardados.");
+    } catch (err) { console.error(err); } finally { setSavingDiscord(false); }
   };
 
   const fetchBattleMetricsData = async (id: string) => {
@@ -339,11 +346,22 @@ export default function DashboardPage() {
 
                 {/* Integración Discord */}
                 <div className="premium-card">
-                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1rem' }}>
+                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem', marginBottom: '1rem' }}>
                     <MessageSquare size={18} color="#5865F2" /> Integración Discord
                   </h3>
-                  <input type="text" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="Webhook URL..." style={{ width: '100%', padding: '0.5rem', fontSize: '0.8rem', background: 'rgba(0,0,0,0.2)', marginBottom: '0.5rem' }} />
-                  <button onClick={saveWebhook} disabled={savingWebhook} className="btn-primary" style={{ width: '100%', fontSize: '0.75rem' }}>Guardar Webhook</button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Webhook URL (Legacy)</label>
+                      <input type="text" value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="https://discord.com/api/webhooks/..." style={{ width: '100%', padding: '0.5rem', fontSize: '0.8rem', background: 'rgba(0,0,0,0.2)' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.2rem' }}>Bot Channel ID (Recomendado)</label>
+                      <input type="text" value={discordChannelId} onChange={(e) => setDiscordChannelId(e.target.value)} placeholder="ID del Canal..." style={{ width: '100%', padding: '0.5rem', fontSize: '0.8rem', background: 'rgba(0,0,0,0.2)' }} />
+                    </div>
+                    <button onClick={saveDiscordSettings} disabled={savingDiscord} className="btn-primary" style={{ width: '100%', fontSize: '0.75rem', marginTop: '0.5rem' }}>
+                      {savingDiscord ? <RefreshCw size={14} className="animate-spin" /> : "Guardar Ajustes Discord"}
+                    </button>
+                  </div>
                 </div>
 
                 {/* BattleMetrics */}

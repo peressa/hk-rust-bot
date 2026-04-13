@@ -68,6 +68,14 @@ db.exec(`
     name TEXT,
     UNIQUE(steamId, serverId, identifier)
   );
+
+  CREATE TABLE IF NOT EXISTS whitelist (
+    steamId TEXT PRIMARY KEY,
+    name TEXT,
+    role TEXT DEFAULT 'user', -- 'user' or 'admin'
+    expiresAt TEXT,
+    createdAt TEXT
+  );
 `);
 
 // Patcheo dinámico de esquema por si la DB ya existía sin estas columnas (Migración silente)
@@ -84,6 +92,9 @@ try {
   db.exec("ALTER TABLE servers ADD COLUMN bmId TEXT;");
 } catch(e) {}
 try {
+  db.exec("ALTER TABLE servers ADD COLUMN discordChannelId TEXT;");
+} catch(e) {}
+try {
   db.exec("ALTER TABLE entities ADD COLUMN value INTEGER DEFAULT 0;");
 } catch(e) {}
 try {
@@ -91,6 +102,13 @@ try {
 } catch(e) {}
 try {
   db.exec("ALTER TABLE entities ADD COLUMN hasCapacity INTEGER DEFAULT 0;");
+} catch(e) {}
+
+// === Whitelist Admin Inicial ===
+try {
+  const adminId = "76561197960580123";
+  const stmt = db.prepare("INSERT OR IGNORE INTO whitelist (steamId, name, role, createdAt) VALUES (?, ?, ?, ?)");
+  stmt.run(adminId, "Admin Principal", "admin", new Date().toISOString());
 } catch(e) {}
 
 export default db;
@@ -103,8 +121,8 @@ export function saveServer(server: any) {
   }
 
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO servers (id, steamId, ip, port, playerId, playerToken, name, useProxy, discordWebhook, bmId)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO servers (id, steamId, ip, port, playerId, playerToken, name, useProxy, discordWebhook, discordChannelId, bmId)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   stmt.run(
     server.id || `${server.steamId}-${server.ip}`, 
@@ -116,6 +134,7 @@ export function saveServer(server: any) {
     server.name,
     server.useProxy ? 1 : 0,
     server.discordWebhook || null,
+    server.discordChannelId || null,
     server.bmId || null
   );
 }
@@ -219,5 +238,50 @@ export function getCameras(steamId: string, serverId: string) {
 export function deleteCamera(cameraId: string) {
   const stmt = db.prepare("DELETE FROM cameras WHERE id = ?");
   stmt.run(cameraId);
+}
+
+// === Whitelist Functions ===
+export function isWhitelisted(steamId: string): any | null {
+  if (!steamId) return null;
+  const stmt = db.prepare("SELECT * FROM whitelist WHERE steamId = ?");
+  const row = stmt.get(steamId) as any;
+  
+  if (!row) return null;
+
+  // Verificar si ha expirado
+  if (row.expiresAt) {
+    const expires = new Date(row.expiresAt);
+    if (expires < new Date()) {
+      console.warn(`[Whitelist] Licencia de ${steamId} expirada el ${row.expiresAt}`);
+      return null;
+    }
+  }
+
+  return row;
+}
+
+export function getAllWhitelisted() {
+  const stmt = db.prepare("SELECT * FROM whitelist ORDER BY createdAt DESC");
+  return stmt.all();
+}
+
+export function addToWhitelist(steamId: string, name: string = "User", role: string = "user", days: number = 0) {
+  let expiresAt = null;
+  if (days > 0) {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    expiresAt = date.toISOString();
+  }
+
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO whitelist (steamId, name, role, expiresAt, createdAt)
+    VALUES (?, ?, ?, ?, ?)
+  `);
+  stmt.run(steamId, name, role, expiresAt, new Date().toISOString());
+}
+
+export function removeFromWhitelist(steamId: string) {
+  const stmt = db.prepare("DELETE FROM whitelist WHERE steamId = ? AND role != 'admin'");
+  stmt.run(steamId);
 }
 

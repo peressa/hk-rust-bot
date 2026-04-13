@@ -494,7 +494,19 @@ class RustPlusManager extends EventEmitter {
 
         // 3. Detección de Muerte (Solo si estaba vivo)
         if (last.isAlive && !m.isAlive) {
-          rustplus.sendTeamMessage(`:exclamation: ¡${m.name} ha muerto en ${grid}!`);
+          console.log(`[Monitor] Muerte detectada para miembro del equipo: ${m.name} en ${grid} (${Math.round(m.x)}, ${Math.round(m.y)})`);
+          this.sendTeamMessage(steamId, ip, `:exclamation: ¡${m.name} ha muerto en ${grid}! (Coord: ${Math.round(m.x)}, ${Math.round(m.y)})`)
+            .catch(e => console.warn(`[Monitor] Error enviando mensaje de muerte para ${m.name}:`, e.message));
+
+          // Alerta en Discord
+          const server = db.getServers(steamId).find((s: any) => s.ip === ip);
+          if (server && (server.discordWebhook || server.discordChannelId)) {
+            const { DiscordManager } = require('@/lib/discord/DiscordManager');
+            DiscordManager.sendDeath({
+              webhookUrl: server.discordWebhook,
+              channelId: server.discordChannelId
+            }, m.name || "Miembro del equipo", m.x, m.y, server.name);
+          }
         }
 
         // 4. Lógica de AFK simplificada (No se movió en 15s, guardamos timestamp)
@@ -546,21 +558,41 @@ class RustPlusManager extends EventEmitter {
       if ([4, 5, 6, 8].includes(m.type) && !lastEventIds.includes(m.id)) {
         const grid = worldToGrid(m.x, m.y, mapSize);
         let msg = "";
+        let eventName = "";
         
-        if (m.type === 5) msg = `:exclamation: ¡Cargo Ship detectado en ${grid}!`;
-        else if (m.type === 4) msg = `:exclamation: ¡Chinook (CH47) en curso hacia ${grid}!`;
-        else if (m.type === 8) msg = `:exclamation: ¡Helicóptero de Patrulla activo en ${grid}!`;
-        else if (m.type === 6) {
-           // Heurística de Oil Rig (Petro): Si está lejos del centro o cerca de los bordes típicos
+        if (m.type === 5) {
+          msg = `:exclamation: ¡Cargo Ship detectado en ${grid}!`;
+          eventName = "🚢 Barco (Cargo Ship)";
+        } else if (m.type === 4) {
+          msg = `:exclamation: ¡Chinook (CH47) en curso hacia ${grid}!`;
+          eventName = "🚁 Chinook (CH47)";
+        } else if (m.type === 8) {
+          msg = `:exclamation: ¡Helicóptero de Patrulla activo en ${grid}!`;
+          eventName = "🚁 Heli Patrulla";
+        } else if (m.type === 6) {
            const isFar = Math.abs(m.x - mapSize/2) > mapSize/3 || Math.abs(m.y - mapSize/2) > mapSize/3;
            if (isFar) {
               msg = `:exclamation: ¡Oil Rig (Petro) activo en ${grid}! Caja fuerte detectada.`;
+              eventName = "📦 Oil Rig (Petro)";
            } else {
               msg = `:exclamation: ¡Caja Fuerte (Locked Crate) detectada en ${grid}!`;
+              eventName = "📦 Caja Fuerte (Locked Crate)";
            }
         }
         
-        if (msg) rustplus.sendTeamMessage(msg);
+        if (msg) {
+          rustplus.sendTeamMessage(msg);
+          
+          // Alerta en Discord
+          const server = db.getServers(steamId).find((s: any) => s.ip === ip);
+          if (server && (server.discordWebhook || server.discordChannelId)) {
+            const { DiscordManager } = require('@/lib/discord/DiscordManager');
+            DiscordManager.sendEvent({
+              webhookUrl: server.discordWebhook,
+              channelId: server.discordChannelId
+            }, eventName, grid, server.name);
+          }
+        }
       }
     });
 
