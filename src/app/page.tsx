@@ -5,34 +5,32 @@ import { getServerSession } from "next-auth";
 import { getAuthOptions } from "@/lib/auth/authOptions";
 import { redirect } from "next/navigation";
 import { 
-  Shield, 
-  Zap, 
-  Map, 
-  MessageSquare, 
+  ShieldAlert, 
+  Terminal, 
+  Map as MapIcon, 
+  Crosshair, 
+  Radio, 
   Activity, 
-  Cctv, 
-  Bell, 
   Lock,
   ChevronRight,
-  Monitor,
-  Smartphone,
-  Server
+  Wifi,
+  Zap,
+  HardDrive
 } from "lucide-react";
 
 export default async function LandingPage() {
   const session = await getServerSession(getAuthOptions());
 
-  // Si el usuario ya está logueado, mandarlo al dashboard directamente
   if (session) {
     redirect("/dashboard");
   }
 
   return (
-    <div style={{ background: 'var(--background)', color: 'white', minHeight: '100vh', overflowX: 'hidden' }}>
+    <div style={{ background: 'var(--background)', color: 'var(--foreground)', minHeight: '100vh', overflowX: 'hidden' }}>
       
-      {/* Navigation */}
+      {/* Tactical Header */}
       <nav style={{ 
-        padding: '1.5rem 2rem', 
+        padding: '1rem 2rem', 
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between',
@@ -41,33 +39,36 @@ export default async function LandingPage() {
         left: 0,
         right: 0,
         zIndex: 100,
-        background: 'rgba(10, 10, 11, 0.8)',
-        backdropFilter: 'blur(20px)',
-        borderBottom: '1px solid var(--border)'
+        background: 'rgba(8, 8, 8, 0.95)',
+        borderBottom: '2px solid rgba(255,255,255,0.03)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <Shield color="var(--primary)" size={32} />
-          <span style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.05em' }}>HK SENTINEL</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div style={{ background: 'var(--primary)', padding: '4px', display: 'flex' }}>
+            <Radio color="white" size={24} />
+          </div>
+          <span style={{ fontSize: '1.75rem', fontWeight: 400, fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>HK // SENTINEL-PROTOCOL</span>
         </div>
-        <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-          <a href="#features" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 500 }}>Funciones</a>
-          <a href="#pricing" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 500 }}>Precios</a>
-          <a href="/api/auth/signin" className="btn-primary" style={{ padding: '0.6rem 1.2rem', fontSize: '0.85rem' }}>
-            Acceso Clientes
-          </a>
+        <div style={{ display: 'flex', gap: '2.5rem', alignItems: 'center' }}>
+          <a href="#system" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Sistema</a>
+          <a href="#access" style={{ color: 'var(--text-muted)', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase' }}>Licencias</a>
+          <Link href="/api/auth/signin" className="btn-primary" style={{ padding: '0.5rem 1.5rem', fontSize: '0.8rem' }}>
+            INGRESAR AL TERMINAL
+          </Link>
         </div>
       </nav>
 
-      {/* Hero Section */}
+      {/* Hero: Industrial Command Center */}
       <header style={{ 
-        padding: '12rem 2rem 8rem',
+        padding: '10rem 2rem 6rem',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         textAlign: 'center',
-        background: 'radial-gradient(circle at 50% 30%, rgba(205, 65, 43, 0.15) 0%, transparent 70%)'
+        minHeight: '90vh',
+        justifyContent: 'center'
       }}>
+        {/* Background Overlay */}
         <div style={{ 
           position: 'absolute', 
           top: 0, 
@@ -75,200 +76,202 @@ export default async function LandingPage() {
           right: 0, 
           bottom: 0, 
           zIndex: -1, 
-          opacity: 0.4,
-          maskImage: 'linear-gradient(to bottom, black 50%, transparent 100%)'
+          opacity: 0.5
         }}>
           <Image 
-            src="/hero.png" 
+            src="/hero_industrial.png" 
             alt="Rust Sentinel Tactical Background" 
             fill 
             style={{ objectFit: 'cover' }}
             priority
           />
+          <div style={{ 
+            position: 'absolute', 
+            inset: 0, 
+            background: 'linear-gradient(to bottom, transparent 0%, var(--background) 95%)' 
+          }}></div>
         </div>
 
-        <div style={{ 
-          display: 'inline-flex', 
-          alignItems: 'center', 
-          gap: '0.5rem', 
-          padding: '0.5rem 1rem', 
-          background: 'rgba(255,255,255,0.05)', 
-          borderRadius: '50px',
-          border: '1px solid var(--border)',
-          marginBottom: '2rem',
-          fontSize: '0.8rem',
-          fontWeight: 600,
-          color: 'var(--primary)'
-        }}>
-          <Zap size={14} fill="var(--primary)" /> LA ÚLTIMA VENTAJA TÁCTICA PARA RUST
-        </div>
+        <div className="animate-fade-in" style={{ maxWidth: '900px' }}>
+          <div className="text-stamped" style={{ marginBottom: '1.5rem', display: 'inline-block' }}>
+            ESTADO DEL SISTEMA: OPERATIVO // VERSIN 4.2.0
+          </div>
+          
+          <h1 style={{ 
+            fontSize: 'clamp(4rem, 10vw, 7rem)', 
+            lineHeight: 0.85, 
+            marginBottom: '1.5rem',
+            color: 'white'
+          }}>
+            VIGILANCIA <br/> <span style={{ color: 'var(--primary)' }}>TOTAL</span>
+          </h1>
 
-        <h1 style={{ 
-          fontSize: 'clamp(3rem, 8vw, 5rem)', 
-          lineHeight: 1, 
-          fontWeight: 900, 
-          maxWidth: '900px',
-          margin: '0 auto 1.5rem',
-          letterSpacing: '-0.04em'
-        }}>
-          Domina el <span style={{ color: 'var(--primary)' }}>Wipe</span> con Inteligencia Real
-        </h1>
+          <p style={{ 
+            color: 'var(--text-muted)', 
+            fontSize: '1.1rem', 
+            maxWidth: '600px', 
+            margin: '0 auto 3rem',
+            lineHeight: 1.5,
+            letterSpacing: '0.02em',
+            textTransform: 'uppercase'
+          }}>
+            La ventaja estratǸgica definitiva para supervivientes. 
+            Conecta tu clan a una red de inteligencia en tiempo real.
+          </p>
 
-        <p style={{ 
-          color: 'var(--text-muted)', 
-          fontSize: '1.25rem', 
-          maxWidth: '700px', 
-          lineHeight: 1.6,
-          marginBottom: '3rem'
-        }}>
-          HK Sentinel conecta tus servidores de Rust directamente con tu equipo. Radar estratégico, notificaciones de bajas y control de base unificado en una sola plataforma web.
-        </p>
-
-        <div style={{ display: 'flex', gap: '1rem' }}>
-          <a href="/api/auth/signin" className="btn-primary" style={{ padding: '1.2rem 2.5rem', fontSize: '1.1rem' }}>
-            Empezar ahora <ChevronRight size={20} />
-          </a>
-          <a href="#features" className="btn-secondary" style={{ padding: '1.2rem 2.5rem', fontSize: '1.1rem', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', borderRadius: '8px', color: 'white', textDecoration: 'none' }}>
-            Ver Funciones
-          </a>
+          <div style={{ display: 'flex', gap: '1px', background: 'rgba(255,255,255,0.05)', padding: '1px' }}>
+            <Link href="/api/auth/signin" className="btn-primary" style={{ padding: '1.2rem 3rem' }}>
+              RECLAMAR ACCESO <ChevronRight size={20} />
+            </Link>
+            <a href="#system" className="btn-secondary" style={{ padding: '1.2rem 3rem' }}>
+              DOCUMENTACIN
+            </a>
+          </div>
         </div>
       </header>
 
-      {/* Features Grid */}
-      <section id="features" style={{ padding: '8rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '5rem' }}>
-          <h2 style={{ fontSize: '2.5rem', marginBottom: '1rem' }}>Diseñado para Clanes <span style={{ color: 'var(--primary)' }}>Dominantes</span></h2>
-          <p style={{ color: 'var(--text-muted)', maxWidth: '600px', margin: '0 auto' }}>Todas las herramientas que necesitas para mantener la superioridad en el servidor sin estar conectado al juego.</p>
+      {/* Modules Grid */}
+      <section id="system" style={{ padding: '6rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
+        <div style={{ borderLeft: '4px solid var(--primary)', paddingLeft: '2rem', marginBottom: '4rem' }}>
+          <h2 style={{ fontSize: '3rem', marginBottom: '0.5rem' }}>Mdulos de Inteligencia</h2>
+          <p style={{ color: 'var(--text-muted)', textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.1em' }}>Integracin directa con servidores Facepunch</p>
         </div>
 
         <div style={{ 
           display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', 
-          gap: '2rem'
+          gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', 
+          gap: '1.5rem'
         }}>
-          <FeatureCard 
-            icon={<Map size={32} color="var(--primary)" />}
-            title="Mapa Táctico Web"
-            desc="Visualiza la posición de tu equipo, monumentos y puntos de interés en tiempo real desde cualquier dispositivo."
+          <SystemModule 
+            id="MOD-01"
+            icon={<MapIcon size={24} />}
+            title="Radar de Posicionamiento"
+            desc="Triangulacin de aliados y objetivos en tiempo real sobre cartografa oficial."
           />
-          <FeatureCard 
-            icon={<MessageSquare size={32} color="var(--primary)" />}
-            title="Notificaciones de Bajas"
-            desc="Recibe alertas instantáneas en Discord cuando tú o miembros de tu clan sean derrotados, con coordenadas exactas."
+          <SystemModule 
+            id="MOD-02"
+            icon={<ShieldAlert size={24} />}
+            title="Protocolo de Bajas"
+            desc="Alertas instantǭneas de eliminacin va satǸlite (Discord) con vector de origen."
           />
-          <FeatureCard 
-            icon={<Activity size={32} color="var(--primary)" />}
-            title="Radar de Eventos"
-            desc="Sé el primero en saber cuándo aparece el Barco, el Heli de Patrulla o el Chinook en el mapa."
+          <SystemModule 
+            id="MOD-03"
+            icon={<Terminal size={24} />}
+            title="Intel de Eventos"
+            desc="Monitoreo automǭtico de activos globales: Barco, Heli y Suministros."
           />
-          <FeatureCard 
-            icon={<Cctv size={32} color="var(--primary)" />}
-            title="Seguridad CCTV"
-            desc="Vigila tus cámaras y controla torretas de forma remota para defender tu base incluso estando offline."
-          />
-          <FeatureCard 
-            icon={<Bell size={32} color="var(--primary)" />}
-            title="Alarmas Inteligentes"
-            desc="Configura alertas que notifican directamente a tu equipo en Discord ante cualquier intrusión detectada."
-          />
-          <FeatureCard 
-            icon={<Lock size={32} color="var(--primary)" />}
-            title="Centralizado y Seguro"
-            desc="Una sola cuenta de Sentinel gestiona todos tus servidores. Seguridad por SteamID y Whitelist."
+          <SystemModule 
+            id="MOD-04"
+            icon={<Activity size={24} />}
+            title="Monitor de Base"
+            desc="Acceso remoto a sistemas CCTV y actuadores elǸctricos (Smart Switches)."
           />
         </div>
       </section>
 
-      {/* Stats / Proof */}
-      <section style={{ padding: '6rem 2rem', background: 'rgba(205, 65, 43, 0.03)', borderY: '1px solid var(--border)' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: '4rem', justifyContent: 'center' }}>
-          <StatItem value="100ms" label="Latencia de Respuesta" />
-          <StatItem value="24/7" label="Disponibilidad Bot" />
-          <StatItem value="100%" label="Seguridad por Steam" />
+      {/* Terminal Data Section */}
+      <section style={{ padding: '4rem 2rem', background: 'rgba(255, 66, 43, 0.02)', borderTop: '1px solid rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '3rem' }}>
+          <TechData icon={<Wifi size={16}/>} label="LATENCIA" value="0.04 MS" />
+          <TechData icon={<HardDrive size={16}/>} label="PERSISTENCIA" value="DB-ENCRYPTED" />
+          <TechData icon={<Lock size={16}/>} label="AUTENTICACIN" value="STEAM-V3" />
         </div>
       </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" style={{ padding: '8rem 2rem', textAlign: 'center' }}>
-        <h2 style={{ fontSize: '3rem', marginBottom: '4rem' }}>Planes Sencillos</h2>
+      {/* Access Plan Section */}
+      <section id="access" style={{ padding: '8rem 2rem', textAlign: 'center' }}>
+        <h2 style={{ fontSize: '3.5rem', marginBottom: '4rem' }}>Protocolos de Adquisicin</h2>
         
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'center', alignItems: 'flex-start' }}>
-          {/* Plan Pro */}
-          <div className="premium-card" style={{ maxWidth: '380px', padding: '3rem', textAlign: 'left', background: 'rgba(255,255,255,0.02)' }}>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Plan Táctico</h3>
-            <div style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>$9.99 <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>/ mes</span></div>
-            <ul style={{ listStyle: 'none', padding: 0, marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-muted)' }}>
-              <li>✓ Radar de Eventos Globales</li>
-              <li>✓ Notificaciones de Bajas</li>
-              <li>✓ Mapa Tactico en Tiempo Real</li>
-              <li>✓ Control CCTV y Switches</li>
-              <li>✓ Soporte Discord Estándar</li>
-            </ul>
-            <a href="/api/auth/signin" className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '1rem' }}>
-              Comprar Ahora
-            </a>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', justifyContent: 'center' }}>
+          {/* Tactical Plan */}
+          <div className="premium-card" style={{ maxWidth: '380px', padding: '0', textAlign: 'left', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ padding: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>REF: SUBS-30D</div>
+              <h3 style={{ fontSize: '1.75rem' }}>Plan de Operaciones</h3>
+            </div>
+            <div style={{ padding: '2rem' }}>
+              <div style={{ fontSize: '3rem', fontWeight: 400, fontFamily: 'Bebas Neue', marginBottom: '2rem' }}>$9.99 <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>/ MES</span></div>
+              <ul style={{ listStyle: 'none', padding: 0, marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                <li>[+] Radar de Eventos Globales</li>
+                <li>[+] Alertas de Bajas Intel</li>
+                <li>[+] Acceso al Mapa Tǭctico</li>
+                <li>[+] Control CCTV Remoto</li>
+              </ul>
+              <Link href="/api/auth/signin" className="btn-secondary" style={{ width: '100%', justifyContent: 'center' }}>
+                ACTIVAR CONTRATO
+              </Link>
+            </div>
           </div>
 
-          {/* Plan Lifetime */}
+          {/* Lifetime Plan */}
           <div className="premium-card" style={{ 
             maxWidth: '380px', 
-            padding: '3rem', 
+            padding: '0', 
             textAlign: 'left', 
-            border: '2px solid var(--primary)',
-            transform: 'scale(1.05)',
-            background: 'linear-gradient(165deg, rgba(205,65,43,0.05) 0%, transparent 100%)'
+            border: '1px solid var(--primary)',
+            background: 'rgba(206, 66, 43, 0.05)'
           }}>
-            <div style={{ background: 'var(--primary)', color: 'white', fontWeight: 800, fontSize: '0.7rem', padding: '0.2rem 1rem', borderRadius: '50px', display: 'inline-block', marginBottom: '1.5rem' }}>VALOR MÁXIMO</div>
-            <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Sentinel Vitalicio</h3>
-            <div style={{ fontSize: '2.5rem', fontWeight: 800, marginBottom: '1.5rem' }}>$49.99 <span style={{ fontSize: '1rem', color: 'var(--text-muted)' }}>pago único</span></div>
-            <ul style={{ listStyle: 'none', padding: 0, marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <li>✓ Todas las funciones incluidas</li>
-              <li>✓ Acceso a futuras actualizaciones</li>
-              <li>✓ Sin cuotas mensuales nunca</li>
-              <li>✓ Rol VIP en Discord</li>
-              <li>✓ Prioridad en la cola del Bot</li>
-            </ul>
-            <a href="/api/auth/signin" className="btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '1rem' }}>
-              Acceso Vitalicio
-            </a>
+            <div style={{ padding: '2rem', borderBottom: '1px solid var(--primary)', background: 'var(--primary)', color: 'white' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, marginBottom: '0.5rem', opacity: 0.8 }}>ALTA PRIORIDAD</div>
+              <h3 style={{ fontSize: '1.75rem' }}>Protocolo Vitalicio</h3>
+            </div>
+            <div style={{ padding: '2rem' }}>
+              <div style={{ fontSize: '3rem', fontWeight: 400, fontFamily: 'Bebas Neue', marginBottom: '2rem' }}>$49.99 <span style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.5)' }}>PAGO NICO</span></div>
+              <ul style={{ listStyle: 'none', padding: 0, marginBottom: '3rem', display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.9rem' }}>
+                <li>[+] Todos los mdulos activos</li>
+                <li>[+] Soporte de Prioridad Alfa</li>
+                <li>[+] Sin cuotas de mantenimiento</li>
+                <li>[+] Rol de Fundador Sentinel</li>
+              </ul>
+              <Link href="/api/auth/signin" className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                ADQUIRIR ACCESO TOTAL
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer style={{ padding: '6rem 2rem 3rem', borderTop: '1px solid var(--border)', textAlign: 'center' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', justifyContent: 'center', marginBottom: '2rem' }}>
-          <Shield color="var(--primary)" size={32} />
-          <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>HK SENTINEL</span>
+      {/* Industrial Footer */}
+      <footer style={{ padding: '6rem 2rem 4rem', borderTop: '2px solid rgba(255,255,255,0.03)', textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', justifyContent: 'center', marginBottom: '3rem' }}>
+          <div style={{ border: '2px solid var(--text-muted)', padding: '4px' }}>
+            <Radio color="var(--text-muted)" size={24} />
+          </div>
+          <span style={{ fontSize: '1.5rem', fontWeight: 400, fontFamily: 'Bebas Neue', color: 'var(--text-muted)' }}>SENTINEL // HK-PRODROME</span>
         </div>
-        <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', marginBottom: '3rem' }}>
-          <Monitor color="var(--text-muted)" />
-          <Smartphone color="var(--text-muted)" />
-          <Server color="var(--text-muted)" />
+        <div style={{ display: 'flex', gap: '3rem', justifyContent: 'center', marginBottom: '4rem', opacity: 0.3 }}>
+          <Terminal size={20} />
+          <Lock size={20} />
+          <Zap size={20} />
         </div>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-          &copy; 2026 HK Sentinel - No afiliado oficialmente con Facepunch Studios.
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.7rem', letterSpacing: '0.1em' }}>
+          RESTRICCIONES: ESTA HERRAMIENTA NO EST AFILIADA CON FACEPUNCH STUDIOS. <br/>
+          &copy; 2026 HK SENTINEL PROTOCOL. TODOS LOS DERECHOS RESERVADOS.
         </p>
       </footer>
     </div>
   );
 }
 
-function FeatureCard({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) {
+function SystemModule({ id, icon, title, desc }: { id: string, icon: React.ReactNode, title: string, desc: string }) {
   return (
-    <div className="premium-card" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-      <div>{icon}</div>
-      <h3 style={{ fontSize: '1.5rem' }}>{title}</h3>
-      <p style={{ color: 'var(--text-muted)', lineHeight: 1.6 }}>{desc}</p>
+    <div className="premium-card" style={{ padding: '2rem' }}>
+      <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800, marginBottom: '1rem' }}>{id}</div>
+      <div style={{ marginBottom: '1.5rem', color: 'white' }}>{icon}</div>
+      <h3 style={{ fontSize: '1.5rem', marginBottom: '0.75rem', color: 'white' }}>{title}</h3>
+      <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.4 }}>{desc}</p>
     </div>
   );
 }
 
-function StatItem({ value, label }: { value: string, label: string }) {
+function TechData({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
-    <div style={{ textAlign: 'center' }}>
-      <div style={{ fontSize: '3rem', fontWeight: 900, color: 'white' }}>{value}</div>
-      <div style={{ color: 'var(--primary)', fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{label}</div>
+    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+      <div style={{ color: 'var(--primary)' }}>{icon}</div>
+      <div>
+        <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 700 }}>{label}</div>
+        <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'white' }}>{value}</div>
+      </div>
     </div>
   );
 }
