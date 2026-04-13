@@ -41,19 +41,19 @@ export default function DashboardPage() {
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
-            <h1 style={{ fontSize: '4rem', fontWeight: 900, fontFamily: 'Bebas Neue', letterSpacing: '0.05em', lineHeight: 0.9 }}>
-              HUB_OPERACIONES
+            <h1 style={{ fontSize: '3rem', fontWeight: 800, fontFamily: 'var(--font-barlow)', letterSpacing: '-0.02em', lineHeight: 1, color: '#fff' }}>
+              Central de Mando
             </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase', marginTop: '0.5rem' }}>
-              Seleccione un teatro de operaciones para iniciar la sincronización táctica.
+            <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '0.5rem', fontWeight: 400 }}>
+              Seleccione un servidor para iniciar la monitorización táctica en tiempo real.
             </p>
           </div>
           <div style={{ display: 'flex', gap: '1rem' }}>
-            <Link href="/dashboard/settings" className="btn-secondary" style={{ padding: '0.75rem 1.5rem' }}>
-              <SettingsIcon size={18} /> CONFIGURACIÓN
+            <Link href="/dashboard/settings" className="btn-secondary" style={{ padding: '0.75rem 1.5rem', fontWeight: 600, fontFamily: 'var(--font-barlow)' }}>
+              <SettingsIcon size={18} /> configuración
             </Link>
-            <Link href="/dashboard/settings" className="btn-primary" style={{ padding: '0.75rem 1.5rem' }}>
-              <PlusCircle size={18} /> VINCULAR NUEVO
+            <Link href="/dashboard/settings" className="btn-primary" style={{ padding: '0.75rem 1.5rem', fontWeight: 700, fontFamily: 'var(--font-barlow)' }}>
+              <PlusCircle size={18} /> vincular nuevo
             </Link>
           </div>
         </header>
@@ -61,8 +61,8 @@ export default function DashboardPage() {
         {servers.length === 0 ? (
           <div className="premium-card" style={{ textAlign: 'center', padding: '6rem 2rem', borderStyle: 'dashed' }}>
              <Server size={64} color="var(--primary)" style={{ opacity: 0.1, marginBottom: '1.5rem' }} />
-             <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '2.5rem', marginBottom: '1rem' }}>NO HAY SEÑALES DETECTADAS</h2>
-             <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto 2.5rem', fontWeight: 700 }}>
+             <h2 style={{ fontFamily: 'var(--font-barlow)', fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>No se detectan señales</h2>
+             <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto 2.5rem' }}>
                 Aún no has vinculado ningún servidor de Rust. Utiliza el terminal de enlace para comenzar la monitorización.
              </p>
              <Link href="/dashboard/settings" className="btn-primary">IR AL TERMINAL DE ENLACE</Link>
@@ -87,15 +87,15 @@ export default function DashboardPage() {
                 transition: 'var(--transition)'
               }} onPointerOver={(e) => (e.currentTarget.style.opacity = '1')} onPointerOut={(e) => (e.currentTarget.style.opacity = '0.5')}>
                 <PlusCircle size={40} />
-                <span style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem' }}>COMPLETAR_ENLACE</span>
+                <span style={{ fontFamily: 'var(--font-barlow)', fontSize: '1.25rem', fontWeight: 600 }}>Vincular Servidor</span>
               </div>
             </Link>
           </div>
         )}
 
-        <footer style={{ marginTop: '5rem', borderTop: '1px solid var(--border)', paddingTop: '2rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>
+        <footer style={{ marginTop: '5rem', borderTop: '1px solid var(--border)', paddingTop: '2rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'var(--font-roboto)' }}>
            <div style={{ display: 'flex', gap: '2rem' }}>
-             <span>SISTEMA: RUST OPS v2.4</span>
+             <span>SISTEMA: RUST SENTINEL v3.0</span>
              <span>ENLACES ACTIVOS: {servers.length}</span>
            </div>
            <div>ESTADO DE RED: <span style={{ color: '#22c55e' }}>NOMINAL</span></div>

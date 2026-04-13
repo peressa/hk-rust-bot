@@ -59,8 +59,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div style={{ background: 'var(--primary)', padding: '4px', display: 'flex' }}>
             <Radio color="white" size={24} />
           </div>
-          <h2 style={{ fontSize: '1.8rem', fontWeight: 900, fontFamily: 'Bebas Neue', letterSpacing: '0.05em', lineHeight: 1 }}>
-            RUST <span style={{ color: 'var(--primary)' }}>OPS</span>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-barlow)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+            RUST <span style={{ color: 'var(--primary)', fontStyle: 'italic' }}>SENTINEL</span>
           </h2>
         </div>
 
@@ -68,17 +68,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           
           <div className="nav-group">
             <h4 style={{ 
-                fontSize: '0.65rem', 
+                fontSize: '0.7rem', 
                 color: 'var(--primary)', 
                 textTransform: 'uppercase', 
-                letterSpacing: '0.2em', 
+                letterSpacing: '0.1rem', 
                 marginBottom: '1rem', 
                 paddingLeft: '0.5rem',
-                fontFamily: 'Bebas Neue',
-                fontWeight: 900,
-                opacity: 0.8
+                fontFamily: 'var(--font-barlow)',
+                fontWeight: 700,
+                opacity: 0.6
             }}>
-                / OPERACIONES
+                Operaciones
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
               <SidebarItem icon={<LayoutDashboard size={18} />} label="Centro de Mando" href="/dashboard" active={pathname === "/dashboard"} />
@@ -87,16 +87,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           <div className="nav-group">
             <h4 style={{ 
-                fontSize: '0.65rem', 
+                fontSize: '0.7rem', 
                 color: 'rgba(255,255,255,0.2)', 
                 textTransform: 'uppercase', 
-                letterSpacing: '0.2em', 
+                letterSpacing: '0.1rem', 
                 marginBottom: '1rem', 
                 paddingLeft: '0.5rem',
-                fontFamily: 'Bebas Neue',
-                fontWeight: 900
+                fontFamily: 'var(--font-barlow)',
+                fontWeight: 700
             }}>
-                / CONFIGURACIÓN
+                Configuración
             </h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
               <SidebarItem icon={<Settings size={18} />} label="Ajustes Globales" href="/dashboard/settings" active={pathname === "/dashboard/settings"} />
@@ -107,16 +107,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           {isAdmin && (
             <div className="nav-group">
               <h4 style={{ 
-                  fontSize: '0.65rem', 
+                  fontSize: '0.7rem', 
                   color: '#fbbf24', 
                   textTransform: 'uppercase', 
-                  letterSpacing: '0.2em', 
+                  letterSpacing: '0.1rem', 
                   marginBottom: '1rem', 
                   paddingLeft: '0.5rem',
-                  fontFamily: 'Bebas Neue',
-                  fontWeight: 900
+                  fontFamily: 'var(--font-barlow)',
+                  fontWeight: 700
               }}>
-                  / PROTOCOLO_ADMIN
+                  Administración
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
                 <SidebarItem icon={<ShieldCheck size={18} />} label="Consola de Mando" href="/dashboard/admin" active={pathname === "/dashboard/admin"} />
@@ -140,27 +140,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {session?.user?.image && <img src={session.user.image} style={{ width: '100%', height: '100%' }} />}
              </div>
              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 900, fontFamily: 'Bebas Neue', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                   {session?.user?.name?.toUpperCase() || "USUARIO_DESCONOCIDO"}
-                </div>
-                <div style={{ fontSize: '0.6rem', color: 'var(--primary)', fontWeight: 900, letterSpacing: '0.1em' }}>STATUS_ONLINE</div>
+                 <div style={{ fontSize: '0.85rem', fontWeight: 600, fontFamily: 'var(--font-barlow)', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {session?.user?.name || "Invitado"}
+                 </div>
+                 <div style={{ fontSize: '0.65rem', color: '#22c55e', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05rem' }}>Conectado</div>
              </div>
           </div>
 
-          <Link href="/api/auth/signout" style={{ 
+          <button onClick={() => signOut({ callbackUrl: '/login' })} style={{ 
               display: 'flex', 
               alignItems: 'center', 
               gap: '0.75rem', 
               padding: '0.5rem 0.75rem', 
               color: '#ef4444', 
-              textDecoration: 'none', 
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
               fontSize: '0.75rem',
-              fontWeight: 900,
-              fontFamily: 'Bebas Neue',
-              letterSpacing: '0.05em'
+              fontWeight: 700,
+              fontFamily: 'var(--font-barlow)',
+              textTransform: 'uppercase'
             }}>
-              <LogOut size={16} /> DESCONECTAR
-          </Link>
+              <LogOut size={16} /> Cerrar Sesión
+          </button>
         </div>
       </aside>
 
@@ -191,15 +193,14 @@ function SidebarItem({ icon, label, href, active = false }: { icon: React.ReactN
       background: active ? 'rgba(206, 66, 43, 0.1)' : 'transparent',
       transition: 'all 0.1s ease-out',
       textDecoration: 'none',
-      fontSize: '0.95rem',
-      fontWeight: 900,
-      fontFamily: 'Bebas Neue',
-      letterSpacing: '0.04em',
+      fontSize: '0.9rem',
+      fontWeight: 600,
+      fontFamily: 'var(--font-roboto)',
       borderLeft: active ? '3px solid var(--primary)' : '3px solid transparent',
       position: 'relative'
     }}>
       <span style={{ color: active ? 'var(--primary)' : 'inherit', display: 'flex' }}>{icon}</span>
-      <span style={{ flex: 1 }}>{label.toUpperCase()}</span>
+      <span style={{ flex: 1 }}>{label}</span>
       {active && <ChevronRight size={14} color="var(--primary)" />}
     </Link>
   );

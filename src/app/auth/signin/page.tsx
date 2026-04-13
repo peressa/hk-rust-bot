@@ -79,8 +79,8 @@ export default function SignInPage() {
             <div style={{ background: 'var(--primary)', padding: '8px', display: 'flex' }}>
               <Radio color="white" size={40} />
             </div>
-            <h1 style={{ fontSize: '4.5rem', fontWeight: 900, fontFamily: 'Bebas Neue', letterSpacing: '0.05em', lineHeight: 1 }}>
-              RUST <span style={{ color: 'var(--primary)' }}>OPS</span>
+            <h1 style={{ fontSize: '4.5rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', letterSpacing: '0.05em', lineHeight: 1 }}>
+              RUST <span style={{ color: 'var\(--primary\)', fontStyle: 'italic' }}>SENTINEL</span>
             </h1>
           </div>
           <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.8rem', letterSpacing: '0.4em', textTransform: 'uppercase', textShadow: '0 0 10px rgba(206, 66, 43, 0.5)' }}>
@@ -106,7 +106,7 @@ export default function SignInPage() {
             textTransform: 'uppercase', 
             letterSpacing: '0.05em',
             lineHeight: 1.4,
-            fontFamily: 'Bebas Neue'
+            fontFamily: 'var(--font-barlow)'
           }}>
             {t.login.authenticate}
           </h2>
@@ -129,7 +129,7 @@ export default function SignInPage() {
               justifyContent: 'center',
               gap: '1rem',
               transition: 'all 0.1s ease-out',
-              fontFamily: 'Bebas Neue'
+              fontFamily: 'var(--font-barlow)'
             }}
             onMouseOver={(e) => (e.currentTarget.style.background = '#fff', e.currentTarget.style.color = '#000')}
             onMouseOut={(e) => (e.currentTarget.style.background = 'var(--primary)', e.currentTarget.style.color = '#fff')}
@@ -151,10 +151,10 @@ export default function SignInPage() {
       
       {/* Visual Tech Decals */}
       <div style={{ position: 'absolute', bottom: '2rem', left: '2rem', fontSize: '0.6rem', color: '#222', fontWeight: 900, fontFamily: 'monospace' }}>
-         OP_PROTOCOL_V4.2 // SECURITY_ENFORCEMENT_ENABLED
+         Conexión Segura // Sentinel v3
       </div>
       <div style={{ position: 'absolute', top: '2rem', right: '2rem', fontSize: '0.6rem', color: '#222', fontWeight: 900, fontFamily: 'monospace' }}>
-         NODE_STATUS: NOMINAL // ENCRYPT_AES_256
+         Sistema: Activo // Encriptación AES-256
       </div>
     </div>
   );

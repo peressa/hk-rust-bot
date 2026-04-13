@@ -3,7 +3,7 @@ import { Users, Map as MapIcon, Globe, RefreshCw } from "lucide-react";
 
 interface ServerHeroProps {
   server: any;
-  info: any; // null = conectando, object = datos, object con .error = fallo
+  info: any; // null = Conectando...bject = datos, object con .error = fallo
 }
 
 export default function ServerHero({ server, info }: ServerHeroProps) {
@@ -19,7 +19,7 @@ export default function ServerHero({ server, info }: ServerHeroProps) {
     : 0;
 
   const statusColor = isOnline ? '#22c55e' : isError ? '#ef4444' : '#eab308';
-  const statusLabel = isOnline ? 'EN LÍNEA' : isError ? 'SIN CONEXIÓN' : 'CONECTANDO...';
+  const statusLabel = isOnline ? 'EN LÍNEA' : isError ? 'SIN CONEXIÓN' : 'Conectando...';
 
   // Tactial color for population bar
   const popColor = playerPercent > 90 ? '#ef4444' : playerPercent > 50 ? '#eab308' : 'var(--primary)';
@@ -33,17 +33,17 @@ export default function ServerHero({ server, info }: ServerHeroProps) {
         <div style={{ flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
             <div style={{ width: '8px', height: '8px', background: statusColor }}></div>
-            <span style={{ fontSize: '0.85rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: statusColor, fontFamily: 'Bebas Neue' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', color: statusColor, fontFamily: 'var(--font-barlow)' }}>
               {statusLabel}
             </span>
             {useProxy && isOnline && (
-              <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', border: '1px solid #3b82f6', color: '#3b82f6', fontWeight: 900, fontFamily: 'Bebas Neue' }}>
-                PROXY ACTIVO
+              <span style={{ fontSize: '0.7rem', padding: '0.1rem 0.4rem', border: '1px solid #3b82f6', color: '#3b82f6', fontWeight: 900, fontFamily: 'var(--font-barlow)' }}>
+                Proxy Activo
               </span>
             )}
             {isConnecting && <RefreshCw size={12} className="animate-spin" color={statusColor} />}
           </div>
-          <h1 style={{ fontSize: '3.5rem', fontWeight: 900, marginBottom: '0.5rem', lineHeight: 1, fontFamily: 'Bebas Neue', letterSpacing: '0.02em' }}>
+          <h1 style={{ fontSize: '3.5rem', fontWeight: 900, marginBottom: '0.5rem', lineHeight: 1, fontFamily: 'var(--font-barlow)', letterSpacing: '0.02em' }}>
             {isOnline ? (info?.name || server.name) : server.name}
           </h1>
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', opacity: 0.8 }}>
@@ -60,10 +60,10 @@ export default function ServerHero({ server, info }: ServerHeroProps) {
 
         <div style={{ textAlign: 'right', minWidth: '220px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'Bebas Neue', color: '#aaa' }}>
+            <span style={{ fontSize: '0.85rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.3rem', fontFamily: 'var(--font-barlow)', color: '#aaa' }}>
               <Users size={14} /> POBLACIÓN
             </span>
-            <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'Bebas Neue' }}>
+            <span style={{ fontSize: '1.5rem', fontWeight: 900, fontFamily: 'var(--font-barlow)' }}>
               {isOnline ? `${info.players} / ${info.maxPlayers}` : '--- / ---'}
             </span>
           </div>
@@ -78,8 +78,8 @@ export default function ServerHero({ server, info }: ServerHeroProps) {
             />
           </div>
           {isOnline && (info?.queued || info?.queuedPlayers) > 0 && (
-            <div style={{ fontSize: '0.9rem', color: '#f97316', marginTop: '0.5rem', fontWeight: 900, textTransform: 'uppercase', fontFamily: 'Bebas Neue' }}>
-              COLA: {info.queued || info.queuedPlayers} JUGADORES
+            <div style={{ fontSize: '0.9rem', color: '#f97316', marginTop: '0.5rem', fontWeight: 900, textTransform: 'uppercase', fontFamily: 'var(--font-barlow)' }}>
+              Cola: {info.queued || info.queuedPlayers} Jugadores
             </div>
           )}
         </div>

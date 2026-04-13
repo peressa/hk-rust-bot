@@ -96,10 +96,10 @@ export default function GuestSharePage() {
                 <MapIcon size={20} color="white" />
             </div>
             <div>
-                <div style={{ fontFamily: 'Bebas Neue', fontSize: '1.2rem', letterSpacing: '0.1em' }}>GUEST_INTEL_ACCESO</div>
+                <div style={{ fontFamily: 'var(--font-barlow)', fontSize: '1.2rem', letterSpacing: '0.1em' }}>Acceso de Invitado</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <div className="status-blink" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div>
-                    <span style={{ fontSize: '0.6rem', color: '#666', fontWeight: 900 }}>MODO_LECTURA_OPERATIVO</span>
+                    <span style={{ fontSize: '0.6rem', color: '#666', fontWeight: 900 }}>Modo Lectura Activo</span>
                 </div>
             </div>
         </div>

@@ -44,7 +44,7 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
          <div style={{ background: 'var(--primary)', padding: '12px', display: 'inline-block', marginBottom: '1rem' }}>
             <Lock size={40} color="white" />
          </div>
-         <h1 style={{ fontFamily: 'Bebas Neue', fontSize: '3rem', letterSpacing: '0.1em' }}>PROTOCOLO_DE_ACCESO</h1>
+         <h1 style={{ fontFamily: 'var(--font-barlow)', fontSize: '3rem', letterSpacing: '0.1em' }}>Acceso Seguro</h1>
          <p style={{ color: '#444', fontSize: '0.8rem', letterSpacing: '0.2rem', textTransform: 'uppercase', fontWeight: 900 }}>IdentificaciÃ³n Requerida para Mando Central</p>
       </div>
 
@@ -97,7 +97,7 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
                     background: key === "C" ? '#333' : (key ? '#252527' : 'transparent'),
                     border: key ? '1px solid #444' : 'none',
                     color: '#fff',
-                    fontFamily: 'Bebas Neue',
+                    fontFamily: 'var(--font-barlow)',
                     fontSize: '1.5rem',
                     cursor: key ? 'pointer' : 'default',
                     transition: 'all 0.05s',
@@ -121,14 +121,14 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
                 color: '#fff',
                 border: 'none',
                 padding: '1rem',
-                fontFamily: 'Bebas Neue',
+                fontFamily: 'var(--font-barlow)',
                 fontSize: '1.2rem',
                 letterSpacing: '0.1em',
                 cursor: pin.length === 4 ? 'pointer' : 'not-allowed',
                 transition: 'all 0.2s'
             }}
         >
-            {loading ? 'VALIDANDO...' : 'AUTORIZAR'}
+            {loading ? 'Validando...' : 'Confirmar'}
         </button>
 
         {error && (
@@ -139,7 +139,7 @@ export default function CodelockGate({ onSuccess, error, loading }: CodelockGate
       </div>
 
       <div style={{ marginTop: '3rem', color: '#222', fontSize: '0.6rem', letterSpacing: '0.5em', fontWeight: 900 }}>
-         ENCRYPTION_PROTOCOL: AES_256_RSA
+         Encriptación AES-256 Activa
       </div>
     </div>
   );

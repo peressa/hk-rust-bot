@@ -69,7 +69,7 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.5rem', paddingTop: '6rem' }}>
-       <h2 style={{ fontSize: '3.5rem', fontFamily: 'Bebas Neue', lineHeight: 1, marginBottom: '0.5rem' }}>PROTOCOLO_INVITADOS</h2>
+       <h2 style={{ fontSize: '3.5rem', fontFamily: 'var(--font-barlow)', lineHeight: 1, marginBottom: '0.5rem' }}>Gesti�n de Invitados</h2>
        <div style={{ color: 'var(--primary)', letterSpacing: '0.4em', fontSize: '0.7rem', marginBottom: '2rem' }}>GESTIÓN_DE_ACCESOS_TÁCTICOS_V3</div>
 
        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', flex: 1 }}>
@@ -77,7 +77,7 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
           {/* Create Section */}
           <section>
              <div className="premium-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                <h3 style={{ fontFamily: 'Bebas Neue', letterSpacing: '0.1em', marginBottom: '1.5rem', color: 'var(--primary)' }}>GENERAR_NUEVA_AUTORIZACIÓN</h3>
+                <h3 style={{ fontFamily: 'var(--font-barlow)', letterSpacing: '0.1em', marginBottom: '1.5rem', color: 'var(--primary)' }}>GENERAR_NUEVA_AUTORIZACIÓN</h3>
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                    <div>
@@ -88,7 +88,7 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
                         placeholder="EJ: 1234"
                         value={pincode}
                         onChange={(e) => setPincode(e.target.value.replace(/\D/g, ""))}
-                        style={{ width: '100%', background: '#000', border: '1px solid var(--border)', padding: '1rem', color: 'white', fontFamily: 'Bebas Neue', fontSize: '1.5rem', letterSpacing: '0.2em' }}
+                        style={{ width: '100%', background: '#000', border: '1px solid var(--border)', padding: '1rem', color: 'white', fontFamily: 'var(--font-barlow)', fontSize: '1.5rem', letterSpacing: '0.2em' }}
                       />
                    </div>
 
@@ -100,7 +100,7 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
                         style={{ width: '20px', height: '20px', accentColor: 'var(--primary)' }}
                       />
                       <div style={{ flex: 1 }}>
-                         <div style={{ fontSize: '0.8rem', fontWeight: 900, fontFamily: 'Bebas Neue' }}>HABILITAR_DIBUJO_TÁCTICO</div>
+                         <div style={{ fontSize: '0.8rem', fontWeight: 900, fontFamily: 'var(--font-barlow)' }}>HABILITAR_DIBUJO_TÁCTICO</div>
                          <div style={{ fontSize: '0.6rem', color: '#555' }}>El invitado podrá realizar trazos en el Radar Global.</div>
                       </div>
                    </label>
@@ -113,14 +113,14 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
                         color: 'white', 
                         border: 'none', 
                         padding: '1.25rem', 
-                        fontFamily: 'Bebas Neue', 
+                        fontFamily: 'var(--font-barlow)', 
                         fontSize: '1.2rem', 
                         letterSpacing: '0.1em',
                         cursor: 'pointer',
                         transition: '0.2s'
                       }}
                    >
-                      {creating ? "AUTORIZANDO..." : "CREAR_ACCESO_OPERATIVO"}
+                      {creating ? "Autorizando..." : "Crear Invitaci�n"}
                    </button>
                 </div>
              </div>
@@ -132,10 +132,10 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
 
           {/* List Section */}
           <section style={{ overflowY: 'auto' }}>
-             <h3 style={{ fontFamily: 'Bebas Neue', letterSpacing: '0.1em', marginBottom: '1.5rem', color: '#666' }}>ACCESOS_ACTIVOS ({invites.length})</h3>
+             <h3 style={{ fontFamily: 'var(--font-barlow)', letterSpacing: '0.1em', marginBottom: '1.5rem', color: '#666' }}>Invitaciones Activas ({invites.length})</h3>
              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {invites.length === 0 ? (
-                   <div style={{ textAlign: 'center', padding: '3rem', border: '1px dashed #222', opacity: 0.3 }}>SIN_INVITACIONES_ACTIVAS</div>
+                   <div style={{ textAlign: 'center', padding: '3rem', border: '1px dashed #222', opacity: 0.3 }}>Sin invitaciones</div>
                 ) : (
                    invites.map((invite) => (
                       <div key={invite.id} className="premium-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem' }}>
@@ -143,7 +143,7 @@ export default function InviteManager({ serverId }: InviteManagerProps) {
                             <LinkIcon size={20} color="var(--primary)" />
                          </div>
                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '0.7rem', fontWeight: 900, fontFamily: 'Bebas Neue', color: 'white' }}>LINK_ID: {invite.id}</div>
+                            <div style={{ fontSize: '0.7rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', color: 'white' }}>Identificador: {invite.id}</div>
                             <div style={{ display: 'flex', gap: '1rem', fontSize: '0.6rem', color: '#555', marginTop: '0.25rem' }}>
                                <span>PIN: {invite.code}</span>
                                <span>DIBUJO: {invite.canDraw ? "SÍ" : "NO"}</span>

@@ -234,7 +234,7 @@ export default function RustMap({
         return showEvents;
       })
       .forEach(marker => {
-        const popupHtml = `<div style="padding: 0.5rem; color: white;"><strong style="color: var(--primary)">${marker.name || 'MARCADOR_VINCULADO'}</strong></div>`;
+        const popupHtml = `<div style="padding: 0.5rem; color: white;"><strong style="color: var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
         L.marker(getPosition(marker.x, marker.y), {
           icon: getIcon(L, marker.type || marker.id, marker.name)
         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });

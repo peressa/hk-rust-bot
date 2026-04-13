@@ -63,8 +63,8 @@ export default function SettingsPage() {
     <DashboardLayout>
       <div style={{ maxWidth: '900px', margin: '0 auto' }}>
         <header style={{ marginBottom: '3rem' }}>
-          <h1 style={{ fontSize: '3rem', fontWeight: 900, fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>
-            OPERACIONES_SISTEMA
+          <h1 style={{ fontSize: '3rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', letterSpacing: '0.05em' }}>
+            Ajustes del Sistema
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase' }}>
             ConfiguraciÃ³n de Identidad y Terminal de Enlace
@@ -77,7 +77,7 @@ export default function SettingsPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Manual Pairing Section */}
                 <section className="premium-card" style={{ borderLeft: '4px solid var(--primary)' }}>
-                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'Bebas Neue', fontSize: '1.5rem' }}>
+                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'var(--font-barlow)', fontSize: '1.5rem' }}>
                     <ExternalLink size={20} /> VINCULACIÃ“N MANUAL
                     </h3>
                     <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', fontWeight: 700 }}>
@@ -88,7 +88,7 @@ export default function SettingsPage() {
 
                 {/* Registration Section */}
                 <section className="premium-card">
-                    <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'Bebas Neue', fontSize: '1.5rem' }}>
+                    <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'var(--font-barlow)', fontSize: '1.5rem' }}>
                     <Cpu size={20} /> IDENTIDAD VIRTUAL (FCM)
                     </h3>
                     <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem', fontWeight: 700 }}>
@@ -109,7 +109,7 @@ export default function SettingsPage() {
                                 disabled={loading || !authToken}
                                 onClick={handleRegister}
                             >
-                                {loading ? <RefreshCw size={18} className="animate-spin" /> : "VINCULAR"}
+                                {loading ? <RefreshCw size={18} className="animate-spin" /> : "Vincular"}
                             </button>
                         </div>
                         <a 
@@ -117,7 +117,7 @@ export default function SettingsPage() {
                             target="_blank" 
                             style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 900, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}
                         >
-                            Â¿DONDE CONSIGO EL TOKEN? <ExternalLink size={10} />
+                            Â¿Dónde consigo el token? <ExternalLink size={10} />
                         </a>
                     </div>
                 </section>
@@ -126,12 +126,12 @@ export default function SettingsPage() {
             <aside style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {/* Status Section */}
                 <div className="premium-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
-                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Bebas Neue', color: '#aaa' }}>
-                    <ShieldCheck size={20} /> ESTADO_BIO
+                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'var(--font-barlow)', color: '#aaa' }}>
+                    <ShieldCheck size={20} /> Estado de Conexión
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                        <StatusLine label="FCM_LISTENER" value={status?.listening ? "ONLINE" : "OFFLINE"} color={status?.listening ? "#22c55e" : "#ef4444"} />
-                        <StatusLine label="KEYS_STATUS" value={status?.hasKeys ? "ENCRIPTADO" : "PENDIENTE"} color={status?.hasKeys ? "#22c55e" : "#ef4444"} />
+                        <StatusLine label="Escucha de Señales" value={status?.listening ? "Activo" : "Inactivo"} color={status?.listening ? "#22c55e" : "#ef4444"} />
+                        <StatusLine label="Estado de Cifrado" value={status?.hasKeys ? "Cifrado" : "Pendiente"} color={status?.hasKeys ? "#22c55e" : "#ef4444"} />
                     </div>
                     
                     {status?.hasKeys && (
@@ -148,13 +148,13 @@ export default function SettingsPage() {
                         textTransform: 'uppercase'
                         }}
                     >
-                        RESET IDENTIDAD UUID
+                        Reiniciar Identidad
                     </button>
                     )}
                 </div>
 
                 <div className="premium-card" style={{ padding: '1rem', borderStyle: 'dashed' }}>
-                    <h4 style={{ fontSize: '0.75rem', fontFamily: 'Bebas Neue', marginBottom: '0.5rem' }}>CONSEJO_PRO</h4>
+                    <h4 style={{ fontSize: '0.75rem', fontFamily: 'var(--font-barlow)', marginBottom: '0.5rem' }}>Consejo</h4>
                     <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.4, fontWeight: 700 }}>
                         SI EL BOT NO DETECTA TUS SERVIDORES, USA EL BOTON DE RESET Y VUELVE A VINCULARTE PARA GENERAR UNA NUEVA ID.
                     </p>
@@ -171,7 +171,7 @@ function StatusLine({ label, value, color }: { label: string, value: string, col
   return (
     <div>
       <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 900, marginBottom: '0.25rem' }}>{label}</div>
-      <div style={{ fontSize: '1.2rem', fontWeight: 900, color, fontFamily: 'Bebas Neue' }}>{value}</div>
+      <div style={{ fontSize: '1.2rem', fontWeight: 900, color, fontFamily: 'var(--font-barlow)' }}>{value}</div>
     </div>
   );
 }

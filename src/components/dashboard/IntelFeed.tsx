@@ -31,7 +31,7 @@ export default function IntelFeed({ log }: { log: IntelItem[] }) {
       borderLeft: '2px solid var(--border)'
     }}>
       <h3 style={{ 
-        fontFamily: 'Bebas Neue', 
+        fontFamily: 'var(--font-barlow)', 
         fontSize: '1.25rem', 
         display: 'flex', 
         alignItems: 'center', 
@@ -39,7 +39,7 @@ export default function IntelFeed({ log }: { log: IntelItem[] }) {
         color: 'var(--primary)',
         letterSpacing: '0.05em'
       }}>
-        <Radio size={18} className="animate-pulse" /> LIVE_INTEL_FEED
+        <Radio size={18} className="animate-pulse" /> Registro de Actividad
       </h3>
 
       <div 
@@ -55,7 +55,7 @@ export default function IntelFeed({ log }: { log: IntelItem[] }) {
       >
         {log.length === 0 ? (
           <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.3, fontSize: '0.7rem', fontWeight: 900 }}>
-             ESPERANDO ACTIVIDAD...
+             Esperando actividad...
           </div>
         ) : (
           log.map((item) => (

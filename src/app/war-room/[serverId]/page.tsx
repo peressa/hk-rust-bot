@@ -123,7 +123,7 @@ export default function WarRoomPage() {
   if (loading) {
     return (
       <div style={{ height: '100vh', width: '100vw', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '2rem' }}>
-         <div className="premium-loader" style={{ fontFamily: 'Inter, sans-serif', fontWeight: 300, color: 'var(--primary)', fontSize: '1.2rem', letterSpacing: '0.1rem' }}>
+         <div className="premium-loader" style={{ fontFamily: 'var(--font-roboto)', fontWeight: 300, color: 'var(--primary)', fontSize: '1.2rem', letterSpacing: '0.1rem' }}>
             Estableciendo conexión segura...
          </div>
          <RefreshCw size={32} className="animate-spin" color="var(--primary)" style={{ opacity: 0.5 }} />
@@ -339,7 +339,7 @@ export default function WarRoomPage() {
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>¿Cerrar Sesión?</h3>
               <p style={{ opacity: 0.5, marginBottom: '2rem' }}>Perderás el acceso inmediato al Radar Táctico de {serverInfo?.name}.</p>
               <div style={{ display: 'flex', gap: '1rem' }}>
-                  <button onClick={() => signOut()} className="btn-confirm-primary">Sí, Cerrar Sesión</button>
+                  <button onClick={() => signOut({ callbackUrl: '/login' })} className="btn-confirm-primary">Sí, Cerrar Sesión</button>
                   <button onClick={() => setShowLogoutConfirm(false)} className="btn-cancel">Cancelar</button>
               </div>
            </div>
@@ -347,12 +347,12 @@ export default function WarRoomPage() {
       )}
 
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Inter:wght@300;400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;600;700;800&family=Roboto:wght@300;400;500;700&display=swap');
 
-        .premium-title { font-family: 'Barlow', sans-serif; font-weight: 800; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
+        .premium-title { font-family: var(--font-barlow), sans-serif; font-weight: 800; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.05em; margin: 0; }
         .icon-btn-simple { background: transparent; border: none; color: #555; cursor: pointer; padding: 6px; transition: 0.1s; border-radius: 4px; }
         .icon-btn-simple:hover { color: #fff; background: rgba(255,255,255,0.05); }
-        .nav-btn { background: transparent; border: none; color: #666; cursor: pointer; display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 1rem; border-radius: 6px; transition: 0.2s; font-weight: 600; font-size: 0.9rem; }
+        .nav-btn { background: transparent; border: none; color: #666; cursor: pointer; display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 1rem; border-radius: 6px; transition: 0.2s; font-weight: 600; font-size: 0.9rem; font-family: var(--font-barlow), sans-serif; }
         .nav-btn:hover { color: #aaa; background: rgba(255,255,255,0.03); }
         .nav-btn.active { color: #fff; background: rgba(255,255,255,0.1); }
         .icon-btn { background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); color: #666; padding: 0.6rem; cursor: pointer; transition: 0.2s; border-radius: 8px; }

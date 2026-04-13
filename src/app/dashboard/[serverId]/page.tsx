@@ -109,18 +109,18 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
           borderBottom: '1px solid var(--border)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-             <Link href="/dashboard" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 900 }}>
-                <ChevronLeft size={16} /> VOLVER AL HUB
+             <Link href="/dashboard" style={{ color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.4rem', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 600, fontFamily: 'var(--font-barlow)' }}>
+                <ChevronLeft size={16} /> Volver al inicio
              </Link>
              <div style={{ width: '1px', height: '20px', background: 'var(--border)' }}></div>
-             <h2 style={{ fontFamily: 'Bebas Neue', fontSize: '1.5rem', margin: 0, letterSpacing: '0.05em' }}>
-                {serverData?.name} <span style={{ color: 'var(--primary)' }}>// WAR_ROOM</span>
+             <h2 style={{ fontFamily: 'var(--font-barlow)', fontSize: '1.25rem', fontWeight: 800, margin: 0, letterSpacing: '-0.01em' }}>
+                {serverData?.name} <span style={{ color: 'var(--primary)', fontStyle: 'italic', opacity: 0.8 }}>// Mando Central</span>
              </h2>
           </div>
           
           <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
-             <StatusItem label="POBLACIÓN" value={serverInfo ? `${serverInfo.players}/${serverInfo.maxPlayers}` : "---"} />
-             <StatusItem label="EQUIPO" value={`${intel.team.filter((m: any) => m.isOnline).length}/${intel.team.length}`} />
+             <StatusItem label="POBLACIÓN" value={serverInfo ? `${serverInfo.players} / ${serverInfo.maxPlayers}` : "---"} />
+             <StatusItem label="OPERATIVOS" value={`${intel.team.filter((m: any) => m.isOnline).length} / ${intel.team.length}`} />
              <Link href="/dashboard/settings" style={{ color: 'var(--text-muted)' }}><Settings size={18} /></Link>
           </div>
         </header>
@@ -145,8 +145,8 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
              />
              
              {/* Map Overlay Info */}
-             <div style={{ position: 'absolute', bottom: '1rem', left: '1rem', background: 'rgba(0,0,0,0.8)', padding: '0.5rem 1rem', borderLeft: '3px solid var(--primary)', fontSize: '0.7rem', fontWeight: 900 }}>
-                COORD_SISTEMA: {intel.team.find((m: any) => m.isOnline)?.grid || "ESTABLE"}
+             <div style={{ position: 'absolute', bottom: '1rem', left: '1rem', background: 'rgba(0,0,0,0.8)', padding: '0.5rem 1rem', borderLeft: '3px solid var(--primary)', fontSize: '0.75rem', fontWeight: 700, fontFamily: 'var(--font-barlow)' }}>
+                Posición Global: {intel.team.find((m: any) => m.isOnline)?.grid || "Estable"}
              </div>
           </main>
 
@@ -166,8 +166,8 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
           gap: '2rem',
           alignItems: 'center'
         }}>
-          <div style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-             Quick_Controls
+          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'var(--font-barlow)' }}>
+             Acciones Rápidas
           </div>
           <div style={{ display: 'flex', gap: '1rem', overflowX: 'auto' }}>
             {entities.filter(e => e.entityType === 1 || e.name?.toLowerCase().includes("turret") || e.name?.toLowerCase().includes("sam")).map(device => (
@@ -179,21 +179,22 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
                    border: `1px solid ${device.value ? 'var(--primary)' : 'var(--border)'}`,
                    padding: '0.4rem 0.8rem',
                    color: device.value ? 'white' : '#666',
-                   fontSize: '0.7rem',
-                   fontWeight: 900,
+                   fontSize: '0.75rem',
+                   fontWeight: 700,
                    display: 'flex',
                    alignItems: 'center',
                    gap: '0.5rem',
                    cursor: 'pointer',
                    whiteSpace: 'nowrap',
-                   transition: 'var(--transition)'
+                   transition: 'var(--transition)',
+                   fontFamily: 'var(--font-barlow)'
                  }}
                >
                  <Power size={12} color={device.value ? 'var(--primary)' : 'inherit'} />
-                 {device.name.toUpperCase()}
+                 {device.name}
                </button>
             ))}
-            {entities.length === 0 && <span style={{ fontSize: '0.7rem', color: '#333' }}>SIN DISPOSITIVOS DE MISIÓN VINCULADOS</span>}
+            {entities.length === 0 && <span style={{ fontSize: '0.75rem', color: '#333', fontWeight: 600, fontFamily: 'var(--font-roboto)' }}>Sin dispositivos vinculados</span>}
           </div>
         </footer>
 
@@ -205,8 +206,8 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
 function StatusItem({ label, value }: { label: string, value: string }) {
   return (
     <div style={{ textAlign: 'right' }}>
-      <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900 }}>{label}</div>
-      <div style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'Bebas Neue' }}>{value}</div>
+      <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', fontWeight: 700, fontFamily: 'var(--font-barlow)', letterSpacing: '0.05rem' }}>{label}</div>
+      <div style={{ fontSize: '1.1rem', fontWeight: 800, fontFamily: 'var(--font-barlow)', color: '#fff' }}>{value}</div>
     </div>
   );
 }

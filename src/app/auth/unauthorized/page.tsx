@@ -64,7 +64,7 @@ function UnauthorizedPageContent() {
             <div style={{ background: 'var(--primary)', width: '64px', height: '64px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
               <ShieldAlert size={32} color="white" />
             </div>
-            <h1 style={{ fontSize: '5rem', lineHeight: 0.9, marginBottom: '1.5rem', fontFamily: 'Bebas Neue' }}>{t.title}</h1>
+            <h1 style={{ fontSize: '5rem', lineHeight: 0.9, marginBottom: '1.5rem', fontFamily: 'var(--font-barlow)' }}>{t.title}</h1>
             <p style={{ color: '#aaa', fontSize: '1.2rem', textTransform: 'uppercase', fontWeight: 700, letterSpacing: '0.05em' }}>
               {t.desc.replace('{id}', steamId || 'TERMINAL')}
             </p>

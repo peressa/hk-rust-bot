@@ -33,7 +33,7 @@ export default function TeamRoster({ members }: { members: TeamMember[] }) {
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h3 style={{ 
-            fontFamily: 'Bebas Neue', 
+            fontFamily: 'var(--font-barlow)', 
             fontSize: '1.25rem', 
             display: 'flex', 
             alignItems: 'center', 
@@ -41,7 +41,7 @@ export default function TeamRoster({ members }: { members: TeamMember[] }) {
             color: 'white',
             letterSpacing: '0.05em'
         }}>
-            <Users size={18} /> ROSTER_EQUIPO
+            <Users size={18} /> Miembros del Clan
         </h3>
         <span style={{ fontSize: '0.7rem', fontWeight: 900, color: 'var(--text-muted)' }}>
             ONLINE: {members.filter(m => m.isOnline).length} / {members.length}
@@ -80,10 +80,10 @@ export default function TeamRoster({ members }: { members: TeamMember[] }) {
              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                     <span style={{ fontWeight: 800, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {member.name.toUpperCase()}
+                        {member.name}
                     </span>
                     {!member.isAlive && (
-                        <span style={{ fontSize: '0.6rem', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '0.1rem 0.3rem', fontWeight: 900 }}>DEAD</span>
+                        <span style={{ fontSize: '0.6rem', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '0.1rem 0.3rem', fontWeight: 900 }}>CAÍDO</span>
                     )}
                 </div>
                 <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.2rem', fontSize: '0.65rem', fontWeight: 700, color: 'var(--text-muted)' }}>
@@ -91,7 +91,7 @@ export default function TeamRoster({ members }: { members: TeamMember[] }) {
                         <MapPin size={10} color={member.isOnline ? 'var(--primary)' : 'inherit'} /> {member.grid || '---'}
                     </span>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
-                        <Heart size={10} color={member.isAlive ? '#22c55e' : '#ef4444'} /> {member.isAlive ? 'VITAL' : 'KIA'}
+                        <Heart size={10} color={member.isAlive ? '#22c55e' : '#ef4444'} /> {member.isAlive ? 'OPERATIVO' : 'ELIMINADO'}
                     </span>
                 </div>
              </div>

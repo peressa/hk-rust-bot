@@ -68,8 +68,8 @@ export default function CommsModule({ serverId }: CommsModuleProps) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', padding: '1.5rem', paddingTop: '6rem' }}>
-       <h2 style={{ fontSize: '3.5rem', fontFamily: 'Bebas Neue', lineHeight: 1, marginBottom: '0.5rem' }}>PROTOCOLO_COMMS</h2>
-       <div style={{ color: 'var(--primary)', letterSpacing: '0.4em', fontSize: '0.7rem', marginBottom: '2rem' }}>FRECUENCIA_DE_RADIO_SEGURA_V3</div>
+       <h2 style={{ fontSize: '3.5rem', fontFamily: 'var(--font-barlow)', lineHeight: 1, marginBottom: '0.5rem' }}>Canal de Radio</h2>
+       <div style={{ color: 'var(--primary)', letterSpacing: '0.4em', fontSize: '0.7rem', marginBottom: '2rem' }}>Transmisi�n Segura</div>
 
        <div className="premium-card" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: 0, overflow: 'hidden', background: 'rgba(5,5,5,0.8)' }}>
           <div 
@@ -79,13 +79,13 @@ export default function CommsModule({ serverId }: CommsModuleProps) {
             {messages.length === 0 ? (
                <div style={{ textAlign: 'center', opacity: 0.2, marginTop: '20%' }}>
                   <MessageSquare size={48} style={{ margin: '0 auto 1rem' }} />
-                  <p style={{ fontFamily: 'Bebas Neue', letterSpacing: '0.1em' }}>SIN_SEÑAL_DETECTADA</p>
+                  <p style={{ fontFamily: 'var(--font-barlow)', letterSpacing: '0.1em' }}>SIN_SEÑAL_DETECTADA</p>
                </div>
             ) : (
                messages.map((msg, i) => (
                   <div key={i} style={{ borderLeft: '2px solid rgba(255,255,255,0.1)', paddingLeft: '1rem' }}>
                      <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'baseline', marginBottom: '0.2rem' }}>
-                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'Bebas Neue' }}>{msg.name?.toUpperCase()}</span>
+                        <span style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--primary)', fontFamily: 'var(--font-barlow)' }}>{msg.name?.toUpperCase()}</span>
                         <span style={{ fontSize: '0.6rem', opacity: 0.3 }}>[{new Date(msg.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}]</span>
                      </div>
                      <div style={{ fontSize: '0.9rem', color: '#ccc' }}>{msg.message}</div>
@@ -100,8 +100,8 @@ export default function CommsModule({ serverId }: CommsModuleProps) {
                   type="text" 
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="TRANSMITIR MENSAJE..."
-                  style={{ flex: 1, background: '#000', border: '1px solid var(--border)', color: 'white', fontFamily: 'Bebas Neue', fontSize: '1.1rem', padding: '0.75rem 1rem' }}
+                  placeholder="Transmitir mensaje..."
+                  style={{ flex: 1, background: '#000', border: '1px solid var(--border)', color: 'white', fontFamily: 'var(--font-barlow)', fontSize: '1.1rem', padding: '0.75rem 1rem' }}
                 />
                 <button type="submit" disabled={sending || !newMessage.trim()} style={{ background: 'var(--primary)', border: 'none', padding: '0 1.5rem', color: 'white', cursor: 'pointer', transition: '0.1s' }}>
                    {sending ? <RefreshCw size={20} className="animate-spin" /> : <Send size={20} />}
