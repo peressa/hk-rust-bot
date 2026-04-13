@@ -9,13 +9,13 @@ export const dictionaries = {
       login: 'DEPLOY TERMINAL'
     },
     hero: {
-      suite: '// CLAN INTELLIGENCE SUITE',
+      suite: 'ADVANCED CLAN INTELLIGENCE',
       title: 'RUST OPS',
-      subtitle: 'TOTAL TACTICAL DOMINANCE. REAL-TIME SERVER DATA FOR HIGH-TIER OPERATIONS.',
+      subtitle: 'TOTAL TACTICAL DOMINANCE. REAL-TIME SERVER DATA FOR HIGH-TIER TEAMS.',
       cta: 'RECLAIM ACCESS'
     },
     modules: {
-      title: 'MISSION MODULES',
+      title: 'TACTICAL TOOLS',
       radar: {
         title: 'FIELD RADAR',
         desc: 'Triangulate member positions and enemy signatures via secure satellite uplink.'
@@ -36,9 +36,9 @@ export const dictionaries = {
     pricing: {
       title: 'SUBSCRIPTION PLANS',
       monthly: {
-        type: 'RECURRING OP-SEC',
+        type: 'RECURRING ACCESS',
         title: 'TACTICAL MONTH',
-        desc: 'Full access to all Sentinel modules. Billed every 30 days. Cancel anytime.',
+        desc: 'Full access to all modules. Billed every 30 days. Cancel anytime.',
         price: '$3.99',
         price_sub: '/ MONTH',
         cta: 'SUBSCRIBE NOW'
@@ -67,17 +67,17 @@ export const dictionaries = {
     nav: {
       ops: 'OPERACIONES',
       intel: 'INTEL',
-      comms: 'COMMS',
-      login: 'DESPLEGAR TERMINAL'
+      comms: 'COMUNICACIÓN',
+      login: 'ACCEDER'
     },
     hero: {
-      suite: '// SUITE DE INTELIGENCIA DE CLAN',
+      suite: 'INTELIGENCIA AVANZADA PARA CLANES',
       title: 'RUST OPS',
-      subtitle: 'DOMINIO TÁCTICO TOTAL. DATOS DE SERVIDOR EN TIEMPO REAL PARA OPERACIONES DE ALTO NIVEL.',
+      subtitle: 'DOMINIO TÁCTICO TOTAL. DATOS DE SERVIDOR EN TIEMPO REAL PARA EQUIPOS COMPETITIVOS.',
       cta: 'RECLAMAR ACCESO'
     },
     modules: {
-      title: 'MÓDULOS DE MISIÓN',
+      title: 'HERRAMIENTAS TÁCTICAS',
       radar: {
         title: 'RADAR DE CAMPO',
         desc: 'Triangulación de posiciones de miembros y firmas enemigas mediante enlace satelital seguro.'
@@ -98,7 +98,7 @@ export const dictionaries = {
     pricing: {
       title: 'PLANES DE SUSCRIPCIÓN',
       monthly: {
-        type: 'OP-SEC RECURRENTE',
+        type: 'ACCESO RECURRENTE',
         title: 'MES TÁCTICO',
         desc: 'Acceso total a todos los módulos. Facturado cada 30 días. Cancela en cualquier momento.',
         price: '$3.99',
@@ -129,17 +129,17 @@ export const dictionaries = {
     nav: {
       ops: 'OPERAÇÕES',
       intel: 'INTEL',
-      comms: 'COMMS',
-      login: 'IMPLANTAR TERMINAL'
+      comms: 'COMUNICAÇÃO',
+      login: 'ACESSAR'
     },
     hero: {
-      suite: '// SUÍTE DE INTELIGÊNCIA DE CLÃ',
+      suite: 'INTELIGÊNCIA AVANÇADA PARA CLÃS',
       title: 'RUST OPS',
-      subtitle: 'DOMÍNIO TÁTICO TOTAL. DADOS DO SERVIDOR EM TEMPO REAL PARA OPERAÇÕES DE ALTO NÍVEL.',
+      subtitle: 'DOMÍNIO TÁTICO TOTAL. DADOS DO SERVIDOR EM TEMPO REAL PARA EQUIPES COMPETITIVAS.',
       cta: 'RECLAMAR ACESSO'
     },
     modules: {
-      title: 'MÓDULOS DE MISSÃO',
+      title: 'FERRAMENTAS TÁTICAS',
       radar: {
         title: 'RADAR DE CAMPO',
         desc: 'Triangulação de posições de membros e assinaturas de inimigos via link de satélite seguro.'

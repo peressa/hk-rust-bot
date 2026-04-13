@@ -45,7 +45,7 @@ export default function SignInPage() {
             <h1 style={{ fontSize: '3rem', fontWeight: 900, fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>RUST <span style={{ color: 'var(--primary)' }}>OPS</span></h1>
           </div>
           <div style={{ color: '#888', fontWeight: 900, fontSize: '0.9rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-            // TERMINAL ACCESS REQUIRED
+            TERMINAL ACCESS REQUIRED
           </div>
         </div>
 

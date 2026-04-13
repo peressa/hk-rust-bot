@@ -111,7 +111,7 @@ function UnauthorizedPageContent() {
               <ArrowLeft size={16} /> {t.return}
             </Link>
             <div style={{ opacity: 0.2, display: 'flex', alignItems: 'center', gap: '1rem' }}>
-               <Radio size={24} /> <div style={{ fontWeight: 900, fontFamily: 'Roboto' }}>RUST OPS // GLOBAL</div>
+               <Radio size={24} /> <div style={{ fontWeight: 900, fontFamily: 'Roboto' }}>RUST OPS GLOBAL</div>
             </div>
           </div>
 

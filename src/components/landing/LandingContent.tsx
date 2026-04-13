@@ -200,7 +200,7 @@ export default function LandingContent() {
       <footer style={{ padding: '8rem 4rem', borderTop: '1px solid #111', color: '#444', fontSize: '0.75rem', fontWeight: 700 }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
-            <div style={{ color: '#888', marginBottom: '1rem' }}>RUST OPS // TERMINAL</div>
+            <div style={{ color: '#888', marginBottom: '1rem' }}>RUST OPS</div>
             <p>&copy; 2026. ALL RIGHTS RESERVED.</p>
             <p style={{ marginTop: '0.5rem' }}>{t.footer.restrictions}</p>
             <p style={{ marginTop: '1.5rem', color: 'var(--primary)', fontWeight: 900, fontSize: '0.8rem' }}>
@@ -210,9 +210,7 @@ export default function LandingContent() {
             </p>
           </div>
           <div style={{ display: 'flex', gap: '4rem' }}>
-            <FooterList title="SYSTEM" items={["Status", "Changelog", "Security"]} />
-            <FooterList title="SOCIAL" items={["Discord", "Twitter", "Twitch"]} />
-            <FooterList title="LEGAL" items={["Privacy", "Terms", "Support"]} />
+            <FooterList title="SOCIAL" items={["Discord"]} />
           </div>
         </div>
       </footer>
