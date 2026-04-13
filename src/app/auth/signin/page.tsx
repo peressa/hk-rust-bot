@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import React, { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
@@ -142,7 +142,7 @@ export default function SignInPage() {
       
       {/* Visual Tech Decals */}
       <div style={{ position: 'absolute', bottom: '2rem', left: '2rem', fontSize: '0.6rem', color: '#222', fontWeight: 900, fontFamily: 'monospace' }}>
-         Conexión Segura // Sentinel v3
+         Conexión Segura // OPS v3
       </div>
       <div style={{ position: 'absolute', top: '2rem', right: '2rem', fontSize: '0.6rem', color: '#222', fontWeight: 900, fontFamily: 'monospace' }}>
          Sistema: Activo // Encriptación AES-256

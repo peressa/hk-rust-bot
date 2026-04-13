@@ -134,76 +134,106 @@ export default function WarRoomPage() {
   return (
     <div className="war-room-root" style={{ height: '100vh', width: '100vw', background: '#050505', color: '#fff', position: 'relative', overflow: 'hidden', fontFamily: 'Inter, sans-serif' }}>
       
-      {/* PREMIUM FLOATING HEADER */}
+      {/* TACTICAL TOP BAR - INTEGRATED */}
       <header style={{ 
-        position: 'absolute', 
-        top: '1.5rem', 
-        left: '50%', 
-        transform: 'translateX(-50%)', 
-        zIndex: 1000,
+        height: '64px',
+        width: '100%',
+        background: '#080808',
+        borderBottom: '1px solid rgba(255,255,255,0.05)',
         display: 'flex',
         alignItems: 'center',
-        gap: '0.5rem',
-        background: 'rgba(5, 5, 5, 0.85)',
-        backdropFilter: 'blur(12px)',
-        padding: '0.5rem',
-        border: '1px solid rgba(255,255,255,0.08)',
-        boxShadow: '0 20px 50px rgba(0,0,0,1)'
+        padding: '0 1.5rem',
+        zIndex: 1000,
+        position: 'absolute',
+        top: 0,
+        left: 0
       }}>
-        <button onClick={() => router.push('/dashboard')} className="icon-btn-simple" title="Volver al Panel">
-          <ChevronLeft size={18} />
-        </button>
-        <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)', margin: '0 0.5rem' }}></div>
-        
-        <NavBtn active={activeModule === "RADAR"} icon={<MapIcon size={18} />} label="Radar" onClick={() => setActiveModule("RADAR")} />
-        <NavBtn active={activeModule === "COMMS"} icon={<MessageSquare size={18} />} label="Chat" onClick={() => setActiveModule("COMMS")} />
-        <NavBtn active={activeModule === "ECONOMY"} icon={<ShoppingCart size={18} />} label="Logística" onClick={() => setActiveModule("ECONOMY")} />
-        <NavBtn active={activeModule === "DISCORD"} icon={<Plus size={18} />} label="Discord" onClick={() => setActiveModule("DISCORD")} />
-        
-        <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)', margin: '0 0.5rem' }}></div>
-        
-        <div style={{ padding: '0 1rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
-           <span style={{ fontSize: '0.9rem', fontWeight: 600, color: '#fff' }}>{serverInfo?.name}</span>
-           <div className="status-blink" style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 10px #22c55e' }}></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <button onClick={() => router.push('/dashboard')} className="icon-btn-simple" title="Volver al Panel">
+            <ChevronLeft size={20} />
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '0.5rem' }}>
+             <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{serverInfo?.name}</span>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34, 197, 94, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+                <div className="status-blink" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div>
+                <span style={{ fontSize: '0.6rem', color: '#22c55e', fontWeight: 800 }}>LIVE</span>
+             </div>
+          </div>
+        </div>
+
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
+          <NavBtn active={activeModule === "RADAR"} icon={<MapIcon size={16} />} label="Radar" onClick={() => setActiveModule("RADAR")} />
+          <NavBtn active={activeModule === "COMMS"} icon={<MessageSquare size={16} />} label="Comunicaciones" onClick={() => setActiveModule("COMMS")} />
+          <NavBtn active={activeModule === "ECONOMY"} icon={<ShoppingCart size={16} />} label="Logística" onClick={() => setActiveModule("ECONOMY")} />
+          <NavBtn active={activeModule === "DISCORD"} icon={<Plus size={16} />} label="Discord" onClick={() => setActiveModule("DISCORD")} />
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <IconButton icon={<Share2 size={16} />} title="Invitados" onClick={() => setShowInviteModal(true)} highlight />
+          <IconButton icon={<RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />} title="Sincronizar" onClick={refreshTacticalData} />
+          <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.05)', margin: '0 0.5rem' }}></div>
+          <button 
+            onClick={() => setShowLogoutConfirm(true)}
+            style={{ 
+                background: 'rgba(239, 68, 68, 0.1)', 
+                border: '1px solid rgba(239, 68, 68, 0.2)', 
+                color: '#ef4444',
+                padding: '0.4rem 0.8rem',
+                borderRadius: '4px',
+                fontSize: '0.7rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+            }}
+          >
+            <LogOut size={14} /> SALIR
+          </button>
         </div>
       </header>
 
-      {/* QUICK COMMANDS - RIGHT */}
-      <div style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', zIndex: 1000, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <IconButton icon={<Share2 size={18} />} title="Invitados" onClick={() => setShowInviteModal(true)} highlight />
-        <IconButton icon={<RefreshCw size={18} className={refreshing ? "animate-spin" : ""} />} title="Sincronizar" onClick={refreshTacticalData} />
-        <IconButton icon={<LogOut size={18} />} title="Cerrar Sesión" onClick={() => setShowLogoutConfirm(true)} />
-      </div>
 
       <main style={{ width: '100%', height: '100%', display: 'flex' }}>
-        
-        {/* LEFT PANEL: ROSTER & ACTIVITY */}
+              {/* LEFT PANEL: ROSTER & ACTIVITY */}
         {activeModule === "RADAR" && (
-          <aside style={{ width: '380px', borderRight: '1px solid rgba(255,255,255,0.05)', background: 'rgba(2,2,2,0.4)', display: 'flex', flexDirection: 'column', padding: '1.5rem', paddingTop: '6.5rem', overflow: 'hidden' }}>
-            <section style={{ marginBottom: '2.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
-                <h3 className="premium-title">Operativos</h3>
-                <span style={{ fontSize: '0.7rem', color: '#444', fontWeight: 700 }}>{team.length} ACTIVOS</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {team.map((m) => (
-                  <MemberCard key={m.steamId} member={m} />
-                ))}
-              </div>
-            </section>
+          <aside style={{ 
+            width: '320px', 
+            borderRight: '1px solid rgba(255,255,255,0.05)', 
+            background: '#0a0a0b', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            height: '100%',
+            overflow: 'hidden',
+            paddingTop: '64px'
+          }}>
+            <div style={{ padding: '1.5rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <section style={{ marginBottom: '2.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
+                    <h3 className="premium-title" style={{ fontSize: '1rem' }}>Operativos</h3>
+                    <span style={{ fontSize: '0.6rem', color: '#444', fontWeight: 800, textTransform: 'uppercase' }}>{team.length} Activos</span>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {team.map((m) => (
+                    <MemberCard key={m.steamId} member={m} />
+                    ))}
+                </div>
+                </section>
 
-            <section style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '1.5rem' }}>
-              <h3 className="premium-title" style={{ opacity: 0.5 }}>Actividad Reciente</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
-                {intel.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.1, fontSize: '0.8rem' }}>Sin inteligencia reportada</div>
-                ) : (
-                  intel.map((log, i) => <IntelItem key={i} log={log} />)
-                )}
-              </div>
-            </section>
+                <section style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '1.5rem' }}>
+                    <h3 className="premium-title" style={{ opacity: 0.4, fontSize: '0.8rem' }}>Inteligencia en Vivo</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.25rem' }}>
+                        {intel.length === 0 ? (
+                        <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.1, fontSize: '0.7rem', fontWeight: 700 }}>SIN DATOS REPORTADOS</div>
+                        ) : (
+                        intel.map((log, i) => <IntelItem key={i} log={log} />)
+                        )}
+                    </div>
+                </section>
+            </div>
           </aside>
         )}
+)}
 
         {/* CONTENT AREA */}
         <div style={{ flex: 1, position: 'relative' }}>
@@ -222,20 +252,20 @@ export default function WarRoomPage() {
           {activeModule === "COMMS" && <CommsModule serverId={serverId} />}
           
           {activeModule === "ECONOMY" && (
-            <div style={{ height: '100%', padding: '8rem 4rem 4rem', display: 'flex', flexDirection: 'column', background: 'radial-gradient(circle at top right, rgba(232, 0, 28, 0.05), transparent)' }}>
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem' }}>
+            <div style={{ height: '100%', padding: '100px 40px 40px', display: 'flex', flexDirection: 'column', background: 'radial-gradient(circle at top right, rgba(206, 66, 43, 0.05), transparent)' }}>
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
                    <div>
-                      <h2 style={{ fontSize: '3.5rem', fontWeight: 800, lineSpacing: '-0.05em', margin: 0 }}>Logística de <em style={{ fontStyle: 'italic', color: 'var(--primary)' }}>Mercado</em></h2>
-                      <div style={{ opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.2rem', fontSize: '0.7rem', marginTop: '0.5rem' }}>Ecosistema de Economía Táctica v3</div>
+                      <h2 style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', textTransform: 'uppercase', margin: 0, letterSpacing: '-0.02em' }}>Logística de <em style={{ fontStyle: 'italic', color: 'var(--primary)' }}>Mercado</em></h2>
+                      <div style={{ opacity: 0.3, textTransform: 'uppercase', letterSpacing: '0.15rem', fontSize: '0.6rem', fontWeight: 800, marginTop: '0.25rem' }}>Ecosistema de Economía Táctica v3</div>
                    </div>
                    <div style={{ position: 'relative' }}>
-                      <Search size={20} style={{ position: 'absolute', left: '1.2rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
+                      <Search size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
                       <input 
                         type="text" 
-                        placeholder="Buscar artículo o tienda..." 
+                        placeholder="BUSCAR ARTÍCULO O TIENDA..." 
                         value={vendingQuery}
                         onChange={(e) => setVendingQuery(e.target.value)}
-                        style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '1rem 1rem 1rem 3.2rem', width: '400px', fontSize: '1rem', borderRadius: '8px', color: 'white', transition: '0.2s' }}
+                        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '0.75rem 1rem 0.75rem 2.8rem', width: '350px', fontSize: '0.8rem', color: 'white', transition: '0.2s', fontFamily: 'var(--font-barlow)', fontWeight: 700 }}
                         className="search-input-premium"
                       />
                    </div>
@@ -243,12 +273,12 @@ export default function WarRoomPage() {
 
                 <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead style={{ position: 'sticky', top: 0, background: '#080808', zIndex: 5, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                        <tr style={{ textAlign: 'left', fontSize: '0.7rem', opacity: 0.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1rem' }}>
-                          <th style={{ padding: '1.5rem' }}>Precio Venta</th>
-                          <th style={{ padding: '1.5rem' }}>Artículo</th>
-                          <th style={{ padding: '1.5rem' }}>Suministro</th>
-                          <th style={{ padding: '1.5rem' }}>Vendedor</th>
+                       <thead style={{ position: 'sticky', top: 0, background: '#0a0a0b', zIndex: 5, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                        <tr style={{ textAlign: 'left', fontSize: '0.6rem', opacity: 0.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1rem', fontFamily: 'var(--font-barlow)' }}>
+                          <th style={{ padding: '1rem 1.5rem' }}>Precio Venta</th>
+                          <th style={{ padding: '1rem 1.5rem' }}>Artículo</th>
+                          <th style={{ padding: '1rem 1.5rem' }}>Suministro</th>
+                          <th style={{ padding: '1rem 1.5rem' }}>Vendedor / Ubicación</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -273,7 +303,7 @@ export default function WarRoomPage() {
                                     {o.amountInStock} UNID
                                  </div>
                               </td>
-                              <td style={{ padding: '1.25rem', opacity: 0.4, fontSize: '0.8rem' }}>{o.machineName}</td>
+                               <td style={{ padding: '0.75rem 1.5rem', opacity: 0.3, fontSize: '0.7rem', fontWeight: 600 }}>{o.machineName.toUpperCase()}</td>
                            </tr>
                         ))}
                       </tbody>
@@ -289,7 +319,7 @@ export default function WarRoomPage() {
                         <Plus size={64} color="#5865F2" />
                     </div>
                     <h2 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1rem' }}>Integración con Discord</h2>
-                    <p style={{ color: '#888', fontSize: '1.2rem', marginBottom: '3rem' }}>Conecta HK Sentinel con tu servidor de Discord para recibir alertas de muertes, eventos globales y alarmas inteligentes en tiempo real.</p>
+                    <p style={{ color: '#888', fontSize: '1.2rem', marginBottom: '3rem' }}>Conecta RUST OPS con tu servidor de Discord para recibir alertas de muertes, eventos globales y alarmas inteligentes en tiempo real.</p>
                     
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '3rem' }}>
                         <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>

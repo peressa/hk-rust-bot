@@ -43,19 +43,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="dashboard-container" style={{ display: 'flex', minHeight: '100vh', background: 'var(--background)' }}>
       {/* Sidebar - Official Rust Terminal Style */}
       <aside style={{ 
-        width: '300px', 
-        padding: '2rem 1rem', 
+        width: '280px', 
+        padding: '2rem 0', 
         display: 'flex', 
         flexDirection: 'column',
-        gap: '2.5rem',
-        background: '#050505',
+        background: 'linear-gradient(180deg, #050505 0%, #0a0a0b 100%)',
         borderRight: '1px solid var(--border)',
         height: '100vh',
         position: 'sticky',
         top: 0,
-        zIndex: 50
+        zIndex: 50,
+        boxShadow: '10px 0 30px rgba(0,0,0,0.5)'
       }}>
-        <div style={{ padding: '0 1rem', marginBottom: '1rem' }}>
+        <div style={{ padding: '0 2rem', marginBottom: '3rem' }}>
           <BrandLogo size="md" />
         </div>
 
@@ -120,44 +120,72 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
         </nav>
 
-        {/* User Footer */}
+        {/* User Operator ID Card */}
         <div style={{ 
             marginTop: 'auto', 
-            background: 'rgba(255,255,255,0.02)', 
-            padding: '1.25rem', 
-            borderTop: '1px solid var(--border)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '1rem'
+            padding: '1.5rem', 
+            borderTop: '1px solid rgba(255,255,255,0.03)',
+            background: 'linear-gradient(to bottom, transparent, rgba(206, 66, 43, 0.02))'
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-             <div style={{ width: '32px', height: '32px', background: '#222', border: '1px solid var(--border)' }}>
-                {session?.user?.image && <img src={session.user.image} style={{ width: '100%', height: '100%' }} />}
-             </div>
-             <div style={{ flex: 1, minWidth: 0 }}>
-                 <div style={{ fontSize: '0.85rem', fontWeight: 600, fontFamily: 'var(--font-barlow)', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {session?.user?.name || "Invitado"}
-                 </div>
-                 <div style={{ fontSize: '0.65rem', color: '#22c55e', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05rem' }}>Conectado</div>
-             </div>
-          </div>
+          <div style={{ 
+              background: 'rgba(255,255,255,0.02)', 
+              padding: '1rem', 
+              border: '1px solid rgba(255,255,255,0.05)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+               <div style={{ 
+                   width: '36px', 
+                   height: '36px', 
+                   background: '#111', 
+                   border: '1px solid var(--primary)',
+                   padding: '2px',
+                   boxShadow: '0 0 10px rgba(206, 66, 43, 0.2)'
+               }}>
+                  {session?.user?.image ? (
+                    <img src={session.user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
+                        <ShieldCheck size={18} />
+                    </div>
+                  )}
+               </div>
+               <div style={{ flex: 1, minWidth: 0 }}>
+                   <div style={{ fontSize: '0.8rem', fontWeight: 800, fontFamily: 'var(--font-barlow)', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', letterSpacing: '0.02em' }}>
+                      {session?.user?.name || "Operador Desconocido"}
+                   </div>
+                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div style={{ width: '4px', height: '4px', background: '#22c55e', borderRadius: '50%' }}></div>
+                      <span style={{ fontSize: '0.6rem', color: '#22c55e', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05rem' }}>Online</span>
+                   </div>
+               </div>
+            </div>
 
-          <button onClick={() => signOut({ callbackUrl: '/login' })} style={{ 
-              display: 'flex', 
-              alignItems: 'center', 
-              gap: '0.75rem', 
-              padding: '0.5rem 0.75rem', 
-              color: '#ef4444', 
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              fontFamily: 'var(--font-barlow)',
-              textTransform: 'uppercase'
-            }}>
-              <LogOut size={16} /> Cerrar Sesión
-          </button>
+            <button onClick={() => signOut({ callbackUrl: '/login' })} style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                gap: '0.5rem', 
+                padding: '0.5rem', 
+                color: 'rgba(239, 68, 68, 0.6)', 
+                background: 'rgba(239, 68, 68, 0.05)',
+                border: '1px solid rgba(239, 68, 68, 0.1)',
+                cursor: 'pointer',
+                fontSize: '0.65rem',
+                fontWeight: 800,
+                fontFamily: 'var(--font-barlow)',
+                textTransform: 'uppercase',
+                width: '100%',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => (e.currentTarget.style.color = '#ef4444', e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)')}
+              onMouseOut={(e) => (e.currentTarget.style.color = 'rgba(239, 68, 68, 0.6)', e.currentTarget.style.background = 'rgba(239, 68, 68, 0.05)')}
+            >
+                <LogOut size={12} /> Desconectar Sistema
+            </button>
+          </div>
         </div>
       </aside>
 
@@ -183,20 +211,28 @@ function SidebarItem({ icon, label, href, active = false }: { icon: React.ReactN
       display: 'flex',
       alignItems: 'center',
       gap: '0.75rem',
-      padding: '0.75rem 1rem',
-      color: active ? 'white' : 'rgba(255,255,255,0.4)',
-      background: active ? 'rgba(206, 66, 43, 0.1)' : 'transparent',
-      transition: 'all 0.1s ease-out',
+      padding: '0.85rem 2rem',
+      color: active ? 'white' : 'rgba(255,255,255,0.3)',
+      background: active ? 'linear-gradient(to right, rgba(206, 66, 43, 0.08), transparent)' : 'transparent',
+      transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
       textDecoration: 'none',
-      fontSize: '0.9rem',
-      fontWeight: 600,
-      fontFamily: 'var(--font-roboto)',
+      fontSize: '0.85rem',
+      fontWeight: active ? 700 : 500,
+      fontFamily: 'var(--font-barlow)',
       borderLeft: active ? '3px solid var(--primary)' : '3px solid transparent',
-      position: 'relative'
-    }}>
-      <span style={{ color: active ? 'var(--primary)' : 'inherit', display: 'flex' }}>{icon}</span>
-      <span style={{ flex: 1 }}>{label}</span>
-      {active && <ChevronRight size={14} color="var(--primary)" />}
+      position: 'relative',
+      overflow: 'hidden'
+    }}
+    onMouseOver={(e) => !active && (e.currentTarget.style.color = 'rgba(255,255,255,0.7)', e.currentTarget.style.background = 'rgba(255,255,255,0.02)')}
+    onMouseOut={(e) => !active && (e.currentTarget.style.color = 'rgba(255,255,255,0.3)', e.currentTarget.style.background = 'transparent')}
+    >
+      <span style={{ 
+          color: active ? 'var(--primary)' : 'inherit', 
+          display: 'flex',
+          filter: active ? 'drop-shadow(0 0 5px rgba(206, 66, 43, 0.5))' : 'none'
+      }}>{icon}</span>
+      <span style={{ flex: 1, letterSpacing: '0.02em', textTransform: 'uppercase', fontSize: '0.75rem' }}>{label}</span>
+      {active && <div style={{ width: '4px', height: '4px', background: 'var(--primary)', borderRadius: '50%', boxShadow: '0 0 10px var(--primary)' }}></div>}
     </Link>
   );
 }

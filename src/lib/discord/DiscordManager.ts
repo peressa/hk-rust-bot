@@ -24,7 +24,7 @@ export class DiscordManager {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            username: "HK Sentinel",
+            username: "RUST OPS",
             avatar_url: this.AVATAR_URL,
             ...payload
           })
@@ -82,7 +82,7 @@ export class DiscordManager {
     await this.sendNotify(config, {
       embeds: [{
         title: `🔗 Enlace Satelital Establecido`,
-        description: `HK Bot se ha emparejado exitosamente con el servidor.\nIP: \`${ip}:${port}\``,
+        description: `RUST OPS se ha emparejado exitosamente con el servidor.\nIP: \`${ip}:${port}\``,
         color: 0x22c55e, // Verde
         footer: { text: `Servidor: ${serverName}` },
         timestamp: new Date().toISOString()

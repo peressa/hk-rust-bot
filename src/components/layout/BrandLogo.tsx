@@ -1,5 +1,5 @@
 import React from "react";
-import { Radio } from "lucide-react";
+import { Target, Activity } from "lucide-react";
 
 interface BrandLogoProps {
   size?: 'sm' | 'md' | 'lg';
@@ -30,9 +30,22 @@ export default function BrandLogo({ size = 'md', showText = true }: BrandLogoPro
         padding: isSm ? '3px' : isLg ? '8px' : '4px', 
         display: 'flex',
         borderRadius: '2px',
-        boxShadow: isLg ? '0 0 20px rgba(206, 66, 43, 0.3)' : 'none'
+        boxShadow: isLg ? '0 0 30px rgba(206, 66, 43, 0.4)' : 'none',
+        position: 'relative'
       }}>
-        <Radio color="white" size={iconSize} />
+        <Target color="white" size={iconSize} />
+        {/* Live Heartbeat Dot */}
+        <div style={{ 
+            position: 'absolute', 
+            top: -2, 
+            right: -2, 
+            width: '8px', 
+            height: '8px', 
+            background: '#22c55e', 
+            borderRadius: '50%',
+            border: '2px solid #050505',
+            boxShadow: '0 0 5px #22c55e'
+        }}></div>
       </div>
       
       {showText && (
@@ -46,7 +59,7 @@ export default function BrandLogo({ size = 'md', showText = true }: BrandLogoPro
           color: '#fff',
           textTransform: 'uppercase'
         }}>
-          RUST <span style={{ color: 'var(--primary)', fontStyle: 'italic' }}>SENTINEL</span>
+          RUST <span style={{ color: 'var(--primary)', fontStyle: 'italic' }}>OPS</span>
         </h2>
       )}
     </div>

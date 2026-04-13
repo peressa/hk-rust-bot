@@ -41,7 +41,7 @@ export default function DashboardPage() {
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
         <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
-            <h1 style={{ fontSize: '3rem', fontWeight: 800, fontFamily: 'var(--font-barlow)', letterSpacing: '-0.02em', lineHeight: 1, color: '#fff' }}>
+            <h1 style={{ fontSize: '3rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', letterSpacing: '-0.02em', lineHeight: 1, color: '#fff', textTransform: 'uppercase' }}>
               Central de Mando
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '0.5rem', fontWeight: 400 }}>
@@ -93,10 +93,22 @@ export default function DashboardPage() {
           </div>
         )}
 
-        <footer style={{ marginTop: '5rem', borderTop: '1px solid var(--border)', paddingTop: '2rem', display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', fontFamily: 'var(--font-roboto)' }}>
-           <div style={{ display: 'flex', gap: '2rem' }}>
-             <span>SISTEMA: RUST SENTINEL v3.0</span>
-             <span>ENLACES ACTIVOS: {servers.length}</span>
+        <footer style={{ 
+            marginTop: '5rem', 
+            borderTop: '1px solid rgba(255,255,255,0.03)', 
+            paddingTop: '2rem', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            fontSize: '0.65rem', 
+            fontWeight: 800, 
+            color: 'rgba(255,255,255,0.2)', 
+            fontFamily: 'var(--font-roboto)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.1em'
+        }}>
+           <div style={{ display: 'flex', gap: '2.5rem' }}>
+             <span>SISTEMA: RUST OPS v3.0</span>
+             <span style={{ color: 'rgba(255,255,255,0.1)' }}>ENLACES ACTIVOS: {servers.length}</span>
            </div>
            <div>ESTADO DE RED: <span style={{ color: '#22c55e' }}>NOMINAL</span></div>
         </footer>
