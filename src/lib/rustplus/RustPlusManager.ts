@@ -38,6 +38,7 @@ class RustPlusManager extends EventEmitter {
   private monitorIntervals: Map<string, NodeJS.Timeout> = new Map();
   private lastMemberStates: Map<string, Map<string, any>> = new Map(); // key -> steamId -> state
   private lastMarkerStates: Map<string, any[]> = new Map(); // key -> markerIds[]
+  private intelLogs: Map<string, any[]> = new Map(); // key -> intel items[]
 
   constructor() {
     super();
@@ -438,6 +439,35 @@ class RustPlusManager extends EventEmitter {
   }
 
   // =====================================================================
+  // INTEL FEED LOGGING
+  // =====================================================================
+  private addIntel(steamId: string, ip: string, type: 'DEATH' | 'EVENT' | 'RAID' | 'SYS', message: string, data?: any) {
+    const key = `${steamId}-${ip}`;
+    if (!this.intelLogs.has(key)) {
+      this.intelLogs.set(key, []);
+    }
+    const log = this.intelLogs.get(key)!;
+    
+    log.push({
+      id: Math.random().toString(36).substr(2, 9),
+      type,
+      message,
+      data,
+      timestamp: Date.now()
+    });
+
+    if (log.length > 50) log.shift(); // Keep last 50
+    this.intelLogs.set(key, log);
+    
+    // Emitir para posibles integraciones en tiempo real (WebSockets futuros)
+    this.emit("intel", { steamId, ip, type, message, data });
+  }
+
+  getIntelLog(steamId: string, ip: string) {
+    return this.intelLogs.get(`${steamId}-${ip}`) || [];
+  }
+
+  // =====================================================================
   // SERVICIO DE MONITOREO Y ALERTAS AUTOMÁTICAS
   // =====================================================================
   private async startMonitoring(steamId: string, ip: string) {
@@ -486,16 +516,21 @@ class RustPlusManager extends EventEmitter {
         // 1. Detección de Desconexión
         if (last.isOnline && !m.isOnline) {
           rustplus.sendTeamMessage(`:exclamation: ${m.name} se ha desconectado.`);
+          this.addIntel(steamId, ip, 'SYS', `${m.name} se ha desconectado.`);
         }
         // 2. Detección de Re-conexión
         else if (!last.isOnline && m.isOnline) {
           rustplus.sendTeamMessage(`:exclamation: ${m.name} ha vuelto.`);
+          this.addIntel(steamId, ip, 'SYS', `${m.name} ha vuelto.`);
         }
 
         // 3. Detección de Muerte (Solo si estaba vivo)
         if (last.isAlive && !m.isAlive) {
+          const deathMsg = `¡${m.name} ha muerto en ${grid}!`;
           console.log(`[Monitor] Muerte detectada para miembro del equipo: ${m.name} en ${grid} (${Math.round(m.x)}, ${Math.round(m.y)})`);
-          this.sendTeamMessage(steamId, ip, `:exclamation: ¡${m.name} ha muerto en ${grid}! (Coord: ${Math.round(m.x)}, ${Math.round(m.y)})`)
+          this.addIntel(steamId, ip, 'DEATH', deathMsg, { name: m.name, grid, x: m.x, y: m.y });
+          
+          this.sendTeamMessage(steamId, ip, `:exclamation: ${deathMsg} (Coord: ${Math.round(m.x)}, ${Math.round(m.y)})`)
             .catch(e => console.warn(`[Monitor] Error enviando mensaje de muerte para ${m.name}:`, e.message));
 
           // Alerta en Discord
@@ -550,7 +585,9 @@ class RustPlusManager extends EventEmitter {
 
     if (deepSeaVendor && !prevDeepSeaVendor) {
       const grid = worldToGrid(deepSeaVendor.x, deepSeaVendor.y, mapSize);
-      rustplus.sendTeamMessage(`:exclamation: ¡Deepsea Event iniciado en ${grid}! Vendedor detectado.`);
+      const msg = `¡Deepsea Event iniciado en ${grid}! Vendedor detectado.`;
+      rustplus.sendTeamMessage(`:exclamation: ${msg}`);
+      this.addIntel(steamId, ip, 'EVENT', msg, { grid });
     }
 
     // Detectar nuevos eventos
@@ -582,6 +619,7 @@ class RustPlusManager extends EventEmitter {
         
         if (msg) {
           rustplus.sendTeamMessage(msg);
+          this.addIntel(steamId, ip, 'EVENT', msg.replace(':exclamation: ', ''), { eventName, grid });
           
           // Alerta en Discord
           const server = db.getServers(steamId).find((s: any) => s.ip === ip);

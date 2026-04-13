@@ -1,22 +1,21 @@
 @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap');
 
-:root {
-  --background: #000;
-  --foreground: #fcfcfc;
+  --background: #000000;
+  --foreground: #ffffff;
   --primary: #ce422b; /* Facepunch Red */
-  --primary-hover: #e04a32;
-  --secondary: #121212;
+  --primary-hover: #ffffff;
+  --secondary: #0a0a0a;
   --accent: #ce422b;
-  --surface: #0a0a0a;
-  --border: rgba(255, 255, 255, 0.1);
-  --glass: rgba(0, 0, 0, 0.9);
-  --text-muted: #888;
+  --surface: #000000;
+  --border: rgba(255, 255, 255, 0.08);
+  --glass: rgba(0, 0, 0, 0.95);
+  --text-muted: #666;
   
   --shadow-sm: none;
   --shadow: none;
   --shadow-lg: none;
   
-  --transition: all 0.15s ease-out;
+  --transition: all 0.1s ease-out;
 }
 
 * {
@@ -64,15 +63,16 @@ body {
 }
 
 .premium-card {
-  background: #111;
+  background: #050505;
   border: 1px solid var(--border);
   border-radius: 0;
   padding: 2rem;
   transition: var(--transition);
+  position: relative;
 }
 
 .premium-card:hover {
-  border-color: rgba(255,255,255,0.3);
+  border-color: rgba(255,255,255,0.15);
 }
 
 .btn-primary {
@@ -160,9 +160,9 @@ input:focus {
 .section-title::after {
   content: "";
   position: absolute;
-  bottom: -10px;
+  bottom: -4px;
   left: 0;
-  width: 50px;
-  height: 4px;
+  width: 40px;
+  height: 3px;
   background: var(--primary);
 }

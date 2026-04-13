@@ -52,12 +52,13 @@ export default function ManualPairingInput({ onPaired }: { onPaired: () => void 
           placeholder="Pega aquí el enlace rustplus://..."
           style={{ 
             flex: 1, 
-            background: 'rgba(0,0,0,0.2)', 
+            background: 'rgba(0,0,0,0.4)', 
             border: '1px solid var(--border)',
             padding: '0.75rem 1rem',
-            borderRadius: '8px',
+            borderRadius: '0',
             color: 'white',
-            fontSize: '0.9rem'
+            fontSize: '0.9rem',
+            outline: 'none'
           }}
         />
         <button 
@@ -67,7 +68,7 @@ export default function ManualPairingInput({ onPaired }: { onPaired: () => void 
           style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}
         >
           {loading ? <RefreshCw size={18} className="animate-spin" /> : <Send size={18} />}
-          Emparejar
+          EMPAREJAR
         </button>
       </form>
 
@@ -79,7 +80,7 @@ export default function ManualPairingInput({ onPaired }: { onPaired: () => void 
           onChange={(e) => setUseProxy(e.target.checked)}
           style={{ cursor: 'pointer' }}
         />
-        <label htmlFor="useProxy" style={{ fontSize: '0.8rem', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+        <label htmlFor="useProxy" style={{ fontSize: '0.7rem', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 900, textTransform: 'uppercase' }}>
           Usar Facepunch Proxy (Recomendado para servidores oficiales/protegidos)
         </label>
       </div>
@@ -87,13 +88,15 @@ export default function ManualPairingInput({ onPaired }: { onPaired: () => void 
       {status && (
         <div style={{ 
           marginTop: '1rem', 
-          padding: '0.75rem', 
-          borderRadius: '6px', 
-          fontSize: '0.85rem',
+          padding: '1rem', 
+          borderRadius: '0', 
+          fontSize: '0.8rem',
+          fontWeight: 900,
+          textTransform: 'uppercase',
           display: 'flex',
           alignItems: 'center',
           gap: '0.5rem',
-          background: status.type === 'success' ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+          background: status.type === 'success' ? 'rgba(34, 197, 94, 0.05)' : 'rgba(239, 68, 68, 0.05)',
           color: status.type === 'success' ? '#22c55e' : '#ef4444',
           border: `1px solid ${status.type === 'success' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`
         }}>

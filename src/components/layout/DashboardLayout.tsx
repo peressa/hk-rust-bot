@@ -34,25 +34,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', flex: 1 }}>
           <section>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingLeft: '1rem', borderLeft: '2px solid var(--primary)' }}>SISTEMAS_LECTURA</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingLeft: '1rem', borderLeft: '2px solid var(--primary)', fontFamily: 'Bebas Neue' }}>SISTEMAS_LECTURA</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <SidebarItem icon={<LayoutDashboard size={18} />} label="Mando Central" href="/dashboard" active={pathname === "/dashboard"} />
-              <SidebarItem icon={<MapIcon size={18} />} label="Mapa Tǭctico" href="/dashboard/map" active={pathname === "/dashboard/map"} />
+              <SidebarItem icon={<MapIcon size={18} />} label="Mapa Táctico" href="/dashboard/map" active={pathname === "/dashboard/map"} />
               <SidebarItem icon={<Video size={18} />} label="Vigilancia CCTV" href="/dashboard/cameras" active={pathname === "/dashboard/cameras"} />
             </div>
           </section>
 
           <section>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingLeft: '1rem', borderLeft: '2px solid var(--primary)' }}>LOGSTICA_RED</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingLeft: '1rem', borderLeft: '2px solid var(--primary)', fontFamily: 'Bebas Neue' }}>LOGÍSTICA_RED</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <SidebarItem icon={<Zap size={18} />} label="Red ElǸctrica" href="/dashboard/energy" active={pathname === "/dashboard/energy"} />
-              <SidebarItem icon={<ShoppingCart size={18} />} label="Economa Vending" href="/dashboard/vending" active={pathname === "/dashboard/vending"} />
+              <SidebarItem icon={<Zap size={18} />} label="Red Eléctrica" href="/dashboard/energy" active={pathname === "/dashboard/energy"} />
+              <SidebarItem icon={<ShoppingCart size={18} />} label="Economía Vending" href="/dashboard/vending" active={pathname === "/dashboard/vending"} />
               <SidebarItem icon={<Calculator size={18} />} label="Calculadora Raid" href="/dashboard/tools/raid" active={pathname === "/dashboard/tools/raid"} />
             </div>
           </section>
 
           <section>
-            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingLeft: '1rem', borderLeft: '2px solid var(--primary)' }}>COMUNICACIONES</div>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingLeft: '1rem', borderLeft: '2px solid var(--primary)', fontFamily: 'Bebas Neue' }}>COMUNICACIONES</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
               <SidebarItem icon={<MessageSquare size={18} />} label="Chat de Equipo" href="/dashboard/chat" active={pathname === "/dashboard/chat"} />
             </div>
@@ -60,7 +60,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {isAdmin && (
             <section>
-              <div style={{ fontSize: '0.65rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingLeft: '1rem', borderLeft: '2px solid var(--primary)' }}>NIVEL_ADMIN</div>
+              <div style={{ fontSize: '0.65rem', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.75rem', paddingLeft: '1rem', borderLeft: '2px solid var(--primary)', fontFamily: 'Bebas Neue' }}>NIVEL_ADMIN</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <SidebarItem icon={<ShieldCheck size={18} />} label="Consola de Mando" href="/dashboard/admin" active={pathname === "/dashboard/admin"} />
               </div>

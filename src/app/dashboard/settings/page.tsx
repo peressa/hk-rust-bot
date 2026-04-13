@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Settings, ShieldCheck, Cpu, Bell, ExternalLink, RefreshCw } from "lucide-react";
+import { Settings, ShieldCheck, Cpu, ExternalLink, RefreshCw } from "lucide-react";
+import ManualPairingInput from "@/components/dashboard/ManualPairingInput";
 
 export default function SettingsPage() {
   const [authToken, setAuthToken] = useState("");
@@ -60,117 +61,117 @@ export default function SettingsPage() {
 
   return (
     <DashboardLayout>
-      <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '2.5rem' }}>
-          <h1 style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Settings color="var(--primary)" /> Configuración de Identidad
+      <div style={{ maxWidth: '900px', margin: '0 auto' }}>
+        <header style={{ marginBottom: '3rem' }}>
+          <h1 style={{ fontSize: '3rem', fontWeight: 900, fontFamily: 'Bebas Neue', letterSpacing: '0.05em' }}>
+            OPERACIONES_SISTEMA
           </h1>
-          <p style={{ color: 'var(--text-muted)' }}>Configura tu conexión con los servicios oficiales de Rust.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 700, textTransform: 'uppercase' }}>
+            Configuración de Identidad y Terminal de Enlace
+          </p>
         </header>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          {/* Status Section */}
-          <section className="premium-card">
-            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <ShieldCheck size={20} color="#22c55e" /> Estado del Dispositivo Virtual
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1.5rem' }}>
-              <StatusBox 
-                label="FCM Listener" 
-                value={status?.listening ? "Activo" : "Inactivo"} 
-                color={status?.listening ? "#22c55e" : "var(--text-muted)"} 
-              />
-              <StatusBox 
-                label="Credenciales FCM" 
-                value={status?.hasKeys ? "Configuradas" : "Pendientes"} 
-                color={status?.hasKeys ? "#22c55e" : "#ef4444"} 
-              />
-            </div>
-            
-            {status?.hasKeys && (
-              <button 
-                onClick={handleReset}
-                style={{ 
-                  marginTop: '1.5rem', 
-                  fontSize: '0.75rem', 
-                  color: '#ef4444', 
-                  background: 'none', 
-                  border: 'none', 
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.25rem'
-                }}
-              >
-                Resetear Conexión y Borrar Datos
-              </button>
-            )}
-          </section>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: '2rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {/* Manual Pairing Section */}
+                <section className="premium-card" style={{ borderLeft: '4px solid var(--primary)' }}>
+                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'Bebas Neue', fontSize: '1.5rem' }}>
+                    <ExternalLink size={20} /> VINCULACIÓN MANUAL
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', fontWeight: 700 }}>
+                    Si el bot no detecta automáticamente tu servidor, pega el enlace de Rust+ aquí.
+                    </p>
+                    <ManualPairingInput onPaired={() => {}} />
+                </section>
 
-          {/* Registration Section */}
-          <section className="premium-card">
-            <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Cpu size={20} color="var(--primary)" /> Vincular con Facepunch
-            </h3>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-              Para recibir notificaciones de "Pairing" directamente en esta web, necesitas registrar tu navegador como un dispositivo virtual.
-            </p>
-            
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', marginBottom: '0.5rem', fontWeight: 600 }}>Rust+ Auth Token</label>
-              <div style={{ display: 'flex', gap: '1rem' }}>
-                <input 
-                  type="password" 
-                  value={authToken}
-                  onChange={(e) => setAuthToken(e.target.value)}
-                  placeholder="Introduce tu Token de Autenticación..." 
-                  style={{ flex: 1, background: 'rgba(0,0,0,0.2)', color: 'white' }}
-                />
-                <button 
-                  className="btn-primary" 
-                  disabled={loading || !authToken}
-                  onClick={handleRegister}
-                >
-                  {loading ? <RefreshCw size={18} className="animate-spin" /> : "Vincular Ahora"}
-                </button>
-              </div>
-              <p style={{ marginTop: '1rem', fontSize: '0.75rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)', padding: '0.75rem', borderRadius: '8px', border: '1px solid rgba(251, 191, 36, 0.2)' }}>
-                <strong>⚠️ Solución de Conectividad:</strong> Si el bot no detecta tus servidores ("PHONE_REGISTRATION_ERROR"), usa el botón de <strong>Resetear</strong> arriba y vuelve a vincularte aquí para generar una nueva identidad UUID.
-              </p>
-              <a 
-                href="https://companion-rust.facepunch.com/" 
-                target="_blank" 
-                style={{ fontSize: '0.75rem', color: 'var(--primary)', marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-              >
-                ¿Dónde consigo mi token? <ExternalLink size={12} />
-              </a>
+                {/* Registration Section */}
+                <section className="premium-card">
+                    <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'Bebas Neue', fontSize: '1.5rem' }}>
+                    <Cpu size={20} /> IDENTIDAD VIRTUAL (FCM)
+                    </h3>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '1.5rem', fontWeight: 700 }}>
+                    Necesitas registrar este navegador para recibir señales de emparejamiento.
+                    </p>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <input 
+                                type="password" 
+                                value={authToken}
+                                onChange={(e) => setAuthToken(e.target.value)}
+                                placeholder="AUTH TOKEN..." 
+                                style={{ flex: 1, background: 'rgba(0,0,0,0.4)', color: 'white' }}
+                            />
+                            <button 
+                                className="btn-primary" 
+                                disabled={loading || !authToken}
+                                onClick={handleRegister}
+                            >
+                                {loading ? <RefreshCw size={18} className="animate-spin" /> : "VINCULAR"}
+                            </button>
+                        </div>
+                        <a 
+                            href="https://companion-rust.facepunch.com/" 
+                            target="_blank" 
+                            style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 900, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}
+                        >
+                            ¿DONDE CONSIGO EL TOKEN? <ExternalLink size={10} />
+                        </a>
+                    </div>
+                </section>
             </div>
-          </section>
 
-          <section className="premium-card">
-            <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Bell size={20} color="var(--primary)" /> Notificaciones y Persistencia
-            </h3>
-            <p style={{ fontSize: '0.85rem' }}>
-              Una vez vinculado, las notificaciones de emparejamiento llegarán automáticamente. 
-            </p>
-            <div style={{ marginTop: '1rem', padding: '1rem', borderRadius: '8px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-              <p style={{ fontSize: '0.75rem', color: '#fca5a5', margin: 0 }}>
-                <strong>⚠️ Nota para Coolify (Vital):</strong> Asegúrate de añadir un <strong>Volume</strong> en tu panel de Coolify mapeando la carpeta <code>/app/data</code>. Sin esto, perderás tu identidad cada vez que el bot se reinicie.
-              </p>
-            </div>
-          </section>
+            <aside style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {/* Status Section */}
+                <div className="premium-card" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                    <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontFamily: 'Bebas Neue', color: '#aaa' }}>
+                    <ShieldCheck size={20} /> ESTADO_BIO
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                        <StatusLine label="FCM_LISTENER" value={status?.listening ? "ONLINE" : "OFFLINE"} color={status?.listening ? "#22c55e" : "#ef4444"} />
+                        <StatusLine label="KEYS_STATUS" value={status?.hasKeys ? "ENCRIPTADO" : "PENDIENTE"} color={status?.hasKeys ? "#22c55e" : "#ef4444"} />
+                    </div>
+                    
+                    {status?.hasKeys && (
+                    <button 
+                        onClick={handleReset}
+                        style={{ 
+                        marginTop: '2rem', 
+                        fontSize: '0.7rem', 
+                        color: '#ef4444', 
+                        background: 'none', 
+                        border: 'none', 
+                        cursor: 'pointer',
+                        fontWeight: 900,
+                        textTransform: 'uppercase'
+                        }}
+                    >
+                        RESET IDENTIDAD UUID
+                    </button>
+                    )}
+                </div>
+
+                <div className="premium-card" style={{ padding: '1rem', borderStyle: 'dashed' }}>
+                    <h4 style={{ fontSize: '0.75rem', fontFamily: 'Bebas Neue', marginBottom: '0.5rem' }}>CONSEJO_PRO</h4>
+                    <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', lineHeight: 1.4, fontWeight: 700 }}>
+                        SI EL BOT NO DETECTA TUS SERVIDORES, USA EL BOTON DE RESET Y VUELVE A VINCULARTE PARA GENERAR UNA NUEVA ID.
+                    </p>
+                </div>
+            </aside>
+          </div>
         </div>
       </div>
     </DashboardLayout>
   );
 }
 
-function StatusBox({ label, value, color }: { label: string, value: string, color: string }) {
+function StatusLine({ label, value, color }: { label: string, value: string, color: string }) {
   return (
-    <div style={{ padding: '1.25rem', borderRadius: '12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
-      <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '0.25rem' }}>{label}</div>
-      <div style={{ fontSize: '1.2rem', fontWeight: 800, color }}>{value}</div>
+    <div>
+      <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 900, marginBottom: '0.25rem' }}>{label}</div>
+      <div style={{ fontSize: '1.2rem', fontWeight: 900, color, fontFamily: 'Bebas Neue' }}>{value}</div>
     </div>
   );
 }

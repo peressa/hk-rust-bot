@@ -139,7 +139,8 @@ export default function LandingContent() {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
-          gap: '2.5rem'
+          gap: '2.5rem',
+          alignItems: 'stretch' // Asegurar que todas las cajas tengan la misma altura
         }}>
           <RustGridItem 
             title={t.modules.radar.title}
@@ -168,28 +169,37 @@ export default function LandingContent() {
       <section style={{ padding: '10rem 4rem', background: '#0a0a0a' }}>
         <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <h2 className="section-title">{t.pricing.title}</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '4rem' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', 
+            gap: '4rem',
+            alignItems: 'stretch' // Estabilizar altura de planes
+          }}>
             
             {/* Monthly */}
-            <div style={{ borderLeft: '4px solid #333', paddingLeft: '3rem' }}>
-              <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.8rem', marginBottom: '1rem' }}>{t.pricing.monthly.type}</div>
-              <h3 style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>{t.pricing.monthly.title}</h3>
-              <p style={{ color: '#888', marginBottom: '3rem', fontSize: '1.1rem' }}>{t.pricing.monthly.desc}</p>
-              <div style={{ fontSize: '4rem', marginBottom: '3rem' }}>{t.pricing.monthly.price} <span style={{ fontSize: '1rem', color: '#555' }}>{t.pricing.monthly.price_sub}</span></div>
-              <Link href="/auth/signin" className="btn-secondary" style={{ width: '100%', justifyContent: 'center' }}>
-                {t.pricing.monthly.cta} <ChevronRight size={18} />
-              </Link>
+            <div style={{ borderLeft: '4px solid #333', paddingLeft: '3rem', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.8rem', marginBottom: '1rem', height: '1rem' }}>{t.pricing.monthly.type}</div>
+              <h3 style={{ fontSize: '3rem', marginBottom: '1.5rem', minHeight: '3.5rem', display: 'flex', alignItems: 'center' }}>{t.pricing.monthly.title}</h3>
+              <p style={{ color: '#888', marginBottom: '3rem', fontSize: '1.1rem', minHeight: '4.5rem' }}>{t.pricing.monthly.desc}</p>
+              <div style={{ marginTop: 'auto' }}>
+                <div style={{ fontSize: '4rem', marginBottom: '3rem' }}>{t.pricing.monthly.price} <span style={{ fontSize: '1rem', color: '#555' }}>{t.pricing.monthly.price_sub}</span></div>
+                <Link href="/auth/signin" className="btn-secondary" style={{ width: '100%', justifyContent: 'center' }}>
+                  {t.pricing.monthly.cta} <ChevronRight size={18} />
+                </Link>
+              </div>
             </div>
 
             {/* Annual */}
-            <div style={{ borderLeft: '4px solid var(--primary)', paddingLeft: '3rem' }}>
-              <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.8rem', marginBottom: '1rem' }}>{t.pricing.annual.type}</div>
-              <h3 style={{ fontSize: '3rem', marginBottom: '1.5rem' }}>{t.pricing.annual.title}</h3>
-              <p style={{ color: '#888', marginBottom: '3rem', fontSize: '1.1rem' }}>{t.pricing.annual.desc}</p>
-              <div style={{ fontSize: '4rem', marginBottom: '3rem' }}>{t.pricing.annual.price} <span style={{ fontSize: '1rem', color: '#555' }}>{t.pricing.annual.price_sub}</span></div>
-              <Link href="/auth/signin" className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
-                {t.pricing.annual.cta} <ChevronRight size={18} />
-              </Link>
+            <div style={{ borderLeft: '4px solid var(--primary)', paddingLeft: '3rem', display: 'flex', flexDirection: 'column' }}>
+              <div style={{ color: 'var(--primary)', fontWeight: 900, fontSize: '0.8rem', marginBottom: '1rem', height: '1rem' }}>{t.pricing.annual.type}</div>
+              <h3 style={{ fontSize: '3rem', marginBottom: '1.5rem', minHeight: '3.5rem', display: 'flex', alignItems: 'center' }}>{t.pricing.annual.title}</h3>
+              <p style={{ color: '#888', marginBottom: '3rem', fontSize: '1.1rem', minHeight: '4.5rem' }}>{t.pricing.annual.desc}</p>
+              <div style={{ marginTop: 'auto' }}>
+                <div style={{ fontSize: '4rem', marginBottom: '3rem' }}>{t.pricing.annual.price} <span style={{ fontSize: '1rem', color: '#555' }}>{t.pricing.annual.price_sub}</span></div>
+                <Link href="/auth/signin" className="btn-primary" style={{ width: '100%', justifyContent: 'center' }}>
+                  {t.pricing.annual.cta} <ChevronRight size={18} />
+                </Link>
+              </div>
             </div>
 
           </div>
@@ -202,7 +212,7 @@ export default function LandingContent() {
           <div>
             <div style={{ color: '#888', marginBottom: '1rem' }}>RUST OPS</div>
             <p>&copy; 2026. ALL RIGHTS RESERVED.</p>
-            <p style={{ marginTop: '0.5rem' }}>{t.footer.restrictions}</p>
+            <p style={{ marginTop: '0.5rem', minHeight: '1rem' }}>{t.footer.restrictions}</p>
             <p style={{ marginTop: '1.5rem', color: 'var(--primary)', fontWeight: 900, fontSize: '0.8rem' }}>
               <a href="https://peressa.dev" target="_blank" style={{ color: 'inherit', textDecoration: 'none' }}>
                 {t.footer.dev}
@@ -220,7 +230,15 @@ export default function LandingContent() {
 
 function NavLink({ label, href }: { label: string, href: string }) {
   return (
-    <a href={href} style={{ color: '#888', textDecoration: 'none', fontSize: '0.8rem', fontWeight: 900, transition: 'var(--transition)' }}>
+    <a href={href} style={{ 
+      color: '#888', 
+      textDecoration: 'none', 
+      fontSize: '0.8rem', 
+      fontWeight: 900, 
+      transition: 'var(--transition)',
+      minWidth: '100px',
+      textAlign: 'center'
+    }}>
       {label}
     </a>
   );
@@ -228,10 +246,10 @@ function NavLink({ label, href }: { label: string, href: string }) {
 
 function RustGridItem({ title, desc, icon }: { title: string, desc: string, icon: React.ReactNode }) {
   return (
-    <div className="premium-card">
+    <div className="premium-card" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ color: 'var(--primary)', marginBottom: '1.5rem' }}>{icon}</div>
-      <h3 style={{ fontSize: '2rem', marginBottom: '1rem' }}>{title}</h3>
-      <p style={{ color: '#888', lineHeight: 1.4, fontSize: '1.1rem' }}>{desc}</p>
+      <h3 style={{ fontSize: '2rem', marginBottom: '1rem', minHeight: '2.5rem', display: 'flex', alignItems: 'center' }}>{title}</h3>
+      <p style={{ color: '#888', lineHeight: 1.4, fontSize: '1.1rem', flex: 1 }}>{desc}</p>
     </div>
   );
 }
