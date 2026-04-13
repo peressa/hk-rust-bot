@@ -736,8 +736,24 @@ const globalStore = global as any;
 
 export const rustPlusManager: RustPlusManager = globalStore._rustPlusManager || (globalStore._rustPlusManager = new RustPlusManager());
 
-if (typeof window === 'undefined') {
-  rustPlusManager.checkProtos().catch(err => console.error("[RustPlus Startup Error]:", err));
-  // Auto-activación de Inteligencia Persistente
-  FcmManager.initAllListeners().catch(err => console.error("[FCM Startup Error]:", err));
+/**
+ * Función de arranque seguro (Bootstrapping).
+ * Se debe llamar desde instrumentation.ts para evitar ejecuciones durante el build.
+ */
+export async function bootstrap() {
+  if (typeof window !== 'undefined') return;
+
+  console.log("[RustPlus] Ejecutando Bootstrapping Operativo...");
+  
+  try {
+    await rustPlusManager.checkProtos();
+    
+    // Importación dinámica para evitar ciclos en el arranque
+    const { FcmManager } = await import("../fcm/FcmManager");
+    await FcmManager.initAllListeners();
+    
+    console.log("[RustPlus] Bootstrapping completado con éxito.");
+  } catch (err) {
+    console.error("[RustPlus] Error durante el arranque táctico:", err);
+  }
 }
