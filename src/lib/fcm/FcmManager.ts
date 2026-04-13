@@ -17,7 +17,6 @@ const FCM_CONFIG = {
 };
 
 import { listenerRegistry } from "./ListenerRegistry";
-import { rustPlusManager } from "../rustplus/RustPlusManager";
 import { worldToGrid } from "../rustplus/coordUtils";
 
 export class FcmManager {
@@ -226,6 +225,7 @@ export class FcmManager {
                const mapSize = server?.mapSize || 4000;
                const grid = worldToGrid(x, y, mapSize);
                
+               const { rustPlusManager } = await import("../rustplus/RustPlusManager");
                rustPlusManager.sendTeamMessage(steamId, ip, 
                  `:exclamation: ¡${killer} te ha eliminado en ${grid}! (Coord: ${Math.round(x)},${Math.round(y)})`
                ).catch(e => console.warn("[FCM] No se pudo enviar el chat de muerte", e));
