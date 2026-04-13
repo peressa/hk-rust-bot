@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     // Verify ownership
     const server = db.prepare("SELECT * FROM servers WHERE id = ? AND steamId = ?").get(serverId, session.user.steamId) as any;
     if (!server) return NextResponse.json({ error: "Server not found" }, { status: 404 });
-|
+
     // Update
     if (discordWebhook !== undefined) server.discordWebhook = discordWebhook;
     if (discordChannelId !== undefined) server.discordChannelId = discordChannelId;
