@@ -358,3 +358,5 @@ export function getTeamChat(serverId: string, limit = 50) {
   return rows.reverse();
 }
 
+export default db;
+

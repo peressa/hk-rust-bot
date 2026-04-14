@@ -1,7 +1,7 @@
 import RustPlus from "@liamcottle/rustplus.js";
 import * as protobuf from "protobufjs";
 import { EventEmitter } from "events";
-import db, { saveTeamMessage } from "../db";
+import db, { saveTeamMessage, getMapCache, saveMapCache } from "../db";
 import { worldToGrid, worldToLeaflet, getRegionName } from "./coordUtils";
 import { FcmManager } from "../fcm/FcmManager";
 
@@ -349,7 +349,7 @@ class RustPlusManager extends EventEmitter {
     
     // 1. Intentar cargar desde cache persistente si tenemos serverId
     if (serverId && !forceRefresh) {
-      const cached: any = db.getMapCache(serverId);
+      const cached: any = getMapCache(serverId);
       if (cached && cached.mapSize) {
         console.log(`${logPrefix} Usando caché de DB para ${serverId} (Size: ${cached.mapSize})`);
         return {
@@ -389,7 +389,7 @@ class RustPlusManager extends EventEmitter {
           const mapSize = info?.mapSize || 4000;
           
           if (serverId) {
-              db.saveMapCache(serverId, {
+              saveMapCache(serverId, {
                 jpgImage: base64,
                 width: map.width,
                 height: map.height,
@@ -582,13 +582,13 @@ class RustPlusManager extends EventEmitter {
             const afkMins = Math.floor((Date.now() - m.afkSince) / 60000);
             const prevAfkMins = Math.floor((Date.now() - 15100 - m.afkSince) / 60000);
             if (afkMins >= 5 && afkMins > prevAfkMins) {
-              this.sendTeamMessage(steamId, ip, `Team member '${m.name}' is AFK for ${afkMins} minutes @ ${grid}`);
+              this.botSendTeamMessage(steamId, ip, `Team member '${m.name}' is AFK for ${afkMins} minutes @ ${grid}`);
             }
           }
         } else if (m.isOnline && hasMoved && last.afkSince) {
           const afkDuration = Math.round((Date.now() - last.afkSince) / 60000);
           if (afkDuration >= 5) { // Solo avisar si estuvo > 5 min quieto
-            this.sendTeamMessage(steamId, ip, `Team member '${m.name}' is no longer AFK after ${afkDuration} minutes @ ${grid}`);
+            this.botSendTeamMessage(steamId, ip, `Team member '${m.name}' is no longer AFK after ${afkDuration} minutes @ ${grid}`);
           }
           m.afkSince = null;
         }
@@ -596,6 +596,27 @@ class RustPlusManager extends EventEmitter {
 
       states.set(m.steamId, { ...m, grid });
     });
+  }
+
+  // Wrapper para enviar mensajes y persistirlos automáticamente en el historial
+  private async botSendTeamMessage(steamId: string, ip: string, message: string) {
+    try {
+      const rustplus = this.connections.get(`${steamId}-${ip}`);
+      if (rustplus) {
+        await rustplus.sendTeamMessage(message);
+        const server = db.prepare("SELECT id FROM servers WHERE steamId = ? AND ip = ?").get(steamId, ip) as any;
+        if (server) {
+          saveTeamMessage(server.id, {
+            steamId: "BOT",
+            name: "HK Bot",
+            message: message,
+            time: Date.now()
+          });
+        }
+      }
+    } catch (e) {
+       console.error("[BotMessage] Error:", e);
+    }
   }
 
   private processMarkersMonitor(steamId: string, ip: string, markers: any[], serverInfo: any) {
@@ -679,8 +700,8 @@ class RustPlusManager extends EventEmitter {
         }
         
         if (msg) {
-          rustplus.sendTeamMessage(msg);
-          this.addIntel(steamId, ip, 'EVENT', msg.replace(':exclamation: ', ''), { eventName, grid });
+          this.botSendTeamMessage(steamId, ip, msg);
+          this.addIntel(steamId, ip, 'EVENT', msg, { eventName, grid });
           
           // Alerta en Discord
           const serverObj = db.getServers(steamId).find((s: any) => s.ip === ip);
@@ -727,7 +748,7 @@ class RustPlusManager extends EventEmitter {
         const totalItems = (m.sellOrders || []).reduce((acc: number, so: any) => acc + (so.amountInStock || 0), 0);
         
         const msg = `¡Nueva máquina expendedora '${name}' con ${totalItems} artículos en stock en ${grid}!`;
-        rustplus.sendTeamMessage(`:exclamation: ${msg}`);
+        this.botSendTeamMessage(steamId, ip, msg);
         this.addIntel(steamId, ip, 'EVENT', msg, { eventName: "Nueva Vending", grid, name, totalItems });
       }
     });

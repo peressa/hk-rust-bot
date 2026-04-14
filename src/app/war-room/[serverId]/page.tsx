@@ -90,18 +90,18 @@ export default function WarRoomPage() {
       setTeam(data.team || []);
       setIntel(data.intel || []);
 
-      const vms = (data.markers || []).filter((m: any) => m.type === 3 && (m.sellOrders || m.sell_orders));
+      const vms = (data.markers || []).filter((m: any) => m.type === 3);
       const offers: any[] = [];
       vms.forEach((vm: any) => {
         const orders = vm.sellOrders || vm.sell_orders || [];
         orders.forEach((order: any) => {
           offers.push({
             machineName: vm.name || "Vending Desconocido",
-            itemToSell: order.itemId,
-            amountToSell: order.quantity,
-            currencyReq: order.currencyId,
-            costPerItem: order.costPerItem,
-            amountInStock: order.amountInStock,
+            itemToSell: order.itemId || order.item_id,
+            amountToSell: order.quantity || order.amount,
+            currencyReq: order.currencyId || order.currency_id,
+            costPerItem: order.costPerItem || order.cost_per_item,
+            amountInStock: order.amountInStock || order.amount_in_stock,
             x: vm.x,
             y: vm.y
           });
