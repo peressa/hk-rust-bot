@@ -143,7 +143,6 @@ try {
   stmt.run(adminId, "Admin Principal", "admin", new Date().toISOString());
 } catch(e) {}
 
-export default db;
 
 export function saveServer(server: any) {
   // Validación crítica: No guardar si faltan tokens (notificaciones de muerte, etc.)
