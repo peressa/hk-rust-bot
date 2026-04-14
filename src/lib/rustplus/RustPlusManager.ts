@@ -155,9 +155,9 @@ class RustPlusManager extends EventEmitter {
 
           // Guardar en DB para persistencia
           try {
-            const server = db.prepare("SELECT id FROM servers WHERE steamId = ? AND ip = ?").get(steamId, connection.ip) as any;
+            const server = db.getServers(steamId).find((s: any) => s.ip === connection.ip);
             if (server) {
-              db.saveTeamMessage(server.id, fullMsg);
+              db.saveTeamMessage(server.id || `${steamId}-${connection.ip}`, fullMsg);
             }
           } catch (e) {
             console.error("[RustPlus] Error al persistir mensaje de chat:", e);

@@ -90,18 +90,16 @@ export default function WarRoomPage() {
       setTeam(data.team || []);
       setIntel(data.intel || []);
 
-      const vms = (data.markers || []).filter((m: any) => m.type === 3);
-      const offers: any[] = [];
       vms.forEach((vm: any) => {
-        const orders = vm.sellOrders || vm.sell_orders || [];
+        const orders = vm.sellOrders || vm.sell_orders || vm.SellOrders || [];
         orders.forEach((order: any) => {
           offers.push({
             machineName: vm.name || "Vending Desconocido",
-            itemToSell: order.itemId || order.item_id,
-            amountToSell: order.quantity || order.amount,
-            currencyReq: order.currencyId || order.currency_id,
-            costPerItem: order.costPerItem || order.cost_per_item,
-            amountInStock: order.amountInStock || order.amount_in_stock,
+            itemToSell: order.itemId || order.item_id || order.ItemId || 0,
+            amountToSell: order.quantity || order.amount || order.Quantity || 0,
+            currencyReq: order.currencyId || order.currency_id || order.CurrencyId || 0,
+            costPerItem: order.costPerItem || order.cost_per_item || order.CostPerItem || 0,
+            amountInStock: order.amountInStock !== undefined ? order.amountInStock : (order.amount_in_stock !== undefined ? order.amount_in_stock : (order.AmountInStock || 0)),
             x: vm.x,
             y: vm.y
           });
