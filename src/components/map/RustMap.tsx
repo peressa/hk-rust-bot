@@ -76,9 +76,16 @@ export default function RustMap({
 
   const getPosition = (x: number, y: number): [number, number] => {
     if (mapSize <= 0) return [0, 0];
-    const totalSize = mapSize + (oceanMargin * 2);
-    const lng = ((x + oceanMargin) / totalSize) * 1000;
-    const lat = ((y + oceanMargin) / totalSize) * 1000;
+    
+    // ESTÁNDAR DE PRECISIÓN RUST+: 1000 unidades de padding por cada lado.
+    // Origin (0,0) es el centro de la isla.
+    const PAD_SIDE = 1000;
+    const worldHalf = mapSize / 2;
+    const totalWorldSize = mapSize + (PAD_SIDE * 2);
+    
+    const lng = ((x + worldHalf + PAD_SIDE) / totalWorldSize) * 1000;
+    const lat = ((y + worldHalf + PAD_SIDE) / totalWorldSize) * 1000;
+    
     return [lat, lng];
   };
 
@@ -140,7 +147,7 @@ export default function RustMap({
         leafletMap.current = L.map(mapRef.current, {
           crs: L.CRS.Simple,
           minZoom: -2,
-          maxZoom: 4,
+          maxZoom: 2,
           zoom: -1,
           center: [500, 500],
           attributionControl: false,
@@ -218,6 +225,32 @@ export default function RustMap({
        } catch(e) {}
     });
   }, [L, drawings]);
+  
+  // Renderizar Monumentos
+  useEffect(() => {
+    if (!L || !leafletMap.current) return;
+    if (layersRef.current['monumentsGroup']) leafletMap.current.removeLayer(layersRef.current['monumentsGroup']);
+    
+    if (showMonuments) {
+      const monumentsGroup = L.layerGroup().addTo(leafletMap.current);
+      layersRef.current['monumentsGroup'] = monumentsGroup;
+      
+      monuments.forEach((mon: any) => {
+        const pos = getPosition(mon.x, mon.y);
+        const cleanName = (mon.token || '').replace(/_/g, ' ').toUpperCase();
+        
+        L.marker(pos, {
+          icon: L.divIcon({
+            className: 'monument-label',
+            html: `<div style="color: rgba(255,255,255,0.4); font-size: 10px; font-weight: 600; text-transform: uppercase; white-space: nowrap; text-shadow: 0 0 4px black; letter-spacing: 0.1em; pointer-events: none;">${cleanName}</div>`,
+            iconSize: [0, 0],
+            iconAnchor: [0, 0]
+          }),
+          interactive: false
+        }).addTo(monumentsGroup);
+      });
+    }
+  }, [L, monuments, showMonuments, mapSize]);
 
   // Renderizar Marcadores (Jugadores, Equipos, Eventos)
   useEffect(() => {
@@ -312,6 +345,7 @@ export default function RustMap({
            .custom-popup-rust .leaflet-popup-content-wrapper { background: #050505; color: white; border: 1px solid var(--border); border-radius: 0; }
            .radar-pulse { animation: pulse 2s infinite; }
            @keyframes pulse { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
+           .leaflet-container { background: #0a0a0b !important; }
         `}</style>
     </div>
   );
