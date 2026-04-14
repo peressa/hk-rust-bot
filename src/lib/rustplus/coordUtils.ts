@@ -51,19 +51,18 @@ export function worldToGrid(x: number, y: number, mapSize: number): string {
  * Proyecta una coordenada de mundo a coordenadas de Leaflet (0-1000)
  */
 export function worldToLeaflet(x: number, y: number, mapSize: number, oceanMargin: number) {
-    // ESTÁNDAR DE REFERENCIA (RustPlus-Desktop):
-    // El mapa se rinde con un padding fijo de 1000 por lado (Total 2000).
-    const PAD_WORLD = 2000;
-    const halfPad = PAD_WORLD / 2;
-    const totalSize = mapSize + PAD_WORLD;
+    // ESTÁNDAR DE PRECISIÓN RUST+:
+    // El mapa se rinde con un padding fijo de 1000 unidades Unity por cada lado.
+    const PAD_SIDE = 1000;
+    const worldHalf = mapSize / 2;
+    const totalWorldSize = mapSize + (PAD_SIDE * 2);
 
-    // RustPlus-Desktop asume que x,y (de markers/team) están en rango [0, mapSize]
-    // o centrados según el origen.
-    // Si x es 0 (borde izq de isla), su posición en la imagen es halfPad (1000).
-    const lng = ((x + halfPad) / totalSize) * 1000;
-    // Y en Leaflet es invertido 0..1000 (arriba..abajo)
-    // Pero RustPlus envia Y de abajo hacia arriba.
-    const lat = ((y + halfPad) / totalSize) * 1000;
+    // Normalizar coordenadas (x,y suelen venir centradas en 0,0)
+    // Desplazamos x,y para que el rango sea [0, totalWorldSize]
+    // lng (X) de Izquierda a Derecha.
+    // lat (Y) de Abajo a Arriba (Rust Y es latitud).
+    const lng = ((x + worldHalf + PAD_SIDE) / totalWorldSize) * 1000;
+    const lat = ((y + worldHalf + PAD_SIDE) / totalWorldSize) * 1000;
     
     return { lat, lng };
 }
