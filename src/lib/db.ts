@@ -47,6 +47,7 @@ db.exec(`
     jpgImage TEXT, -- Bloque Base64 de la imagen
     width INTEGER,
     height INTEGER,
+    mapSize INTEGER,
     updatedAt TEXT
   );
 
@@ -100,9 +101,8 @@ db.exec(`
 try {
   db.exec("ALTER TABLE map_cache ADD COLUMN oceanMargin INTEGER DEFAULT 0;");
 } catch(e) {}
-try {
-  db.exec("ALTER TABLE map_cache ADD COLUMN monuments TEXT DEFAULT '[]';");
-} catch(e) {}
+try { db.exec("ALTER TABLE map_cache ADD COLUMN mapSize INTEGER;"); } catch (e) {}
+try { db.exec("ALTER TABLE map_cache ADD COLUMN monuments TEXT;"); } catch (e) {}
 try {
   db.exec("ALTER TABLE servers ADD COLUMN discordWebhook TEXT;");
 } catch(e) {}
@@ -157,26 +157,25 @@ export function saveServer(server: any) {
   );
 }
 
-export function saveMapCache(serverId: string, mapData: any) {
+export function saveMapCache(serverId: string, data: { jpgImage: string, width: number, height: number, monuments: any[], mapSize: number }) {
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO map_cache (serverId, jpgImage, width, height, oceanMargin, monuments, updatedAt)
+    INSERT OR REPLACE INTO map_cache (serverId, jpgImage, width, height, monuments, mapSize, updatedAt)
     VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
-  const monumentsStr = mapData.monuments ? JSON.stringify(mapData.monuments) : '[]';
-  stmt.run(serverId, mapData.jpgImage, mapData.width, mapData.height, mapData.oceanMargin || 0, monumentsStr, new Date().toISOString());
+  const monumentsJson = JSON.stringify(data.monuments);
+  stmt.run(serverId, data.jpgImage, data.width, data.height, monumentsJson, data.mapSize, new Date().toISOString());
 }
 
 export function getMapCache(serverId: string) {
-  const stmt = db.prepare("SELECT * FROM map_cache WHERE serverId = ?");
-  const row: any = stmt.get(serverId);
-  if (row && row.monuments) {
-    try {
-      row.monuments = JSON.parse(row.monuments);
-    } catch(e) {
-      row.monuments = [];
-    }
-  }
-  return row;
+  const row = db.prepare("SELECT * FROM map_cache WHERE serverId = ?").get(serverId) as any;
+  if (!row) return null;
+  return {
+    jpgImage: row.jpgImage,
+    width: row.width,
+    height: row.height,
+    mapSize: row.mapSize,
+    monuments: row.monuments ? JSON.parse(row.monuments) : []
+  };
 }
 
 export function clearMapCache(serverId: string) {
