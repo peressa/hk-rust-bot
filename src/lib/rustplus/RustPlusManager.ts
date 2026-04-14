@@ -332,15 +332,15 @@ class RustPlusManager extends EventEmitter {
     // 1. Intentar cargar desde cache persistente si tenemos serverId
     if (serverId && !forceRefresh) {
       const cached: any = db.getMapCache(serverId);
-      if (cached) {
-        console.log(`${logPrefix} Usando caché de DB para ${serverId}`);
+      if (cached && cached.mapSize) {
+        console.log(`${logPrefix} Usando caché de DB para ${serverId} (Size: ${cached.mapSize})`);
         return {
           response: {
             map: {
               jpgImage: Buffer.from(cached.jpgImage, 'base64'),
               width: cached.width,
               height: cached.height,
-              oceanMargin: cached.oceanMargin,
+              mapSize: cached.mapSize,
               monuments: cached.monuments,
               cached: true,
               updatedAt: cached.updatedAt
@@ -350,43 +350,48 @@ class RustPlusManager extends EventEmitter {
       }
     }
 
-    console.log(`${logPrefix} Solicitando MAP real para ${ip} (Timeout: 90s)...`);
+    console.log(`${logPrefix} Solicitando MAP e INFO real para ${ip} (Timeout: 90s)...`);
     
     try {
-      const response = await this.sendRequest(steamId, ip, { getMap: {} }, 90000);
-      
-      // Validador de respuesta de mapa
-      if (!response?.response?.map) {
-        console.warn(`${logPrefix} Respuesta vacía para ${ip}`);
-        throw new Error("El servidor devolvió una respuesta de mapa vacía. Posible error de .proto");
+      // Necesitamos tanto el mapa como el info para tener el mapSize real (unidades Unity)
+      const [mapResp, infoResp] = await Promise.all([
+        this.sendRequest(steamId, ip, { getMap: {} }, 90000),
+        this.sendRequest(steamId, ip, { getInfo: {} }).catch(() => null)
+      ]);
+
+      const map = mapResp?.response?.map;
+      const info = infoResp?.response?.info;
+
+      if (!map) {
+        throw new Error("El servidor devolvió una respuesta de mapa vacía.");
       }
 
-      // 2. Guardar en caché si tenemos éxito y serverId
-      if (serverId && response.response.map.jpgImage) {
-        try {
-          const map = response.response.map;
+      if (map.jpgImage) {
           const base64 = Buffer.from(map.jpgImage).toString('base64');
-          db.saveMapCache(serverId, {
-            jpgImage: base64,
-            width: map.width,
-            height: map.height,
-            oceanMargin: map.oceanMargin,
-            monuments: map.monuments
-          });
-          console.log(`${logPrefix} Mapa guardado en caché para ${serverId}`);
-        } catch (cacheErr) {
-          console.error(`${logPrefix} Error guardando caché:`, cacheErr);
-        }
+          const mapSize = info?.mapSize || 4000;
+          
+          if (serverId) {
+              db.saveMapCache(serverId, {
+                jpgImage: base64,
+                width: map.width,
+                height: map.height,
+                monuments: map.monuments || [],
+                mapSize: mapSize
+              });
+              console.log(`${logPrefix} Mapa y worldSize (${mapSize}) guardados en caché.`);
+          }
+
+          // Inyectamos el mapSize en la respuesta para que el frontend lo reciba
+          map.mapSize = mapSize;
       }
 
-      return response;
+      return mapResp;
     } catch (error: any) {
-      console.error(`${logPrefix} Error en ${ip}:`, error.message || error);
+      console.error(`${logPrefix} Error al obtener mapa para ${ip}:`, error.message || error);
 
       // Si es un timeout, advertir sobre la posibilidad de usar Proxy o Fallback.
       if (error.message?.includes('timeout') || error.message?.includes('Timeout')) {
         console.warn(`${logPrefix} Timeout detectado para ${ip}.`);
-        
         const connection = Array.from(this.connections.values()).find(c => (c as any).server === ip);
         if (connection && !(connection as any).useFacepunchProxy) {
           throw new Error("Timeout prolongado en mapa. Intenta activar 'Usar Proxy' en la configuración del servidor.");
@@ -517,22 +522,22 @@ class RustPlusManager extends EventEmitter {
       if (last) {
         // 1. Detección de Desconexión
         if (last.isOnline && !m.isOnline) {
-          rustplus.sendTeamMessage(`:exclamation: ${m.name} se ha desconectado.`);
+          this.sendTeamMessage(steamId, ip, `:exclamation: ${m.name} se ha desconectado.`);
           this.addIntel(steamId, ip, 'SYS', `${m.name} se ha desconectado.`);
         }
         // 2. Detección de Re-conexión
         else if (!last.isOnline && m.isOnline) {
-          rustplus.sendTeamMessage(`:exclamation: ${m.name} ha vuelto.`);
+          this.sendTeamMessage(steamId, ip, `:exclamation: ${m.name} ha vuelto.`);
           this.addIntel(steamId, ip, 'SYS', `${m.name} ha vuelto.`);
         }
 
         // 3. Detección de Muerte (Solo si estaba vivo)
         if (last.isAlive && !m.isAlive) {
-          const status = m.isOnline ? "Online" : "Offline";
+          const status = m.isOnline ? "online" : "offline";
           const timeLived = m.spawnTime ? Math.round((Date.now() / 1000) - m.spawnTime) : null;
           const timeStr = timeLived ? ` | Vida: ${Math.floor(timeLived / 60)}m ${timeLived % 60}s` : "";
 
-          const deathMsg = `¡${m.name} ha muerto en ${grid}! (Coords: ${Math.round(m.x)}, ${Math.round(m.y)}${timeStr} | Estado: ${status})`;
+          const deathMsg = `El miembro del equipo '${m.name}' ha muerto mientras estaba ${status} @ ${grid} (Coords: ${Math.round(m.x)}, ${Math.round(m.y)}${timeStr})`;
           console.log(`[Monitor] Muerte detectada para miembro del equipo: ${m.name} en ${grid} (${Math.round(m.x)}, ${Math.round(m.y)})`);
           this.addIntel(steamId, ip, 'DEATH', deathMsg, { name: m.name, grid, x: m.x, y: m.y, status, timeLived });
           
@@ -559,13 +564,13 @@ class RustPlusManager extends EventEmitter {
             const afkMins = Math.floor((Date.now() - m.afkSince) / 60000);
             const prevAfkMins = Math.floor((Date.now() - 15000 - m.afkSince) / 60000);
             if (afkMins >= 5 && afkMins > prevAfkMins) {
-              rustplus.sendTeamMessage(`:exclamation: El miembro del equipo '${m.name}' está AFK por ${afkMins} minutos en ${grid}`);
+              this.sendTeamMessage(steamId, ip, `:exclamation: El miembro del equipo '${m.name}' está AFK por ${afkMins} minutos @ ${grid}`);
             }
           }
         } else if (m.isOnline && hasMoved && last.afkSince) {
           const afkDuration = Math.round((Date.now() - last.afkSince) / 60000);
           if (afkDuration >= 5) { // Solo avisar si estuvo > 5 min quieto
-            rustplus.sendTeamMessage(`:exclamation: El miembro del equipo '${m.name}' ha dejado de estar AFK (estuvo quieto ${afkDuration}m en ${grid}).`);
+            this.sendTeamMessage(steamId, ip, `:exclamation: El miembro del equipo '${m.name}' ha dejado de estar AFK (estuvo quieto ${afkDuration}m @ ${grid}).`);
           }
           m.afkSince = null;
         }
