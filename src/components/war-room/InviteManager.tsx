@@ -16,7 +16,7 @@ export default function InviteManager({ serverId }: { serverId: string }) {
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(false);
   const [name, setName] = useState("");
-  const [expires, setExpires] = useState("7d");
+  const [expires, setExpires] = useState("wipe");
   const [canDraw, setCanDraw] = useState(false);
 
   useEffect(() => {
@@ -85,6 +85,7 @@ export default function InviteManager({ serverId }: { serverId: string }) {
             onChange={(e) => setExpires(e.target.value)}
             style={{ flex: 1, background: '#000', border: '1px solid #222', padding: '0.6rem', color: 'white', fontSize: '0.8rem' }}
           >
+            <option value="wipe">Hasta el fin del Wipe</option>
             <option value="12h">Cierra en 12 horas</option>
             <option value="1d">Cierra en 1 día</option>
             <option value="2d">Cierra en 2 días</option>
@@ -116,7 +117,10 @@ export default function InviteManager({ serverId }: { serverId: string }) {
               <div>
                 <div style={{ fontWeight: 800, fontSize: '0.85rem', color: 'var(--primary)', textTransform: 'uppercase', fontFamily: 'var(--font-barlow)' }}>{invite.name}</div>
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '0.2rem', fontSize: '0.65rem', color: '#666', fontWeight: 700 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Clock size={10} /> {new Date(invite.expiresAt).toLocaleDateString()}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Clock size={10} /> 
+                    {invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : "Fin del Wipe"}
+                  </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Key size={10} /> PIN: {invite.code}</span>
                 </div>
               </div>

@@ -1,8 +1,8 @@
 import RustPlus from "@liamcottle/rustplus.js";
 import * as protobuf from "protobufjs";
 import { EventEmitter } from "events";
-import * as db from "../db";
-import { worldToGrid } from "./coordUtils";
+import db, { saveTeamMessage } from "../db";
+import { worldToGrid, worldToLeaflet, getRegionName } from "./coordUtils";
 import { FcmManager } from "../fcm/FcmManager";
 
 // =====================================================================
@@ -139,11 +139,29 @@ class RustPlusManager extends EventEmitter {
         if (message.broadcast?.teamMessage) {
           const teamKey = `${steamId}-${connection.ip}`;
           const chatMsg = message.broadcast.teamMessage.message;
-          const history = this.chatHistory.get(teamKey) || [];
           
-          history.push({ ...chatMsg, time: Date.now() });
+          const fullMsg = {
+            steamId: String(chatMsg.steamId),
+            name: chatMsg.name,
+            message: chatMsg.message,
+            color: chatMsg.color,
+            time: Date.now()
+          };
+
+          const history = this.chatHistory.get(teamKey) || [];
+          history.push(fullMsg);
           if (history.length > 100) history.shift();
           this.chatHistory.set(teamKey, history);
+
+          // Guardar en DB para persistencia
+          try {
+            const server = db.prepare("SELECT id FROM servers WHERE steamId = ? AND ip = ?").get(steamId, connection.ip) as any;
+            if (server) {
+              db.saveTeamMessage(server.id, fullMsg);
+            }
+          } catch (e) {
+            console.error("[RustPlus] Error al persistir mensaje de chat:", e);
+          }
 
           if (chatMsg.message.startsWith("!")) {
             this.handleTeamCommand(steamId, connection.ip, chatMsg.message);
@@ -556,21 +574,21 @@ class RustPlusManager extends EventEmitter {
         }
 
         // 4. Lógica de AFK (Notificar cada minuto a partir de los 5 min)
-        const hasMoved = Math.abs(last.x - m.x) > 1 || Math.abs(last.y - m.y) > 1;
+        const hasMoved = Math.abs(last.x - m.x) > 0.1 || Math.abs(last.y - m.y) > 0.1;
         if (m.isOnline && !hasMoved) {
           if (!last.afkSince) m.afkSince = Date.now();
           else {
             m.afkSince = last.afkSince;
             const afkMins = Math.floor((Date.now() - m.afkSince) / 60000);
-            const prevAfkMins = Math.floor((Date.now() - 15000 - m.afkSince) / 60000);
+            const prevAfkMins = Math.floor((Date.now() - 15100 - m.afkSince) / 60000);
             if (afkMins >= 5 && afkMins > prevAfkMins) {
-              this.sendTeamMessage(steamId, ip, `:exclamation: El miembro del equipo '${m.name}' está AFK por ${afkMins} minutos @ ${grid}`);
+              this.sendTeamMessage(steamId, ip, `Team member '${m.name}' is AFK for ${afkMins} minutes @ ${grid}`);
             }
           }
         } else if (m.isOnline && hasMoved && last.afkSince) {
           const afkDuration = Math.round((Date.now() - last.afkSince) / 60000);
           if (afkDuration >= 5) { // Solo avisar si estuvo > 5 min quieto
-            this.sendTeamMessage(steamId, ip, `:exclamation: El miembro del equipo '${m.name}' ha dejado de estar AFK (estuvo quieto ${afkDuration}m @ ${grid}).`);
+            this.sendTeamMessage(steamId, ip, `Team member '${m.name}' is no longer AFK after ${afkDuration} minutes @ ${grid}`);
           }
           m.afkSince = null;
         }
@@ -597,8 +615,8 @@ class RustPlusManager extends EventEmitter {
 
     lastCargoMarkers.forEach(oldM => {
       if (!currentCargoIds.includes(oldM.id)) {
-        const msg = "El Barco de Carga (Cargo Ship) ha salido del mapa.";
-        rustplus.sendTeamMessage(`:exclamation: ${msg}`);
+        const msg = "The Cargo Ship has left the map";
+        rustplus.sendTeamMessage(msg);
         this.addIntel(steamId, ip, 'EVENT', msg);
       }
     });
@@ -639,14 +657,15 @@ class RustPlusManager extends EventEmitter {
         let msg = "";
         let eventName = "";
         
+        const region = getRegionName(m.x, m.y, mapSize);
         if (m.type === 5) {
-          msg = `:exclamation: ¡Cargo Ship detectado en ${grid}!`;
-          eventName = "🚢 Barco (Cargo Ship)";
+          msg = `A Cargo Ship is active @ ${region} (${grid})`;
+          eventName = "🚢 Cargo Ship";
         } else if (m.type === 4) {
-          msg = `:exclamation: ¡Chinook (CH47) en curso hacia ${grid}!`;
+          msg = `A CH-47 Chinook with a Locked Crate is active @ ${region} (${grid})`;
           eventName = "🚁 Chinook (CH47)";
         } else if (m.type === 8) {
-          msg = `:exclamation: ¡Helicóptero de Patrulla activo en ${grid}!`;
+          msg = `A Patrol Helicopter is active @ ${region} (${grid})`;
           eventName = "🚁 Heli Patrulla";
         } else if (m.type === 6) {
            const isFar = Math.abs(m.x - mapSize/2) > mapSize/3 || Math.abs(m.y - mapSize/2) > mapSize/3;
@@ -684,8 +703,9 @@ class RustPlusManager extends EventEmitter {
 
         if (nearHarbor && !dockedSet.has(m.id)) {
           const grid = worldToGrid(m.x, m.y, mapSize);
-          const msg = `El Barco de Carga ha atracado en ${grid} (Harbor)`;
-          rustplus.sendTeamMessage(`:exclamation: ${msg}`);
+          const monumentName = nearHarbor.token.toUpperCase().replace(/_/g, ' ');
+          const msg = `The Cargo Ship has docked @ ${grid} (${monumentName})`;
+          rustplus.sendTeamMessage(msg);
           this.addIntel(steamId, ip, 'EVENT', msg, { grid });
           dockedSet.add(m.id);
         } else if (!nearHarbor && dockedSet.has(m.id)) {

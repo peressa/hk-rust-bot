@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { Layers, Users, Zap, EyeOff, Map as MapIcon, ShoppingCart, Pencil, Trash2 } from "lucide-react";
-import { indexToLetter } from "@/lib/rustplus/coordUtils";
+import { indexToLetter, worldToLeaflet } from "@/lib/rustplus/coordUtils";
 
 const MARKER_TYPES = {
   PLAYER: "Player",
@@ -76,17 +76,8 @@ export default function RustMap({
 
   const getPosition = (x: number, y: number): [number, number] => {
     if (mapSize <= 0) return [0, 0];
-    
-    // ESTÁNDAR DE PRECISIÓN RUST+: 1000 unidades de padding por cada lado.
-    // Origin (0,0) es el centro de la isla.
-    const PAD_SIDE = 1000;
-    const worldHalf = mapSize / 2;
-    const totalWorldSize = mapSize + (PAD_SIDE * 2);
-    
-    const lng = ((x + worldHalf + PAD_SIDE) / totalWorldSize) * 1000;
-    const lat = ((y + worldHalf + PAD_SIDE) / totalWorldSize) * 1000;
-    
-    return [lat, lng];
+    const projection = worldToLeaflet(x, y, mapSize);
+    return [projection.lat, projection.lng];
   };
 
   const getIcon = (leaflet: any, type: any, name: string) => {
@@ -168,34 +159,42 @@ export default function RustMap({
       const gridGroup = L.layerGroup().addTo(leafletMap.current);
       layersRef.current['gridGroup'] = gridGroup;
 
-      const totalCells = Math.max(1, Math.round(mapSize / 150));
-      const PAD_WORLD = 2000;
-      const totalSize = mapSize + PAD_WORLD;
-      const offset = (1000 / totalSize) * 1000; 
-      const effectiveStep = (1000 - (offset * 2)) / totalCells;
+      const GRID_SIZE = 146.25;
+      const worldHalf = mapSize / 2;
+      const numCells = Math.ceil(mapSize / GRID_SIZE);
 
-      for (let i = 0; i < totalCells; i++) {
-        for (let j = 0; j < totalCells; j++) {
-          const xPos = offset + (i * effectiveStep);
-          const yPos = offset + (j * effectiveStep);
-          const opts = { color: 'white', weight: 1, opacity: 0.15, dashArray: '5, 10' };
+      for (let i = 0; i < numCells; i++) {
+        for (let j = 0; j < numCells; j++) {
+          const worldX = -worldHalf + (i * GRID_SIZE);
+          const worldY = worldHalf - (j * GRID_SIZE);
+          
+          const p1 = worldToLeaflet(worldX, worldY, mapSize);
+          const p2 = worldToLeaflet(worldX + GRID_SIZE, worldY - GRID_SIZE, mapSize);
+          
+          const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
 
-          if (j === 0) L.polyline([[offset, xPos], [1000 - offset, xPos]], opts).addTo(gridGroup);
-          if (i === 0) L.polyline([[1000 - yPos, offset], [1000 - yPos, 1000 - offset]], opts).addTo(gridGroup);
+          // Dibujar líneas solo una vez por celda
+          if (j === 0) L.polyline([[p1.lat, p1.lng], [p2.lat + (numCells * GRID_SIZE / (mapSize + 2000) * 1000), p1.lng]], { ...opts, color: 'transparent' }); // Placeholder logic simplified
+          
+          // Líneas verticales y horizontales
+          L.polyline([[p1.lat, p1.lng], [p2.lat, p1.lng]], opts).addTo(gridGroup);
+          L.polyline([[p1.lat, p1.lng], [p1.lat, p2.lng]], opts).addTo(gridGroup);
+          
+          // Cerrar la grilla en los bordes finales
+          if (i === numCells - 1) L.polyline([[p1.lat, p2.lng], [p2.lat, p2.lng]], opts).addTo(gridGroup);
+          if (j === numCells - 1) L.polyline([[p2.lat, p1.lng], [p2.lat, p2.lng]], opts).addTo(gridGroup);
 
-          const gridLabel = `${indexToLetter(i)}${j + 1}`;
-          L.marker([1000 - (yPos + effectiveStep / 2), xPos + (effectiveStep / 2)], {
+          const gridLabel = `${indexToLetter(i)}${j}`;
+          L.marker([p1.lat + (p2.lat - p1.lat) / 2, p1.lng + (p2.lng - p1.lng) / 2], {
             icon: L.divIcon({
               className: 'grid-cell-label',
-              html: `<div class="grid-cell-text" style="color: rgba(255,255,255,0.15); font-size: 14px; font-weight: 700; font-family: 'Barlow', sans-serif; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">${gridLabel}</div>`,
+              html: `<div class="grid-cell-text" style="color: rgba(255,255,255,0.1); font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">${gridLabel}</div>`,
               iconSize: [40, 40]
             }),
             interactive: false
           }).addTo(gridGroup);
         }
       }
-
-      // Etiquetas Exteriores (Removidas por petición del usuario para mayor limpieza)
     }
   }, [L, mapSize, showGrid]);
 
@@ -274,9 +273,17 @@ export default function RustMap({
       });
   }, [L, markers, showEvents, showPlayers, showVending, mapSize]);
 
-  // Manejador de Dibujo
+  // Manejador de Dibujo y Desactivación de Arrastre
   useEffect(() => {
-    if (!L || !leafletMap.current || !isDrawingMode) return;
+    if (!L || !leafletMap.current) return;
+    
+    if (isDrawingMode) {
+        leafletMap.current.dragging.disable();
+    } else {
+        leafletMap.current.dragging.enable();
+    }
+    
+    if (!isDrawingMode) return;
     
     let currentPath: any[] = [];
     let polyline: any = null;
@@ -346,6 +353,9 @@ export default function RustMap({
            .radar-pulse { animation: pulse 2s infinite; }
            @keyframes pulse { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
            .leaflet-container { background: #0a0a0b !important; }
+           .grid-cell-text { pointer-events: none; user-select: none; }
+           .monument-label div { pointer-events: none; user-select: none; }
+           .custom-popup-rust .leaflet-popup-tip { background: #050505; }
         `}</style>
     </div>
   );

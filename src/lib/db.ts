@@ -81,8 +81,10 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS war_room_invites (
     id TEXT PRIMARY KEY,
     serverId TEXT,
+    name TEXT,
     code TEXT,
     targetWipeTime INTEGER, -- Invalida el link tras Wipe
+    expiresAt TEXT,
     canDraw INTEGER DEFAULT 0,
     createdAt TEXT
   );
@@ -94,6 +96,16 @@ db.exec(`
     data TEXT, -- JSON con puntos del trazo
     color TEXT,
     createdAt TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS team_chat (
+    id TEXT PRIMARY KEY,
+    serverId TEXT,
+    steamId TEXT,
+    name TEXT,
+    message TEXT,
+    color TEXT,
+    timestamp INTEGER
   );
 `);
 
@@ -109,6 +121,8 @@ try {
 try {
   db.exec("ALTER TABLE servers ADD COLUMN bmId TEXT;");
 } catch(e) {}
+try { db.exec("ALTER TABLE war_room_invites ADD COLUMN name TEXT;"); } catch (e) {}
+try { db.exec("ALTER TABLE war_room_invites ADD COLUMN expiresAt TEXT;"); } catch (e) {}
 try {
   db.exec("ALTER TABLE servers ADD COLUMN discordChannelId TEXT;");
 } catch(e) {}
@@ -303,13 +317,13 @@ export function removeFromWhitelist(steamId: string) {
 }
 
 // === War Room Invites ===
-export function createInvite(serverId: string, code: string, targetWipeTime: number, canDraw: boolean) {
+export function createInvite(serverId: string, name: string, code: string, targetWipeTime: number, expiresAt: string | null, canDraw: boolean) {
     const id = Math.random().toString(36).substring(2, 11);
     const stmt = db.prepare(`
-        INSERT INTO war_room_invites (id, serverId, code, targetWipeTime, canDraw, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO war_room_invites (id, serverId, name, code, targetWipeTime, expiresAt, canDraw, createdAt)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     `);
-    stmt.run(id, serverId, code, targetWipeTime, canDraw ? 1 : 0, new Date().toISOString());
+    stmt.run(id, serverId, name, code, targetWipeTime, expiresAt, canDraw ? 1 : 0, new Date().toISOString());
     return id;
 }
 
@@ -326,5 +340,21 @@ export function deleteInvite(id: string) {
 export function getInvitesByServer(serverId: string) {
     const stmt = db.prepare("SELECT * FROM war_room_invites WHERE serverId = ?");
     return stmt.all(serverId);
+}
+
+// === Team Chat ===
+export function saveTeamMessage(serverId: string, msg: any) {
+  const stmt = db.prepare(`
+    INSERT OR IGNORE INTO team_chat (id, serverId, steamId, name, message, color, timestamp)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `);
+  const id = `${serverId}-${msg.steamId}-${msg.time || Date.now()}`;
+  stmt.run(id, serverId, String(msg.steamId), msg.name, msg.message, msg.color || '', msg.time || Date.now());
+}
+
+export function getTeamChat(serverId: string, limit = 50) {
+  const stmt = db.prepare("SELECT * FROM team_chat WHERE serverId = ? ORDER BY timestamp DESC LIMIT ?");
+  const rows = stmt.all(serverId, limit);
+  return rows.reverse();
 }
 

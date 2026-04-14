@@ -25,7 +25,7 @@ import {
 import RustMap from "@/components/map/RustMap";
 import CommsModule from "@/components/war-room/CommsModule";
 import InviteManager from "@/components/war-room/InviteManager";
-import { getItemName } from "@/lib/data/items";
+import { getItemName, getItemIcon } from "@/lib/data/items";
 
 type MissionModule = "RADAR" | "CCTV" | "ECONOMY" | "ENERGY" | "COMMS" | "DISCORD";
 
@@ -284,10 +284,16 @@ export default function WarRoomPage() {
                         {filteredOffers.map((o, idx) => (
                            <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} className="table-row-premium">
                               <td style={{ padding: '1.25rem' }}>
-                                 <span style={{ color: '#fbbf24', fontWeight: 600 }}>{o.costPerItem}x</span> {getItemName(o.currencyReq)}
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <img src={getItemIcon(o.currencyReq)} style={{ width: '20px', height: '20px', objectFit: 'contain' }} alt="" />
+                                    <span style={{ color: '#fbbf24', fontWeight: 600 }}>{o.costPerItem}x</span> {getItemName(o.currencyReq)}
+                                 </div>
                               </td>
                               <td style={{ padding: '1.25rem' }}>
-                                 <span style={{ color: '#60a5fa', fontWeight: 600 }}>{o.amountToSell}x</span> {getItemName(o.itemToSell)}
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <img src={getItemIcon(o.itemToSell)} style={{ width: '24px', height: '24px', objectFit: 'contain', filter: 'drop-shadow(0 0 5px rgba(96, 165, 250, 0.4))' }} alt="" />
+                                    <span style={{ color: '#60a5fa', fontWeight: 600 }}>{o.amountToSell}x</span> {getItemName(o.itemToSell)}
+                                 </div>
                               </td>
                               <td style={{ padding: '1.25rem' }}>
                                  <div style={{ 
