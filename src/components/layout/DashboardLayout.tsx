@@ -163,7 +163,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                </div>
             </div>
 
-            <button onClick={() => signOut({ callbackUrl: '/login' })} style={{ 
+            <button onClick={() => signOut({ callbackUrl: '/auth/signin' })} style={{ 
                 display: 'flex', 
                 alignItems: 'center', 
                 justifyContent: 'center',

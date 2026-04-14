@@ -112,7 +112,7 @@ export default function GuestSharePage() {
         <main style={{ height: '100%', width: '100%' }}>
             <RustMap 
               mapJpg={mapData?.jpgImage} 
-              mapSize={mapData?.width || 4000} 
+              mapSize={mapData?.mapSize || 4000} 
               oceanMargin={mapData?.oceanMargin || 0}
               monuments={mapData?.monuments || []}
               markers={markers}

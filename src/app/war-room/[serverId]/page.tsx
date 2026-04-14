@@ -374,7 +374,7 @@ export default function WarRoomPage() {
               <h3 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>¿Cerrar Sesión?</h3>
               <p style={{ opacity: 0.5, marginBottom: '2rem' }}>Perderás el acceso inmediato al Radar Táctico de {serverInfo?.name}.</p>
               <div style={{ display: 'flex', gap: '1rem' }}>
-                  <button onClick={() => signOut({ callbackUrl: '/login' })} className="btn-confirm-primary">Sí, Cerrar Sesión</button>
+                  <button onClick={() => signOut({ callbackUrl: '/auth/signin' })} className="btn-confirm-primary">Sí, Cerrar Sesión</button>
                   <button onClick={() => setShowLogoutConfirm(false)} className="btn-cancel">Cancelar</button>
               </div>
            </div>

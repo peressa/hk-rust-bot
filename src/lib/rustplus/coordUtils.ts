@@ -43,7 +43,7 @@ export function worldToGrid(x: number, y: number, mapSize: number): string {
  * North = Top (0), South = Bottom (1000)
  */
 export function worldToLeaflet(x: number, y: number, mapSize: number) {
-    const PAD_SIDE = 1000;
+    const PAD_SIDE = 500; // Calibración Rust+: 500 metros de margen por lado.
     const worldHalf = mapSize / 2;
     const totalWorldSize = mapSize + (PAD_SIDE * 2);
 
