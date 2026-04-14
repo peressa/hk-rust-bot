@@ -240,7 +240,7 @@ export default function WarRoomPage() {
           {activeModule === "RADAR" && (
             <RustMap 
               mapJpg={mapData?.jpgImage} 
-              mapSize={mapData?.width} 
+              mapSize={mapData?.mapSize || 4000} 
               oceanMargin={mapData?.oceanMargin}
               monuments={mapData?.monuments}
               markers={markers}
