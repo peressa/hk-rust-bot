@@ -40,6 +40,7 @@ class RustPlusManager extends EventEmitter {
   private lastMemberStates: Map<string, Map<string, any>> = new Map(); // key -> steamId -> state
   private lastMarkerStates: Map<string, any[]> = new Map(); // key -> markerIds[]
   private intelLogs: Map<string, any[]> = new Map(); // key -> intel items[]
+  private lastDockedStates: Map<string, Set<number>> = new Map(); // key -> markerIds docked
 
   constructor() {
     super();
@@ -527,11 +528,15 @@ class RustPlusManager extends EventEmitter {
 
         // 3. Detección de Muerte (Solo si estaba vivo)
         if (last.isAlive && !m.isAlive) {
-          const deathMsg = `¡${m.name} ha muerto en ${grid}!`;
+          const status = m.isOnline ? "Online" : "Offline";
+          const timeLived = m.spawnTime ? Math.round((Date.now() / 1000) - m.spawnTime) : null;
+          const timeStr = timeLived ? ` | Vida: ${Math.floor(timeLived / 60)}m ${timeLived % 60}s` : "";
+
+          const deathMsg = `¡${m.name} ha muerto en ${grid}! (Coords: ${Math.round(m.x)}, ${Math.round(m.y)}${timeStr} | Estado: ${status})`;
           console.log(`[Monitor] Muerte detectada para miembro del equipo: ${m.name} en ${grid} (${Math.round(m.x)}, ${Math.round(m.y)})`);
-          this.addIntel(steamId, ip, 'DEATH', deathMsg, { name: m.name, grid, x: m.x, y: m.y });
+          this.addIntel(steamId, ip, 'DEATH', deathMsg, { name: m.name, grid, x: m.x, y: m.y, status, timeLived });
           
-          this.sendTeamMessage(steamId, ip, `:exclamation: ${deathMsg} (Coord: ${Math.round(m.x)}, ${Math.round(m.y)})`)
+          this.sendTeamMessage(steamId, ip, `:exclamation: ${deathMsg}`)
             .catch(e => console.warn(`[Monitor] Error enviando mensaje de muerte para ${m.name}:`, e.message));
 
           // Alerta en Discord
@@ -545,15 +550,22 @@ class RustPlusManager extends EventEmitter {
           }
         }
 
-        // 4. Lógica de AFK simplificada (No se movió en 15s, guardamos timestamp)
+        // 4. Lógica de AFK (Notificar cada minuto a partir de los 5 min)
         const hasMoved = Math.abs(last.x - m.x) > 1 || Math.abs(last.y - m.y) > 1;
         if (m.isOnline && !hasMoved) {
           if (!last.afkSince) m.afkSince = Date.now();
-          else m.afkSince = last.afkSince;
+          else {
+            m.afkSince = last.afkSince;
+            const afkMins = Math.floor((Date.now() - m.afkSince) / 60000);
+            const prevAfkMins = Math.floor((Date.now() - 15000 - m.afkSince) / 60000);
+            if (afkMins >= 5 && afkMins > prevAfkMins) {
+              rustplus.sendTeamMessage(`:exclamation: El miembro del equipo '${m.name}' está AFK por ${afkMins} minutos en ${grid}`);
+            }
+          }
         } else if (m.isOnline && hasMoved && last.afkSince) {
           const afkDuration = Math.round((Date.now() - last.afkSince) / 60000);
           if (afkDuration >= 5) { // Solo avisar si estuvo > 5 min quieto
-            rustplus.sendTeamMessage(`:exclamation: ${m.name} ha dejado de estar AFK (estuvo quieto ${afkDuration}m).`);
+            rustplus.sendTeamMessage(`:exclamation: El miembro del equipo '${m.name}' ha dejado de estar AFK (estuvo quieto ${afkDuration}m en ${grid}).`);
           }
           m.afkSince = null;
         }
@@ -566,24 +578,47 @@ class RustPlusManager extends EventEmitter {
   private processMarkersMonitor(steamId: string, ip: string, markers: any[], serverInfo: any) {
     const key = `${steamId}-${ip}`;
     const rustplus = this.connections.get(key);
+    const hasPreviousState = this.lastMarkerStates.has(key);
     const lastMarkers = this.lastMarkerStates.get(key) || [];
     const mapSize = serverInfo?.mapSize || 4000;
     
-    // Solo nos interesan eventos globales
-    const currentEventIds = markers
-      .filter(m => [4, 5, 6, 8].includes(m.type)) // Chinook, Cargo, Crate, Heli
-      .map(m => m.id);
-
     const lastEventIds = lastMarkers.map(m => m.id);
+    const currentEventIds = markers.map(m => m.id);
 
-    // Detectar Deepsea Event (Casino Bar Shopkeeper en tiendas)
+    // 1. Detectar Cargo Ship que sale del mapa
+    const lastCargoMarkers = lastMarkers.filter(m => m.type === 5);
+    const currentCargoMarkers = markers.filter(m => m.type === 5);
+    const currentCargoIds = currentCargoMarkers.map(m => m.id);
+
+    lastCargoMarkers.forEach(oldM => {
+      if (!currentCargoIds.includes(oldM.id)) {
+        const msg = "El Barco de Carga (Cargo Ship) ha salido del mapa.";
+        rustplus.sendTeamMessage(`:exclamation: ${msg}`);
+        this.addIntel(steamId, ip, 'EVENT', msg);
+      }
+    });
+
+    // 2. Preparar detección de Atraque (Harbors)
+    const harbors: any[] = [];
+    const server = db.getServers(steamId).find((s: any) => s.ip === ip);
+    if (server) {
+      const cache = db.getMapCache(server.id || `${steamId}-${ip}`);
+      if (cache?.monuments) {
+        harbors.push(...cache.monuments.filter((mon: any) => 
+          mon.token.toLowerCase().includes("harbor") || mon.token.toLowerCase().includes("puerto")
+        ));
+      }
+    }
+    if (!this.lastDockedStates.has(key)) this.lastDockedStates.set(key, new Set());
+    const dockedSet = this.lastDockedStates.get(key)!;
+
+    // 3. Detectar Deepsea Event
     const deepSeaVendor = markers.find(m => 
         m.type === 3 && m.name && m.name.includes("Casino Bar Shopkeeper")
     );
     const prevDeepSeaVendor = lastMarkers.find(m => 
         m.type === 3 && m.name && m.name.includes("Casino Bar Shopkeeper")
     );
-
     if (deepSeaVendor && !prevDeepSeaVendor) {
       const grid = worldToGrid(deepSeaVendor.x, deepSeaVendor.y, mapSize);
       const msg = `¡Deepsea Event iniciado en ${grid}! Vendedor detectado.`;
@@ -591,8 +626,9 @@ class RustPlusManager extends EventEmitter {
       this.addIntel(steamId, ip, 'EVENT', msg, { grid });
     }
 
-    // Detectar nuevos eventos
+    // 4. Detectar nuevos eventos y atraques
     markers.forEach(m => {
+      // Eventos Globales (No Vending)
       if ([4, 5, 6, 8].includes(m.type) && !lastEventIds.includes(m.id)) {
         const grid = worldToGrid(m.x, m.y, mapSize);
         let msg = "";
@@ -623,17 +659,60 @@ class RustPlusManager extends EventEmitter {
           this.addIntel(steamId, ip, 'EVENT', msg.replace(':exclamation: ', ''), { eventName, grid });
           
           // Alerta en Discord
-          const server = db.getServers(steamId).find((s: any) => s.ip === ip);
-          if (server && (server.discordWebhook || server.discordChannelId)) {
+          const serverObj = db.getServers(steamId).find((s: any) => s.ip === ip);
+          if (serverObj && (serverObj.discordWebhook || serverObj.discordChannelId)) {
             const { DiscordManager } = require('@/lib/discord/DiscordManager');
             DiscordManager.sendEvent({
-              webhookUrl: server.discordWebhook,
-              channelId: server.discordChannelId
-            }, eventName, grid, server.name);
+              webhookUrl: serverObj.discordWebhook,
+              channelId: serverObj.discordChannelId
+            }, eventName, grid, serverObj.name);
           }
         }
       }
+      
+      // Lógica específica para atraque de Cargo Ship
+      if (m.type === 5 && harbors.length > 0) {
+        const nearHarbor = harbors.find(h => {
+          const dist = Math.sqrt(Math.pow(m.x - h.x, 2) + Math.pow(m.y - h.y, 2));
+          return dist < 120; // Radio de atraque
+        });
+
+        if (nearHarbor && !dockedSet.has(m.id)) {
+          const grid = worldToGrid(m.x, m.y, mapSize);
+          const msg = `El Barco de Carga ha atracado en ${grid} (Harbor)`;
+          rustplus.sendTeamMessage(`:exclamation: ${msg}`);
+          this.addIntel(steamId, ip, 'EVENT', msg, { grid });
+          dockedSet.add(m.id);
+        } else if (!nearHarbor && dockedSet.has(m.id)) {
+          // Salida de Harbor (con un margen extra para evitar oscilaciones)
+          const minDockDist = harbors.reduce((min, h) => {
+            const d = Math.sqrt(Math.pow(m.x - h.x, 2) + Math.pow(m.y - h.y, 2));
+            return Math.min(min, d);
+          }, Infinity);
+          if (minDockDist > 150) {
+            dockedSet.delete(m.id);
+          }
+        }
+      }
+
+      // Detección de nuevas Vending Machines (Tipo 3)
+      if (m.type === 3 && hasPreviousState && !lastEventIds.includes(m.id)) {
+        const grid = worldToGrid(m.x, m.y, mapSize);
+        const name = m.name || "Tienda Desconocida";
+        const totalItems = (m.sellOrders || []).reduce((acc: number, so: any) => acc + (so.amountInStock || 0), 0);
+        
+        const msg = `¡Nueva máquina expendedora '${name}' con ${totalItems} artículos en stock en ${grid}!`;
+        rustplus.sendTeamMessage(`:exclamation: ${msg}`);
+        this.addIntel(steamId, ip, 'EVENT', msg, { eventName: "Nueva Vending", grid, name, totalItems });
+      }
     });
+
+    // Limpieza de barcos que ya no existen en el mapa
+    for (const dId of Array.from(dockedSet)) {
+      if (!currentCargoIds.includes(dId)) {
+        dockedSet.delete(dId);
+      }
+    }
 
     this.lastMarkerStates.set(key, markers);
   }
