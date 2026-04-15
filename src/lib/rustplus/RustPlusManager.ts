@@ -555,11 +555,11 @@ class RustPlusManager extends EventEmitter {
           const timeLived = m.spawnTime ? Math.round((Date.now() / 1000) - m.spawnTime) : null;
           const timeStr = timeLived ? ` | Vida: ${Math.floor(timeLived / 60)}m ${timeLived % 60}s` : "";
 
-          const deathMsg = `El miembro del equipo '${m.name}' ha muerto mientras estaba ${status} @ ${grid} (Coords: ${Math.round(m.x)}, ${Math.round(m.y)}${timeStr})`;
+          const deathMsg = `[HK-BOT] :exclamation: El miembro del equipo '${m.name}' ha muerto mientras estaba ${status} @ ${grid} (Coordenadas: ${Math.round(m.x)}, ${Math.round(m.y)}${timeStr})`;
           console.log(`[Monitor] Muerte detectada para miembro del equipo: ${m.name} en ${grid} (${Math.round(m.x)}, ${Math.round(m.y)})`);
           this.addIntel(steamId, ip, 'DEATH', deathMsg, { name: m.name, grid, x: m.x, y: m.y, status, timeLived });
           
-          this.sendTeamMessage(steamId, ip, `:exclamation: ${deathMsg}`)
+          this.botSendTeamMessage(steamId, ip, deathMsg)
             .catch(e => console.warn(`[Monitor] Error enviando mensaje de muerte para ${m.name}:`, e.message));
 
           // Alerta en Discord
@@ -582,13 +582,13 @@ class RustPlusManager extends EventEmitter {
             const afkMins = Math.floor((Date.now() - m.afkSince) / 60000);
             const prevAfkMins = Math.floor((Date.now() - 15100 - m.afkSince) / 60000);
             if (afkMins >= 5 && afkMins > prevAfkMins) {
-              this.botSendTeamMessage(steamId, ip, `Team member '${m.name}' is AFK for ${afkMins} minutes @ ${grid}`);
+              this.botSendTeamMessage(steamId, ip, `:exclamation: El miembro del equipo '${m.name}' lleva AFK ${afkMins} minutos en ${grid}`);
             }
           }
         } else if (m.isOnline && hasMoved && last.afkSince) {
           const afkDuration = Math.round((Date.now() - last.afkSince) / 60000);
           if (afkDuration >= 5) { // Solo avisar si estuvo > 5 min quieto
-            this.botSendTeamMessage(steamId, ip, `Team member '${m.name}' is no longer AFK after ${afkDuration} minutes @ ${grid}`);
+            this.botSendTeamMessage(steamId, ip, `:exclamation: El miembro del equipo '${m.name}' ya no está AFK después de ${afkDuration} minutos en ${grid}`);
           }
           m.afkSince = null;
         }
@@ -601,9 +601,11 @@ class RustPlusManager extends EventEmitter {
   // Wrapper para enviar mensajes y persistirlos automáticamente en el historial
   private async botSendTeamMessage(steamId: string, ip: string, message: string) {
     try {
+      if (!this.isConnected(steamId, ip)) return;
       const rustplus = this.connections.get(`${steamId}-${ip}`);
       if (rustplus) {
-        await rustplus.sendTeamMessage(message);
+        const fullMessage = message.startsWith("[HK-BOT]") ? message : `[HK-BOT] ${message}`;
+        await rustplus.sendTeamMessage(fullMessage);
         const server = db.prepare("SELECT id FROM servers WHERE steamId = ? AND ip = ?").get(steamId, ip) as any;
         if (server) {
           saveTeamMessage(server.id, {
@@ -636,8 +638,8 @@ class RustPlusManager extends EventEmitter {
 
     lastCargoMarkers.forEach(oldM => {
       if (!currentCargoIds.includes(oldM.id)) {
-        const msg = "The Cargo Ship has left the map";
-        rustplus.sendTeamMessage(msg);
+        const msg = "El Barco de Carga (Cargo Ship) ha salido del mapa.";
+        this.botSendTeamMessage(steamId, ip, msg);
         this.addIntel(steamId, ip, 'EVENT', msg);
       }
     });
@@ -680,13 +682,13 @@ class RustPlusManager extends EventEmitter {
         
         const region = getRegionName(m.x, m.y, mapSize);
         if (m.type === 5) {
-          msg = `A Cargo Ship is active @ ${region} (${grid})`;
+          msg = `Un Barco de Carga (Cargo Ship) está activo en ${region} (${grid})`;
           eventName = "🚢 Cargo Ship";
         } else if (m.type === 4) {
-          msg = `A CH-47 Chinook with a Locked Crate is active @ ${region} (${grid})`;
+          msg = `Un Chinook CH-47 con caja fuerte está activo en ${region} (${grid})`;
           eventName = "🚁 Chinook (CH47)";
         } else if (m.type === 8) {
-          msg = `A Patrol Helicopter is active @ ${region} (${grid})`;
+          msg = `Un Helicóptero de Patrulla está activo en ${region} (${grid})`;
           eventName = "🚁 Heli Patrulla";
         } else if (m.type === 6) {
            const isFar = Math.abs(m.x - mapSize/2) > mapSize/3 || Math.abs(m.y - mapSize/2) > mapSize/3;
@@ -725,8 +727,8 @@ class RustPlusManager extends EventEmitter {
         if (nearHarbor && !dockedSet.has(m.id)) {
           const grid = worldToGrid(m.x, m.y, mapSize);
           const monumentName = nearHarbor.token.toUpperCase().replace(/_/g, ' ');
-          const msg = `The Cargo Ship has docked @ ${grid} (${monumentName})`;
-          rustplus.sendTeamMessage(msg);
+          const msg = `El Barco de Carga (Cargo Ship) ha atracado en ${grid} (${monumentName})`;
+          this.botSendTeamMessage(steamId, ip, msg);
           this.addIntel(steamId, ip, 'EVENT', msg, { grid });
           dockedSet.add(m.id);
         } else if (!nearHarbor && dockedSet.has(m.id)) {

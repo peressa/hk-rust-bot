@@ -76,7 +76,7 @@ export default function RustMap({
 
   const getPosition = (x: number, y: number): [number, number] => {
     if (mapSize <= 0) return [0, 0];
-    const projection = worldToLeaflet(x, y, mapSize);
+    const projection = worldToLeaflet(x, y, mapSize, oceanMargin);
     return [projection.lat, projection.lng];
   };
 
@@ -168,13 +168,13 @@ export default function RustMap({
           const worldX = -worldHalf + (i * GRID_SIZE);
           const worldY = worldHalf - (j * GRID_SIZE);
           
-          const p1 = worldToLeaflet(worldX, worldY, mapSize);
-          const p2 = worldToLeaflet(worldX + GRID_SIZE, worldY - GRID_SIZE, mapSize);
+          const p1 = worldToLeaflet(worldX, worldY, mapSize, oceanMargin);
+          const p2 = worldToLeaflet(worldX + GRID_SIZE, worldY - GRID_SIZE, mapSize, oceanMargin);
           
           const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '5, 10' };
 
           // Dibujar líneas solo una vez por celda
-          if (j === 0) L.polyline([[p1.lat, p1.lng], [p2.lat + (numCells * GRID_SIZE / (mapSize + 2000) * 1000), p1.lng]], { ...opts, color: 'transparent' }); // Placeholder logic simplified
+          // Placeholder logic removed as it was hardcoded to 2000 margin
           
           // Líneas verticales y horizontales
           L.polyline([[p1.lat, p1.lng], [p2.lat, p1.lng]], opts).addTo(gridGroup);

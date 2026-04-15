@@ -24,7 +24,7 @@ export class DiscordManager {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            username: "RUST OPS",
+            username: "HK TACTICAL",
             avatar_url: this.AVATAR_URL,
             ...payload
           })

@@ -41,18 +41,22 @@ export function worldToGrid(x: number, y: number, mapSize: number): string {
 /**
  * Proyecta una coordenada de mundo a coordenadas de Leaflet (0-1000)
  * North = Top (0), South = Bottom (1000)
+ * @param x Coordenada X (Este/Oeste)
+ * @param y Coordenada Y (Norte/Sur)
+ * @param mapSize Tamaño del mapa (unidades Unity)
+ * @param oceanMargin Margen de océano en cada lado (unidades Unity). Por defecto 0.
  */
-export function worldToLeaflet(x: number, y: number, mapSize: number) {
-    const PAD_SIDE = 1000; // Calibración de Precisión: 1000 unidades de margen de océano por lado.
+export function worldToLeaflet(x: number, y: number, mapSize: number, oceanMargin: number = 0) {
     const worldHalf = mapSize / 2;
-    const totalWorldSize = mapSize + (PAD_SIDE * 2);
+    const totalSize = mapSize + (oceanMargin * 2);
 
     // X (lng): Izquierda a Derecha
-    const lng = ((x + worldHalf + PAD_SIDE) / totalWorldSize) * 1000;
+    // El punto central del mundo (0,0) está en (mapSize/2 + margin) / totalSize
+    const lng = ((x + worldHalf + oceanMargin) / totalSize) * 1000;
     
     // Y (lat): En Leaflet Simple CRS, 0 es TOP, 1000 es BOTTOM.
     // Unity +Y es Norte (Top). Por tanto lat = 1000 - (proyección normal).
-    const latNormal = ((y + worldHalf + PAD_SIDE) / totalWorldSize) * 1000;
+    const latNormal = ((y + worldHalf + oceanMargin) / totalSize) * 1000;
     const lat = 1000 - latNormal;
     
     return { lat, lng };

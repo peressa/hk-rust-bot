@@ -26,6 +26,7 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
   const [entities, setEntities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [serverData, setServerData] = useState<any>(null);
+  const [mapData, setMapData] = useState<any>(null);
 
   useEffect(() => {
     fetchInitialData();
@@ -45,7 +46,7 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
       const current = servers.find((s: any) => s.id === serverId);
       setServerData(current);
 
-      await Promise.all([fetchIntel(), fetchInfo(), fetchEntities()]);
+      await Promise.all([fetchIntel(), fetchInfo(), fetchEntities(), fetchMap()]);
     } catch (err) {
       console.error(err);
     } finally {
@@ -67,6 +68,14 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
       const data = await res.json();
       setServerInfo(data);
     } catch (err) { console.error("Info Poll Error", err); }
+  };
+
+  const fetchMap = async () => {
+    try {
+      const res = await fetch(`/api/rustplus/map?serverId=${serverId}`);
+      const data = await res.json();
+      if (!data.error) setMapData(data);
+    } catch (err) { console.error("Map Poll Error", err); }
   };
 
   const fetchEntities = async () => {
@@ -142,6 +151,9 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
                  ...intel.team.map((m: any) => ({ ...m, type: 'PLAYER' })),
                  ...(intel.intelLog.filter((l: any) => l.type === 'DEATH').map((l: any) => ({ ...l.data, type: 'DEATH' })))
                ]} 
+               mapJpg={mapData?.jpgImage}
+               mapSize={mapData?.mapSize}
+               oceanMargin={mapData?.oceanMargin}
              />
              
              {/* Map Overlay Info */}
