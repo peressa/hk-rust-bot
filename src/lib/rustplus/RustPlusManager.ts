@@ -397,6 +397,7 @@ class RustPlusManager extends EventEmitter {
           const oceanMargin = (map.oceanMargin !== undefined && map.oceanMargin !== null && map.oceanMargin > 0)
             ? map.oceanMargin
             : 0;
+          console.log(`${logPrefix} [COORD DEBUG] mapSize=${mapSize}, oceanMargin_raw=${map.oceanMargin}, oceanMargin_used=${oceanMargin}, img=${map.width}x${map.height}`);
           
           if (serverId) {
               saveMapCache(serverId, {

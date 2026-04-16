@@ -67,6 +67,19 @@ export default function RustMap({
     }
   }, [mapSize, oceanMargin, width, height]);
 
+  // Log primeros marcadores para diagnóstico de coordenadas
+  useEffect(() => {
+    if (!markers || markers.length === 0) return;
+    const sample = markers.slice(0, 5).map(m => ({
+      type: m.type,
+      name: m.name,
+      rawX: m.x,
+      rawY: m.y,
+      projected: worldToLeaflet(m.x, m.y, mapSize, oceanMargin)
+    }));
+    console.log(`[HK Map Debug] Markers sample (mapSize=${mapSize}, ocean=${oceanMargin}):`, JSON.stringify(sample));
+  }, [markers, mapSize, oceanMargin]);
+
   // Sync Drawings from DB
   useEffect(() => {
     if (!serverId) return;
@@ -364,6 +377,11 @@ export default function RustMap({
         <div style={{ width: '1px', background: 'var(--border)', margin: '0 0.5rem' }}></div>
         <MapControlButton active={isDrawingMode} icon={<Pencil size={18} />} onClick={() => setIsDrawingMode(!isDrawingMode)} title="Dibujo Táctico" highlight />
         <MapControlButton active={false} icon={<Trash2 size={18} />} onClick={() => serverId && fetch(`/api/rustplus/drawings?serverId=${serverId}`, { method: 'DELETE' })} title="Limpiar Mapa" />
+      </div>
+
+      {/* DEBUG BADGE — eliminar después de confirmar que el mapa está correcto */}
+      <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', zIndex: 2000, background: 'rgba(0,0,0,0.85)', border: '1px solid #ce422b', padding: '0.25rem 0.5rem', fontSize: '10px', fontFamily: 'monospace', color: '#ce422b', pointerEvents: 'none' }}>
+        map={mapSize} ocean={oceanMargin} img={width}x{height}
       </div>
 
       <div ref={mapRef} style={{ height: "100%", width: "100%", cursor: isDrawingMode ? 'crosshair' : 'grab' }} />
