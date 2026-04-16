@@ -350,8 +350,7 @@ class RustPlusManager extends EventEmitter {
     // 1. Intentar cargar desde cache persistente si tenemos serverId
     if (serverId && !forceRefresh) {
       const cached: any = getMapCache(serverId);
-      // Invalidamos agresivamente cualquier caché con el margen antiguo erróneo (<= 500)
-      if (cached && cached.mapSize && cached.oceanMargin > 500) {
+      if (cached && cached.mapSize && cached.oceanMargin !== undefined && cached.oceanMargin !== null) {
         console.log(`${logPrefix} Usando caché de DB para ${serverId} (Size: ${cached.mapSize})`);
         return {
           response: {
@@ -389,9 +388,11 @@ class RustPlusManager extends EventEmitter {
       if (map.jpgImage) {
           const base64 = Buffer.from(map.jpgImage).toString('base64');
           const mapSize = info?.mapSize || 4000;
-          const oceanMargin = (map.oceanMargin !== undefined && map.oceanMargin !== null && map.oceanMargin > 0) 
-            ? map.oceanMargin 
-            : Math.floor(mapSize / 2);
+          // El servidor envía oceanMargin en unidades del mundo (igual que mapSize).
+          // El valor típico es ~500 para un mapa de 4000. Si no viene, usamos 0.
+          const oceanMargin = (map.oceanMargin !== undefined && map.oceanMargin !== null && map.oceanMargin > 0)
+            ? map.oceanMargin
+            : 0;
           
           if (serverId) {
               saveMapCache(serverId, {
@@ -535,7 +536,7 @@ class RustPlusManager extends EventEmitter {
     const mapSize = serverInfo?.mapSize || 4000;
     const oceanMargin = (serverInfo?.oceanMargin !== undefined && serverInfo?.oceanMargin !== null && serverInfo?.oceanMargin > 0)
       ? serverInfo.oceanMargin
-      : Math.floor(mapSize / 2);    
+      : 0;
     if (!this.lastMemberStates.has(key)) {
       this.lastMemberStates.set(key, new Map());
     }

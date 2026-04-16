@@ -24,11 +24,12 @@ export const GRID_CELL_SIZE = 146.25;
  * Convierte coordenadas de mundo Unity a formato de cuadrícula Rust (Ej: "M14")
  */
 export function worldToGrid(x: number, y: number, mapSize: number, oceanMargin: number = 0): string {
-    const totalSize = mapSize + (oceanMargin * 2);
-    const worldHalf = totalSize / 2;
+    // La cuadrícula de Rust se basa en el área JUGABLE, no en el total con océano.
+    // A0 = esquina superior-izquierda del área jugable (no del océano).
+    const worldHalf = mapSize / 2;
     // X aumenta hacia el Este (Derecha) -> A, B, C...
     const gridX = Math.floor((x + worldHalf) / GRID_CELL_SIZE);
-    // Y disminuye hacia el Sur (Abajo). In-game el 0 está en el Norte.
+    // Y: la fila 0 está en el Norte (parte superior del área jugable).
     const gridY = Math.floor((worldHalf - y) / GRID_CELL_SIZE);
     const safeX = Math.max(0, gridX);
     const safeY = Math.max(0, gridY);
