@@ -388,7 +388,9 @@ class RustPlusManager extends EventEmitter {
       if (map.jpgImage) {
           const base64 = Buffer.from(map.jpgImage).toString('base64');
           const mapSize = info?.mapSize || 4000;
-          const oceanMargin = (map.oceanMargin !== undefined && map.oceanMargin !== null) ? map.oceanMargin : 500;
+          const oceanMargin = (map.oceanMargin !== undefined && map.oceanMargin !== null && map.oceanMargin > 0) 
+            ? map.oceanMargin 
+            : Math.floor(mapSize / 2);
           
           if (serverId) {
               saveMapCache(serverId, {
