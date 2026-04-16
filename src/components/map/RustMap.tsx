@@ -1,4 +1,4 @@
-p"use client";
+"use client";
 
 import React, { useEffect, useState, useRef } from "react";
 import { Layers, Users, Zap, EyeOff, Map as MapIcon, ShoppingCart, Pencil, Trash2 } from "lucide-react";
