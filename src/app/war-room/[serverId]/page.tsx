@@ -248,6 +248,7 @@ export default function WarRoomPage() {
               oceanMargin={mapData?.oceanMargin}
               monuments={mapData?.monuments}
               markers={markers}
+              team={team}
               serverId={serverId}
             />
           )}

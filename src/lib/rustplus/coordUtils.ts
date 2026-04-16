@@ -21,16 +21,32 @@ export function indexToLetter(index: number): string {
 export const GRID_CELL_SIZE = 146.25;
 
 /**
+ * Normaliza una coordenada que puede venir en formato 0..mapSize (markers) 
+ * a formato mundo -half..half (equipo/muertes).
+ */
+export function normalizeToWorld(val: number, mapSize: number): number {
+    // Si el valor es mayor que el tamaño del mapa o mayor que mapSize/2 significativamente,
+    // es probable que sea una coordenada de marcador (0..mapSize).
+    // Nota: los marcadores de Rust+ siempre son positivos.
+    if (val > (mapSize / 2) + 100) {
+        return val - (mapSize / 2);
+    }
+    return val;
+}
+
+/**
  * Convierte coordenadas de mundo Unity a formato de cuadrícula Rust (Ej: "M14")
  */
-export function worldToGrid(x: number, y: number, mapSize: number, oceanMargin: number = 0): string {
-    // La cuadrícula de Rust se basa en el área JUGABLE, no en el total con océano.
-    // A0 = esquina superior-izquierda del área jugable (no del océano).
+export function worldToGrid(x: number, y: number, mapSize: number): string {
     const worldHalf = mapSize / 2;
-    // X aumenta hacia el Este (Derecha) -> A, B, C...
-    const gridX = Math.floor((x + worldHalf) / GRID_CELL_SIZE);
-    // Y: la fila 0 está en el Norte (parte superior del área jugable).
-    const gridY = Math.floor((worldHalf - y) / GRID_CELL_SIZE);
+    
+    // Aseguramos que trabajamos con coordenadas centradas
+    const nx = normalizeToWorld(x, mapSize);
+    const ny = normalizeToWorld(y, mapSize);
+
+    const gridX = Math.floor((nx + worldHalf) / GRID_CELL_SIZE);
+    const gridY = Math.floor((worldHalf - ny) / GRID_CELL_SIZE);
+    
     const safeX = Math.max(0, gridX);
     const safeY = Math.max(0, gridY);
     return `${indexToLetter(safeX)}${safeY}`;
@@ -60,23 +76,38 @@ export function worldToLeaflet(x: number, y: number, mapSize: number, oceanMargi
 }
 
 /**
- * Obtiene el nombre de la región cardinal basada en el cuadrante (Norte, Sur, Este, Oeste, Centro)
+ * Obtiene el nombre de la región cardinal basada en el cuadrante (Arriba, Abajo, Derecha, Izquierda, Centro)
  */
 export function getRegionName(x: number, y: number, mapSize: number): string {
-    const third = mapSize / 4;
+    const worldHalf = mapSize / 2;
+    const edgeMargin = mappingEdgeMargin(mapSize); // Margen dinámico para considerar "Borde"
+    
+    // Prioridad a bordes cardinales puros (útil para Deepsea)
+    if (y > worldHalf - edgeMargin) return "Arriba (Norte)";
+    if (y < -worldHalf + edgeMargin) return "Abajo (Sur)";
+    if (x > worldHalf - edgeMargin) return "Derecha (Este)";
+    if (x < -worldHalf + edgeMargin) return "Izquierda (Oeste)";
+
+    const third = mapSize / 6;
     
     let lat = "";
     let lon = "";
     
-    if (y > third) lat = "Top";
-    else if (y < -third) lat = "Bottom";
+    if (y > third) lat = "Arriba";
+    else if (y < -third) lat = "Abajo";
     
-    if (x > third) lon = "Right";
-    else if (x < -third) lon = "Left";
+    if (x > third) lon = "Derecha";
+    else if (x < -third) lon = "Izquierda";
     
-    if (!lat && !lon) return "Center";
+    if (!lat && !lon) return "Centro";
     if (!lat) return lon;
     if (!lon) return lat;
     
-    return `${lat} ${lon}`;
+    return `${lat} a la ${lon}`;
+}
+
+function mappingEdgeMargin(mapSize: number): number {
+    if (mapSize <= 3000) return 200;
+    if (mapSize <= 4500) return 400;
+    return 600;
 }

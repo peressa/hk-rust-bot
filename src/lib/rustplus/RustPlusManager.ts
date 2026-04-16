@@ -398,8 +398,10 @@ class RustPlusManager extends EventEmitter {
           // El campo map.oceanMargin del proto Rust+ llega frecuentemente como 0.
           // El dato correcto se calcula a partir de las dimensiones de la imagen:
           // map.width = totalWidth = mapSize + 2*oceanMargin (mundo Unity, incluye océano)
+          // map.width = totalWidth = mapSize + 2*oceanMargin (mundo Unity, incluye océano)
           // Por lo tanto: oceanMargin = (map.width - mapSize) / 2
-          const oceanMargin = (map.width > mapSize && map.width > 0)
+          // Nota: Si map.width es muy pequeño (ej < 1000) probablemente son pixeles y no unidades.
+          const oceanMargin = (map.width > mapSize && map.width > 2000)
             ? Math.round((map.width - mapSize) / 2)
             : (map.oceanMargin > 0 ? map.oceanMargin : 0);
 
@@ -555,7 +557,7 @@ class RustPlusManager extends EventEmitter {
 
     members.forEach((m: any) => {
       const last = states.get(m.steamId);
-      const grid = worldToGrid(m.x, m.y, mapSize, oceanMargin);
+      const grid = worldToGrid(m.x, m.y, mapSize);
 
       if (last) {
         // 1. Detección de Desconexión
@@ -690,17 +692,18 @@ class RustPlusManager extends EventEmitter {
         m.type === 3 && m.name && m.name.includes("Casino Bar Shopkeeper")
     );
     if (deepSeaVendor && !prevDeepSeaVendor) {
-      const grid = worldToGrid(deepSeaVendor.x, deepSeaVendor.y, mapSize, oceanMargin);
-      const msg = `¡Deepsea Event iniciado en ${grid}! Vendedor detectado.`;
-      rustplus.sendTeamMessage(`:exclamation: ${msg}`);
-      this.addIntel(steamId, ip, 'EVENT', msg, { grid });
+      const grid = worldToGrid(deepSeaVendor.x, deepSeaVendor.y, mapSize);
+      const region = getRegionName(deepSeaVendor.x, deepSeaVendor.y, mapSize);
+      const msg = `❗ ¡Deepsea Event iniciado en el ${region} (${grid})! Vendedor de Casino detectado.`;
+      rustplus.sendTeamMessage(msg);
+      this.addIntel(steamId, ip, 'EVENT', msg, { grid, region });
     }
 
     // 4. Detectar nuevos eventos y atraques
     markers.forEach(m => {
       // Eventos Globales (No Vending)
       if ([4, 5, 6, 8].includes(m.type) && !lastEventIds.includes(m.id)) {
-        const grid = worldToGrid(m.x, m.y, mapSize, oceanMargin);
+        const grid = worldToGrid(m.x, m.y, mapSize);
         let msg = "";
         let eventName = "";
         
@@ -751,7 +754,7 @@ class RustPlusManager extends EventEmitter {
         });
 
         if (nearHarbor && !dockedSet.has(m.id)) {
-          const grid = worldToGrid(m.x, m.y, mapSize, oceanMargin);
+          const grid = worldToGrid(m.x, m.y, mapSize);
           const monumentName = nearHarbor.token.toUpperCase().replace(/_/g, ' ');
           const msg = `El Barco de Carga (Cargo Ship) ha atracado en ${grid} (${monumentName})`;
           this.botSendTeamMessage(steamId, ip, msg);
@@ -771,7 +774,7 @@ class RustPlusManager extends EventEmitter {
 
       // Detección de nuevas Vending Machines (Tipo 3)
       if (m.type === 3 && hasPreviousState && !lastEventIds.includes(m.id)) {
-        const grid = worldToGrid(m.x, m.y, mapSize, oceanMargin);
+        const grid = worldToGrid(m.x, m.y, mapSize);
         const name = m.name || "Tienda Desconocida";
         const totalItems = (m.sellOrders || []).reduce((acc: number, so: any) => acc + (so.amountInStock || 0), 0);
         

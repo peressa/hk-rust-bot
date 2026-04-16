@@ -24,6 +24,7 @@ interface RustMapProps {
   height?: number;
   monuments?: any[];
   markers?: any[];
+  team?: any[];
   serverId?: string;
   allowDrawing?: boolean;
 }
@@ -36,6 +37,7 @@ export default function RustMap({
   height = 1000,
   monuments = [],
   markers = [],
+  team = [],
   serverId,
   allowDrawing = true
 }: RustMapProps) {
@@ -100,7 +102,13 @@ export default function RustMap({
   }, [serverId]);
 
   const getPosition = (x: number, y: number, currentMapSize: number, currentOceanMargin: number): [number, number] => {
-    const projection = worldToLeaflet(x, y, currentMapSize, currentOceanMargin);
+    // IMPORTANTE: Normalizar coordenadas. 
+    // Los marcadores (vending, monumentos) suelen venir 0..mapSize.
+    // Los jugadores y muertes suelen venir -mapSize/2..mapSize/2.
+    const nx = x > (currentMapSize / 2) + 50 ? x - (currentMapSize / 2) : x;
+    const ny = y > (currentMapSize / 2) + 50 ? y - (currentMapSize / 2) : y;
+
+    const projection = worldToLeaflet(nx, ny, currentMapSize, currentOceanMargin);
     const lat = Math.min(Math.max(projection.lat, 0), 1000);
     const lng = Math.min(Math.max(projection.lng, 0), 1000);
     return [lat, lng];
@@ -349,13 +357,30 @@ export default function RustMap({
       })
       .forEach(marker => {
         const popupHtml = `<div style="padding:0.5rem;color:white;"><strong style="color:var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
-        // Usar oceanMargin directamente (ya correcto desde el backend)
         const pos = getPosition(marker.x, marker.y, mapSize, oceanMargin);
         L.marker(pos, {
           icon: getIcon(L, marker.type, marker.name)
         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
       });
-  }, [L, markers, showEvents, showPlayers, showVending, mapSize, oceanMargin]);
+
+    // Renderizar Team Members (Vienen en data.team separadamente)
+    if (showPlayers && team) {
+      team.filter(tm => tm.isAlive && tm.x !== undefined).forEach(tm => {
+        const pos = getPosition(tm.x, tm.y, mapSize, oceanMargin);
+        const color = tm.isOnline ? "#22c55e" : "#555";
+        const iconHtml = `<div class="marker-player" style="background: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color}; display: flex; align-items: center; justify-content: center; font-size: 8px; color: white; font-weight: 800;">${tm.name?.charAt(0)}</div>`;
+        
+        L.marker(pos, {
+          icon: L.divIcon({
+            className: 'custom-div-icon',
+            html: iconHtml,
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+          })
+        }).addTo(markersGroup).bindPopup(`<div style="padding:0.5rem;color:white;"><strong>${tm.name}</strong><br/>${tm.isOnline ? 'EN LÍNEA' : 'DESCONECTADO'}</div>`, { className: 'custom-popup-rust' });
+      });
+    }
+  }, [L, markers, team, showEvents, showPlayers, showVending, mapSize, oceanMargin]);
 
   // Manejador de Dibujo y Desactivación de Arrastre
   useEffect(() => {
@@ -441,10 +466,34 @@ export default function RustMap({
            .custom-popup-rust .leaflet-popup-content-wrapper { background: #050505; color: white; border: 1px solid var(--border); border-radius: 0; }
            .radar-pulse { animation: pulse 2s infinite; }
            @keyframes pulse { 0% { transform: scale(0.5); opacity: 0.8; } 100% { transform: scale(2.5); opacity: 0; } }
-           .leaflet-container { background: #0a0a0b !important; }
+           .leaflet-container { 
+             background: #0a0a0b !important; 
+           }
            .grid-cell-text { pointer-events: none; user-select: none; }
            .monument-label div { pointer-events: none; user-select: none; }
            .custom-popup-rust .leaflet-popup-tip { background: #050505; }
+           
+           /* Tactical Overlay Effects */
+           .rust-map-wrapper::after {
+             content: "";
+             position: absolute;
+             top: 0; left: 0; width: 100%; height: 100%;
+             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                         linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+             background-size: 100% 3px, 3px 100%;
+             pointer-events: none;
+             z-index: 500;
+             opacity: 0.3;
+           }
+           
+           .rust-map-wrapper::before {
+             content: "";
+             position: absolute;
+             top: 0; left: 0; width: 100%; height: 100%;
+             background: radial-gradient(circle at center, transparent 30%, rgba(0,0,0,0.4) 100%);
+             pointer-events: none;
+             z-index: 501;
+           }
         `}</style>
     </div>
   );
