@@ -16,16 +16,26 @@ export function indexToLetter(index: number): string {
 export const GRID_CELL_SIZE = 146.25;
 
 /**
- * Normaliza una coordenada que puede venir en formato 0..mapSize (markers) 
+ * Normaliza una coordenada que puede venir en formato 0..mapSize (marcadores) 
  * a formato mundo -half..half (equipo/muertes).
  */
 export function normalizeToWorld(val: number, mapSize: number): number {
-    // Si el valor es mayor que el tamaño del mapa o mayor que mapSize/2 significativamente,
-    // es probable que sea una coordenada de marcador (0..mapSize).
-    // Nota: los marcadores de Rust+ siempre son positivos.
-    if (val > (mapSize / 2) + 100) {
+    if (val === undefined || val === null) return 0;
+    
+    // Si el valor es mayor que mapSize, definitivamente es 0..mapSize (o incluso mayor si hay offset)
+    if (val > mapSize) return val - (mapSize / 2);
+    
+    // Rust+ API Markers (monumentos, vending) suelen venir en 0..mapSize.
+    // Rust+ API World (team, events) suelen venir en -half..half.
+    // Si el valor es muy alto (> mapSize/2), es casi seguro que necesita normalización.
+    if (val > (mapSize / 2) + 0.1) {
         return val - (mapSize / 2);
     }
+
+    // El problema es el rango [0, mapSize/2].
+    // Si sabemos que viene de un marcador (monumento), siempre hay que normalizar.
+    // Esta función heurística asume que si val es positivo y el caller no lo ha centrado,
+    // pero no podemos estar 100% seguros aquí sin el contexto del tipo de objeto.
     return val;
 }
 
@@ -35,21 +45,21 @@ export function normalizeToWorld(val: number, mapSize: number): number {
 export function worldToGrid(x: number, y: number, mapSize: number): string {
     const worldHalf = mapSize / 2;
     
-    // El número de celdas se redondea según el estándar de 146.25 unidades
-    let numCells = Math.max(1, Math.ceil(mapSize / 146.25));
-    if (mapSize >= 3000 && mapSize <= 3500) numCells = 23;
+    // Determinamos número de celdas según tamaño del mapa
+    let numCells = Math.ceil(mapSize / 146.25);
+    if (mapSize >= 3000 && mapSize <= 4000) numCells = 24; // Estándar para mapas comunes
     
     const cellSize = mapSize / numCells;
 
-    // Aseguramos que trabajamos con coordenadas centradas
-    const nx = normalizeToWorld(x, mapSize);
-    const ny = normalizeToWorld(y, mapSize);
+    // Normalizar si vienen en 0..mapSize
+    const nx = x > worldHalf ? x - worldHalf : x;
+    const ny = y > worldHalf ? y - worldHalf : y;
 
     const gridX = Math.floor((nx + worldHalf) / cellSize);
     const gridY = Math.floor((worldHalf - ny) / cellSize);
     
-    const safeX = Math.max(0, gridX);
-    const safeY = Math.max(0, gridY);
+    const safeX = Math.max(0, Math.min(gridX, numCells - 1));
+    const safeY = Math.max(0, Math.min(gridY, numCells - 1));
     return `${indexToLetter(safeX)}${safeY}`;
 }
 
