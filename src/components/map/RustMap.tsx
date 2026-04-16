@@ -103,9 +103,19 @@ export default function RustMap({
     return () => clearInterval(interval);
   }, [serverId]);
 
-  const getPosition = (x: number, y: number, currentMapSize: number): [number, number] => {
-    // Las coordenadas ya vienen normalizadas al centro (-half..half) desde WarRoomPage
-    const projection = worldToLeaflet(x, y, currentMapSize, effectiveOceanMargin);
+  const getPosition = (x: number, y: number, currentMapSize: number, forceNormalize: boolean = false): [number, number] => {
+    let nx = x;
+    let ny = y;
+    
+    // Si forzamos normalización o el valor parece estar en formato 0..mapSize (no centrado)
+    if (forceNormalize || (nx > currentMapSize / 2 && nx <= currentMapSize)) {
+      nx = nx - (currentMapSize / 2);
+    }
+    if (forceNormalize || (ny > currentMapSize / 2 && ny <= currentMapSize)) {
+      ny = ny - (currentMapSize / 2);
+    }
+
+    const projection = worldToLeaflet(nx, ny, currentMapSize, effectiveOceanMargin);
     const lat = Math.min(Math.max(projection.lat, 0), 1000);
     const lng = Math.min(Math.max(projection.lng, 0), 1000);
     return [lat, lng];
@@ -192,9 +202,12 @@ export default function RustMap({
       layersRef.current['gridGroup'] = gridGroup;
 
       const worldHalf = mapSize / 2;
-      // Forzamos 23 cuadrantes (W) y tamaño estándar 146.25 para máxima compatibilidad con desktop
-      const numCells = 23;
-      const cellSizeGrid = 146.25;
+      
+      // Cálculo dinámico para coincidir con coordUtils.ts
+      let numCells = Math.ceil(mapSize / 146.25);
+      if (mapSize >= 3000 && mapSize <= 4000) numCells = 24; 
+      
+      const cellSizeGrid = mapSize / numCells;
       const margin = effectiveOceanMargin;
 
       const lineOpts = { color: 'rgba(255,255,255,0.12)', weight: 1, opacity: 1, dashArray: '3, 6' };
@@ -309,8 +322,8 @@ export default function RustMap({
 
         if (!cleanName) return;
 
-        // Usar effectiveOceanMargin directamente
-        const pos = getPosition(mon.x, mon.y, mapSize);
+        // Importante: los monumentos y markers del API suelen venir en 0..mapSize
+        const pos = getPosition(mon.x, mon.y, mapSize, true);
 
         L.marker(pos, {
           icon: L.divIcon({
@@ -354,7 +367,8 @@ export default function RustMap({
       })
       .forEach(marker => {
         const popupHtml = `<div style="padding:0.5rem;color:white;"><strong style="color:var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
-        const pos = getPosition(marker.x, marker.y, mapSize);
+        const shouldNormalize = marker.type !== MARKER_TYPES.PLAYER && marker.type !== 'Death';
+        const pos = getPosition(marker.x, marker.y, mapSize, shouldNormalize);
         L.marker(pos, {
           icon: getIcon(L, marker.type, marker.name)
         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
