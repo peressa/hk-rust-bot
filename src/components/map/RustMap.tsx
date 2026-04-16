@@ -239,10 +239,9 @@ export default function RustMap({
       layersRef.current['monumentsGroup'] = monumentsGroup;
       
       monuments.forEach((mon: any) => {
-        // Los monumentos del API getMap vienen en coordenadas de imagen (0..width, 0..height)
-        // No en coordenadas de mundo como los marcadores dinámicos.
-        const lat = (mon.y / height) * 1000;
-        const lng = (mon.x / width) * 1000;
+        // Facepunch getMap y=0 es ARRIBA (North), Leaflet Simple lat=0 es ABAJO (South).
+        const lat = (1 - (mon.y / (height || 1000))) * 1000;
+        const lng = (mon.x / (width || 1000)) * 1000;
         const pos: [number, number] = [lat, lng];
         const cleanName = (mon.token || '').replace(/_/g, ' ').toUpperCase();
         
