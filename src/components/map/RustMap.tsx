@@ -367,7 +367,14 @@ export default function RustMap({
       team.filter(tm => tm.isAlive && tm.x !== undefined).forEach(tm => {
         const pos = getPosition(tm.x, tm.y, mapSize, oceanMargin);
         const color = tm.isOnline ? "#22c55e" : "#555";
-        const iconHtml = `<div class="marker-player" style="background: ${color}; width: 16px; height: 16px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color}; display: flex; align-items: center; justify-content: center; font-size: 8px; color: white; font-weight: 800;">${tm.name?.charAt(0)}</div>`;
+        const iconHtml = `
+          <div style="position: relative; width: 16px; height: 16px;">
+            ${tm.isOnline ? `<div class="radar-pulse" style="position: absolute; inset: -4px; border: 2px solid ${color}; border-radius: 50%; pointer-events: none; z-index: 1;"></div>` : ''}
+            <div style="background: ${color}; width: 100%; height: 100%; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 10px ${color}; display: flex; align-items: center; justify-content: center; font-size: 8px; color: white; font-weight: 800; position: relative; z-index: 2;">
+              ${tm.name?.charAt(0)}
+            </div>
+          </div>
+        `;
         
         L.marker(pos, {
           icon: L.divIcon({
