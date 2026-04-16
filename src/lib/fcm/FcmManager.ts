@@ -25,8 +25,9 @@ export class FcmManager {
   static async register(steamId: string, authToken: string) {
     console.log(`[FCM] Registering for ${steamId}`);
     
-    // Generate a permanent DeviceId for this user
-    const deviceId = `rust-web-${uuidv4().substring(0, 8)}`;
+    // Check if we already have a deviceId for this user to avoid 403/Forbidden due to many devices
+    const existing = db.prepare("SELECT deviceId FROM fcm_keys WHERE steamId = ?").get(steamId) as any;
+    const deviceId = existing?.deviceId || `rust-web-${steamId.substring(0, 8)}`;
     
     const fcmCredentials = await AndroidFCM.register(
       FCM_CONFIG.apiKey,
