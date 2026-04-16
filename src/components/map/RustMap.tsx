@@ -86,7 +86,9 @@ export default function RustMap({
 
   const getPosition = (x: number, y: number, currentMapSize: number, currentOceanMargin: number): [number, number] => {
     const projection = worldToLeaflet(x, y, currentMapSize, currentOceanMargin);
-    return [projection.lat, projection.lng];
+    const lat = Math.min(Math.max(projection.lat, 0), 1000);
+    const lng = Math.min(Math.max(projection.lng, 0), 1000);
+    return [lat, lng];
   };
 
   const getIcon = (leaflet: any, type: any, name: string) => {
