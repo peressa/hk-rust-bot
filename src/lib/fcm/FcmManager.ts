@@ -26,7 +26,8 @@ export class FcmManager {
     console.log(`[FCM] Registering for ${steamId}`);
     
     // Generate a permanent DeviceId for this user
-    const deviceId = `rust-web-${uuidv4().substring(0, 8)}`;
+    // Generate a random DeviceId that looks more standard
+    const deviceId = require('crypto').randomBytes(8).toString('hex');
     
     const fcmCredentials = await AndroidFCM.register(
       FCM_CONFIG.apiKey,
@@ -37,21 +38,45 @@ export class FcmManager {
       FCM_CONFIG.androidPackageCert
     );
 
-    // PushKind 1 is for native Android (FCM/GCM)
-    await axios.post("https://companion-rust.facepunch.com/api/push/register", {
-      AuthToken: authToken,
-      DeviceId: deviceId,
-      PushKind: 1, 
-      PushToken: fcmCredentials.fcm.token,
-    }, {
-      headers: {
-        "User-Agent": "Rust-Companion-App/2.1.0 (Android; 13)",
-        "App-Version": "2.1.0",
-        "X-Rust-Plus-App-Version": "2.1.0",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
+    // Validar expiración localmente para dar feedback claro
+    try {
+      const parts = authToken.split('.');
+      if (parts.length >= 1) {
+        const payload = JSON.parse(Buffer.from(parts[0], 'base64').toString());
+        if (payload.exp && payload.exp < Date.now() / 1000) {
+          throw new Error("EL TOKEN DE RUST+ HA EXPIRADO. Por favor, obtén uno nuevo en https://companion-rust.facepunch.com/");
+        }
       }
-    });
+    } catch (e: any) {
+      if (e.message.includes("EXPIRADO")) throw e;
+      // Otros errores de parseo se ignoran para dejar que la API decida
+    }
+
+    // PushKind 1 is for native Android (FCM/GCM)
+    try {
+      await axios.post("https://companion-rust.facepunch.com/api/push/register", {
+        AuthToken: authToken,
+        DeviceId: deviceId,
+        PushKind: 1, 
+        PushToken: fcmCredentials.fcm.token,
+      }, {
+        headers: {
+          "User-Agent": "Rust-Companion-App/2.2.0 (Android; 13)",
+          "App-Version": "2.2.0",
+          "X-Rust-Plus-App-Version": "2.2.0",
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Origin": "https://companion-rust.facepunch.com",
+          "Referer": "https://companion-rust.facepunch.com/",
+        }
+      });
+    } catch (err: any) {
+      if (err.response?.status === 403) {
+        console.error("[FCM] Error 403: Acceso denegado por Facepunch. Posible token inválido o rate-limit (10 intentos/5min).");
+        throw new Error("Error 403: Facepunch rechazó el token. Asegúrate de que sea RECIÉN generado y no hayas intentado muchas veces (espera 5 min).");
+      }
+      throw err;
+    }
 
     console.log(`[FCM] Successfully registered native FCM with Facepunch for ${steamId}. Device: ${deviceId}`);
 
