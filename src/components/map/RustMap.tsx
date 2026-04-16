@@ -149,10 +149,11 @@ export default function RustMap({
         minZoom: -2,
         maxZoom: 2,
         zoom: -1,
-        center: [500, 500],
-        attributionControl: false,
-        zoomControl: false
-      });
+        maxBounds: [[0, 0], [1000, 1000]],
+        maxBoundsViscosity: 1.0,
+        zoomControl: false,
+        attributionControl: false
+      }).setView([500, 500], -1);
       L.control.zoom({ position: 'bottomright' }).addTo(leafletMap.current);
     }
   }, [L]);
