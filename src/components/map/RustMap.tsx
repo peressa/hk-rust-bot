@@ -206,7 +206,7 @@ export default function RustMap({
         }
       }
     }
-  }, [L, mapSize, showGrid]);
+  }, [L, mapSize, oceanMargin, showGrid]);
 
   // Imagen Base64
   useEffect(() => {
@@ -265,7 +265,7 @@ export default function RustMap({
         }).addTo(monumentsGroup);
       });
     }
-  }, [L, monuments, showMonuments, mapSize]);
+  }, [L, monuments, showMonuments, mapSize, oceanMargin, width, height]);
 
   // Renderizar Marcadores (Jugadores, Equipos, Eventos)
   useEffect(() => {
@@ -290,7 +290,7 @@ export default function RustMap({
           icon: getIcon(L, marker.type || marker.id, marker.name)
         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
       });
-  }, [L, markers, showEvents, showPlayers, showVending, mapSize]);
+  }, [L, markers, showEvents, showPlayers, showVending, mapSize, oceanMargin]);
 
   // Manejador de Dibujo y Desactivación de Arrastre
   useEffect(() => {
