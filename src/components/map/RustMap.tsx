@@ -18,6 +18,8 @@ interface RustMapProps {
   mapJpg?: string;
   mapSize?: number;
   oceanMargin?: number;
+  width?: number;
+  height?: number;
   monuments?: any[];
   markers?: any[];
   serverId?: string;
@@ -28,6 +30,8 @@ export default function RustMap({
   mapJpg,
   mapSize = 4000,
   oceanMargin = 0,
+  width = 1000,
+  height = 1000,
   monuments = [],
   markers = [],
   serverId,
@@ -235,7 +239,11 @@ export default function RustMap({
       layersRef.current['monumentsGroup'] = monumentsGroup;
       
       monuments.forEach((mon: any) => {
-        const pos = getPosition(mon.x, mon.y);
+        // Los monumentos del API getMap vienen en coordenadas de imagen (0..width, 0..height)
+        // No en coordenadas de mundo como los marcadores dinámicos.
+        const lat = (mon.y / height) * 1000;
+        const lng = (mon.x / width) * 1000;
+        const pos: [number, number] = [lat, lng];
         const cleanName = (mon.token || '').replace(/_/g, ' ').toUpperCase();
         
         L.marker(pos, {

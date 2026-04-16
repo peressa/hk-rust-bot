@@ -50,14 +50,13 @@ export function worldToLeaflet(x: number, y: number, mapSize: number, oceanMargi
     const worldHalf = mapSize / 2;
     const totalSize = mapSize + (oceanMargin * 2);
 
-    // X (lng): Izquierda a Derecha
-    // El punto central del mundo (0,0) está en (mapSize/2 + margin) / totalSize
+    // X (lng): Izquierda a Derecha (Oeste a Este)
     const lng = ((x + worldHalf + oceanMargin) / totalSize) * 1000;
     
-    // Y (lat): En Leaflet Simple CRS, 0 es TOP, 1000 es BOTTOM.
-    // Unity +Y es Norte (Top). Por tanto lat = 1000 - (proyección normal).
-    const latNormal = ((y + worldHalf + oceanMargin) / totalSize) * 1000;
-    const lat = 1000 - latNormal;
+    // Y (lat): En Leaflet Simple CRS [[0,0],[1000,1000]], 0 es el SUR y 1000 es el NORTE.
+    // Unity +Y es Norte. La proyección directa (y + worldHalf + margin) / totalSize 
+    // nos da 1000 en el Norte y 0 en el Sur.
+    const lat = ((y + worldHalf + oceanMargin) / totalSize) * 1000;
     
     return { lat, lng };
 }

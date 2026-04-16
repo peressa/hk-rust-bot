@@ -359,6 +359,7 @@ class RustPlusManager extends EventEmitter {
               width: cached.width,
               height: cached.height,
               mapSize: cached.mapSize,
+              oceanMargin: cached.oceanMargin || 0,
               monuments: cached.monuments,
               cached: true,
               updatedAt: cached.updatedAt
@@ -394,7 +395,8 @@ class RustPlusManager extends EventEmitter {
                 width: map.width,
                 height: map.height,
                 monuments: map.monuments || [],
-                mapSize: mapSize
+                mapSize: mapSize,
+                oceanMargin: map.oceanMargin || 0
               });
               console.log(`${logPrefix} Mapa y worldSize (${mapSize}) guardados en caché.`);
           }

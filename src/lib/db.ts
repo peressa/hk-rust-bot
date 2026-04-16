@@ -170,13 +170,13 @@ export function saveServer(server: any) {
   );
 }
 
-export function saveMapCache(serverId: string, data: { jpgImage: string, width: number, height: number, monuments: any[], mapSize: number }) {
+export function saveMapCache(serverId: string, data: { jpgImage: string, width: number, height: number, monuments: any[], mapSize: number, oceanMargin: number }) {
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO map_cache (serverId, jpgImage, width, height, monuments, mapSize, updatedAt)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO map_cache (serverId, jpgImage, width, height, monuments, mapSize, oceanMargin, updatedAt)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const monumentsJson = JSON.stringify(data.monuments);
-  stmt.run(serverId, data.jpgImage, data.width, data.height, monumentsJson, data.mapSize, new Date().toISOString());
+  stmt.run(serverId, data.jpgImage, data.width, data.height, monumentsJson, data.mapSize, data.oceanMargin, new Date().toISOString());
 }
 
 export function getMapCache(serverId: string) {
@@ -187,6 +187,7 @@ export function getMapCache(serverId: string) {
     width: row.width,
     height: row.height,
     mapSize: row.mapSize,
+    oceanMargin: row.oceanMargin || 0,
     monuments: row.monuments ? JSON.parse(row.monuments) : []
   };
 }
