@@ -41,6 +41,8 @@ export default function RustMap({
   serverId,
   allowDrawing = true
 }: RustMapProps) {
+  // Asegurar margen de océano estándar si no viene definido o es 0
+  const effectiveOceanMargin = (oceanMargin && oceanMargin > 0) ? oceanMargin : 1000;
   const mapRef = useRef<HTMLDivElement>(null);
   const [L, setL] = useState<any>(null);
   const leafletMap = useRef<any>(null);
@@ -101,9 +103,9 @@ export default function RustMap({
     return () => clearInterval(interval);
   }, [serverId]);
 
-  const getPosition = (x: number, y: number, currentMapSize: number, currentOceanMargin: number): [number, number] => {
+  const getPosition = (x: number, y: number, currentMapSize: number): [number, number] => {
     // Las coordenadas ya vienen normalizadas al centro (-half..half) desde WarRoomPage
-    const projection = worldToLeaflet(x, y, currentMapSize, currentOceanMargin);
+    const projection = worldToLeaflet(x, y, currentMapSize, effectiveOceanMargin);
     const lat = Math.min(Math.max(projection.lat, 0), 1000);
     const lng = Math.min(Math.max(projection.lng, 0), 1000);
     return [lat, lng];
@@ -189,15 +191,11 @@ export default function RustMap({
       const gridGroup = L.layerGroup().addTo(leafletMap.current);
       layersRef.current['gridGroup'] = gridGroup;
 
-      // Ajuste dinámico: si el usuario dice que llega a W (23 celdas),
-      // forzamos 23 celdas para tamaños cercanos a 3000-3500.
-      let numCells = Math.max(1, Math.ceil(mapSize / 146.25));
-      if (mapSize >= 3000 && mapSize <= 3500) numCells = 23;
-      
-      const cellSizeGrid = mapSize / numCells;
       const worldHalf = mapSize / 2;
-      // Usar oceanMargin directamente: ahora viene correcto del backend
-      const margin = oceanMargin;
+      // Forzamos 23 cuadrantes (W) y tamaño estándar 146.25 para máxima compatibilidad con desktop
+      const numCells = 23;
+      const cellSizeGrid = 146.25;
+      const margin = effectiveOceanMargin;
 
       const lineOpts = { color: 'rgba(255,255,255,0.12)', weight: 1, opacity: 1, dashArray: '3, 6' };
 
@@ -311,8 +309,8 @@ export default function RustMap({
 
         if (!cleanName) return;
 
-        // Usar oceanMargin directamente (ahora correcto desde el backend)
-        const pos = getPosition(mon.x, mon.y, mapSize, oceanMargin);
+        // Usar effectiveOceanMargin directamente
+        const pos = getPosition(mon.x, mon.y, mapSize);
 
         L.marker(pos, {
           icon: L.divIcon({
@@ -356,7 +354,7 @@ export default function RustMap({
       })
       .forEach(marker => {
         const popupHtml = `<div style="padding:0.5rem;color:white;"><strong style="color:var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
-        const pos = getPosition(marker.x, marker.y, mapSize, oceanMargin);
+        const pos = getPosition(marker.x, marker.y, mapSize);
         L.marker(pos, {
           icon: getIcon(L, marker.type, marker.name)
         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
@@ -365,7 +363,7 @@ export default function RustMap({
     // Renderizar Team Members (Vienen en data.team separadamente)
     if (showPlayers && team) {
       team.filter(tm => tm.isAlive && tm.x !== undefined).forEach(tm => {
-        const pos = getPosition(tm.x, tm.y, mapSize, oceanMargin);
+        const pos = getPosition(tm.x, tm.y, mapSize);
         const color = tm.isOnline ? "#22c55e" : "#555";
         const iconHtml = `
           <div style="position: relative; width: 16px; height: 16px;">
@@ -458,7 +456,7 @@ export default function RustMap({
 
       {/* DEBUG BADGE — eliminar después de confirmar que el mapa está correcto */}
       <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', zIndex: 2000, background: 'rgba(0,0,0,0.85)', border: '1px solid #ce422b', padding: '0.25rem 0.5rem', fontSize: '10px', fontFamily: 'monospace', color: '#ce422b', pointerEvents: 'none' }}>
-        map={mapSize} ocean={oceanMargin} img={width}x{height}
+        map={mapSize} ocean={effectiveOceanMargin} img={width}x{height}
       </div>
 
       <div ref={mapRef} style={{ height: "100%", width: "100%", cursor: isDrawingMode ? 'crosshair' : 'grab' }} />

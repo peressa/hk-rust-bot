@@ -38,17 +38,11 @@ export class FcmManager {
     );
 
     // PushKind 1 is for native Android (FCM/GCM)
-    await axios.post("https://companion-rust.facepunch.com/api/push/register", {
+    await axios.post("https://companion-rust.facepunch.com:443/api/push/register", {
       AuthToken: authToken,
       DeviceId: deviceId,
       PushKind: 1, 
       PushToken: fcmCredentials.fcm.token,
-    }, {
-      headers: {
-        "User-Agent": "RustCompanion/32 (Android)",
-        "Accept": "application/json",
-        "Content-Type": "application/json"
-      }
     });
 
     console.log(`[FCM] Successfully registered native FCM with Facepunch for ${steamId}. Device: ${deviceId}`);
