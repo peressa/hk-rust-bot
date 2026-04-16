@@ -1,9 +1,4 @@
-/**
- * Utilidades para el manejo de coordenadas y cuadrículas de Rust.
- * El tamaño estándar de un cuadrante es 146.3 unidades de Unity.
- */
 
-export const GRID_CELL_SIZE = 150;
 
 /**
  * Convierte un índice numérico a letras (0 -> A, 1 -> B, 25 -> Z, 26 -> AA...)

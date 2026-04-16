@@ -392,7 +392,6 @@ class RustPlusManager extends EventEmitter {
 
       if (map.jpgImage) {
           const base64 = Buffer.from(map.jpgImage).toString('base64');
-          const mapSize = info?.mapSize || 4000;
 
           // CORRECCIÓN CRÍTICA DE COORDENADAS:
           // map.width = totalWidth (mundo Unity, incluye océano).
