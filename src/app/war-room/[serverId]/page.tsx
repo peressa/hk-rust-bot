@@ -86,9 +86,15 @@ export default function WarRoomPage() {
       const res = await fetch(`/api/rustplus/markers?serverId=${serverId}`);
       const data = await res.json();
       
-      setMarkers(data.markers || []);
+      // Fusionar marcadores de mapa normales con muertes del equipo (type='Death')
+      const deathMarkers = (data.deaths || []).map((d: any) => ({ ...d, type: 'Death' }));
+      setMarkers([...(data.markers || []), ...deathMarkers]);
       setTeam(data.team || []);
       setIntel(data.intel || []);
+
+      // Extraer vending machines (type=3) del array de marcadores
+      const vms = (data.markers || []).filter((m: any) => m.type === 3);
+      const offers: any[] = [];
 
       vms.forEach((vm: any) => {
         const orders = vm.sellOrders || vm.sell_orders || vm.SellOrders || [];

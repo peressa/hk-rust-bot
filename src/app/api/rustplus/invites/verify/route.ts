@@ -11,7 +11,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Missing fields" }, { status: 400 });
     }
 
-    const invite = getInvite(inviteId);
+    const invite = getInvite(inviteId) as any;
     if (!invite) {
       return NextResponse.json({ error: "Invitación no encontrada" }, { status: 404 });
     }
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     
     // Simplificación: Buscamos en la DB de servers por ese serverId.
     const db = require("@/lib/db").default;
-    const server = db.prepare("SELECT * FROM servers WHERE id = ?").get(invite.serverId);
+    const server = db.prepare("SELECT * FROM servers WHERE id = ?").get(invite.serverId) as any;
     
     if (server) {
         try {

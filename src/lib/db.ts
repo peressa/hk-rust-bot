@@ -136,6 +136,17 @@ try {
   db.exec("ALTER TABLE entities ADD COLUMN hasCapacity INTEGER DEFAULT 0;");
 } catch(e) {}
 
+// MIGRACIÓN CRÍTICA: Borrar caché de mapas con oceanMargin=0 (datos incorrectos).
+// Con el fix de RustPlusManager, los mapas ahora calculan oceanMargin desde map.width - mapSize.
+// Los registros viejos con oceanMargin=0 se borran para forzar re-descarga correcta.
+try {
+  const deleted = db.prepare("DELETE FROM map_cache WHERE oceanMargin = 0 OR oceanMargin IS NULL").run();
+  if (deleted.changes > 0) {
+    console.log(`[DB Migration] Eliminados ${deleted.changes} caché(s) de mapa con oceanMargin incorrecto (0). Se re-descargarán correctamente.`);
+  }
+} catch(e) {}
+
+
 // === Whitelist Admin Inicial ===
 try {
   const adminId = "76561197960580123";
@@ -182,13 +193,15 @@ export function saveMapCache(serverId: string, data: { jpgImage: string, width: 
 export function getMapCache(serverId: string) {
   const row = db.prepare("SELECT * FROM map_cache WHERE serverId = ?").get(serverId) as any;
   if (!row) return null;
+  // NO defaultear oceanMargin a 0 — si es 0. es un dato incorrecto y el caller lo rechazará
   return {
     jpgImage: row.jpgImage,
     width: row.width,
     height: row.height,
     mapSize: row.mapSize,
-    oceanMargin: row.oceanMargin || 0,
-    monuments: row.monuments ? JSON.parse(row.monuments) : []
+    oceanMargin: row.oceanMargin,
+    monuments: row.monuments ? JSON.parse(row.monuments) : [],
+    updatedAt: row.updatedAt
   };
 }
 

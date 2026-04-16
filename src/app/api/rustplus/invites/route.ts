@@ -31,7 +31,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const server = getServers(session.user.steamId).find((s: any) => s.id === serverId);
+    const server = getServers(session.user.steamId).find((s: any) => s.id === serverId) as any;
     if (!server) throw new Error("Server not found");
 
     const info = await rustPlusManager.sendRequest(session.user.steamId, server.ip, { getInfo: {} });

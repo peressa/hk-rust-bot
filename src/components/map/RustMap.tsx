@@ -4,14 +4,16 @@ import React, { useEffect, useState, useRef } from "react";
 import { Layers, Users, Zap, EyeOff, Map as MapIcon, ShoppingCart, Pencil, Trash2 } from "lucide-react";
 import { indexToLetter, worldToLeaflet } from "@/lib/rustplus/coordUtils";
 
+// Tipos de marcadores según el proto AppMarkerType (enteros)
 const MARKER_TYPES = {
-  PLAYER: "Player",
-  EXPLOSION: 2,
-  VENDING: 3,
-  CH47: 4,
-  CARGO: 5,
-  GENERIC: 6,
-  HELI: 7
+  PLAYER: 1,       // Player
+  EXPLOSION: 2,    // Explosion
+  VENDING: 3,      // VendingMachine
+  CH47: 4,         // CH47
+  CARGO: 5,        // CargoShip
+  CRATE: 6,        // Crate
+  GENERIC: 7,      // GenericRadius
+  HELI: 8          // PatrolHelicopter
 };
 
 interface RustMapProps {
@@ -98,10 +100,7 @@ export default function RustMap({
   }, [serverId]);
 
   const getPosition = (x: number, y: number, currentMapSize: number, currentOceanMargin: number): [number, number] => {
-    // Casi todos los mapas de Rust+ vienen con un margen de 2000, 
-    // pero a veces el API devuelve 0. Usamos 2000 como corrección estándar.
-    const effectiveMargin = currentOceanMargin === 0 ? 2000 : currentOceanMargin;
-    const projection = worldToLeaflet(x, y, currentMapSize, effectiveMargin);
+    const projection = worldToLeaflet(x, y, currentMapSize, currentOceanMargin);
     const lat = Math.min(Math.max(projection.lat, 0), 1000);
     const lng = Math.min(Math.max(projection.lng, 0), 1000);
     return [lat, lng];
@@ -176,7 +175,7 @@ export default function RustMap({
     }
   }, [L]);
 
-  // Capa Grilla Táctica con ETIQUETAS ELEGANTES
+  // Capa Grilla Táctica
   useEffect(() => {
     if (!L || !leafletMap.current) return;
     if (layersRef.current['gridGroup']) {
@@ -190,49 +189,52 @@ export default function RustMap({
       const GRID_SIZE = 146.25;
       const worldHalf = mapSize / 2;
       const numCells = Math.ceil(mapSize / GRID_SIZE);
-      const effectiveMargin = oceanMargin === 0 ? 2000 : oceanMargin;
+      // Usar oceanMargin directamente: ahora viene correcto del backend
+      const margin = oceanMargin;
 
-      const opts = { color: 'white', weight: 1, opacity: 0.1, dashArray: '2, 4' };
+      const lineOpts = { color: 'rgba(255,255,255,0.12)', weight: 1, opacity: 1, dashArray: '3, 6' };
 
+      // Líneas Verticales + etiquetas de columna (letras: A, B, C...)
       for (let i = 0; i <= numCells; i++) {
-        // Líneas Verticales (A, B, C...)
         const x = -worldHalf + (i * GRID_SIZE);
-        const pTop = worldToLeaflet(x, worldHalf, mapSize, effectiveMargin);
-        const pBottom = worldToLeaflet(x, -worldHalf, mapSize, effectiveMargin);
-        
-        L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pTop.lng]], opts).addTo(gridGroup);
+        const pTop    = worldToLeaflet(x, worldHalf, mapSize, margin);
+        const pBottom = worldToLeaflet(x, -worldHalf, mapSize, margin);
 
-        // Etiquetas de Columnas (Arriba)
+        L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
+
         if (i < numCells) {
           const char = indexToLetter(i);
-          const pLabel = worldToLeaflet(x + GRID_SIZE/2, worldHalf + 100, mapSize, effectiveMargin);
+          // Etiqueta sobre la línea superior del grid
+          const pLabel = worldToLeaflet(x + GRID_SIZE / 2, worldHalf, mapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
-              className: 'grid-axis-label',
-              html: `<div style="color: rgba(255,255,255,0.4); font-size: 14px; font-weight: 800;">${char}</div>`,
-              iconSize: [20, 20]
+              className: '',
+              html: `<div style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:800;line-height:1;transform:translateX(-50%);pointer-events:none;">${char}</div>`,
+              iconSize: [0, 0],
+              iconAnchor: [0, 0]
             }),
             interactive: false
           }).addTo(gridGroup);
         }
       }
 
+      // Líneas Horizontales + etiquetas de fila (números: 0, 1, 2...)
       for (let j = 0; j <= numCells; j++) {
-        // Líneas Horizontales (0, 1, 2...)
         const y = worldHalf - (j * GRID_SIZE);
-        const pLeft = worldToLeaflet(-worldHalf, y, mapSize, effectiveMargin);
-        const pRight = worldToLeaflet(worldHalf, y, mapSize, effectiveMargin);
+        const pLeft  = worldToLeaflet(-worldHalf, y, mapSize, margin);
+        const pRight = worldToLeaflet(worldHalf, y, mapSize, margin);
 
-        L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], opts).addTo(gridGroup);
+        L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
 
-        // Etiquetas de Filas (Izquierda)
         if (j < numCells) {
-          const pLabel = worldToLeaflet(-worldHalf - 100, y - GRID_SIZE/2, mapSize, effectiveMargin);
+          // Etiqueta a la izquierda de la línea
+          const pLabel = worldToLeaflet(-worldHalf, y - GRID_SIZE / 2, mapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
-              className: 'grid-axis-label',
-              html: `<div style="color: rgba(255,255,255,0.4); font-size: 14px; font-weight: 800; text-align: right;">${j}</div>`,
-              iconSize: [20, 20]
+              className: '',
+              html: `<div style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:800;line-height:1;transform:translateY(-50%);pointer-events:none;">${j}</div>`,
+              iconSize: [0, 0],
+              iconAnchor: [0, 0]
             }),
             interactive: false
           }).addTo(gridGroup);
@@ -279,33 +281,46 @@ export default function RustMap({
 
       monuments.forEach((mon: any) => {
         const token = mon.token || "";
-        
-        // Limpiamos el nombre: eliminamos tecnicismos y suffixes molestos
-        let cleanName = token.toUpperCase()
+
+        // Filtrar ruido técnico (túneles, laboratorios, paths de assets)
+        if (
+          token.startsWith('assets/') ||
+          token.includes('tunnel') ||
+          token.includes('underwater') ||
+          token.includes('lab')
+        ) return;
+
+        // Limpiar el nombre: quitar sufijos técnicos generados por Rust+
+        let cleanName = token
           .replace(/_/g, ' ')
-          .replace(' DISPLAY NAME', '')
-          .replace(' DISPLAYNAME', '')
-          .replace(' MONUMENT NAME', '')
-          .replace(' MONUMENT', '')
-          .replace(' NAME', '')
-          .trim();
-        
-        // Mantener nombres fijos conocidos si se prefiere
-        if (cleanName === "SUPERMARKET") cleanName = "Abandoned Supermarket";
-        if (cleanName === "GAS STATION") cleanName = "Oxum's Gas Station";
+          .replace(/\bdisplay name\b/gi, '')
+          .replace(/\bdisplayname\b/gi, '')
+          .replace(/\bmonument name\b/gi, '')
+          .replace(/\bmonument\b/gi, '')
+          .replace(/\bname\b/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim()
+          .toUpperCase();
 
-        // Filtro para limpiar el ruido del mapa (túneles, laboratorios, etc)
-        if (token.includes('assets/') || token.includes('tunnel') || token.includes('underwater') || token.includes('lab')) return;
+        if (!cleanName) return;
 
-        // Unificamos a world coordinates usando getPosition
-        // Importante: Many maps use 2000 as margin. If it is 0 in mapData, 2000 is usually the real value.
-        const effectiveMargin = oceanMargin === 0 ? 2000 : oceanMargin;
-        const pos = getPosition(mon.x, mon.y, mapSize, effectiveMargin);
-        
+        // Usar oceanMargin directamente (ahora correcto desde el backend)
+        const pos = getPosition(mon.x, mon.y, mapSize, oceanMargin);
+
         L.marker(pos, {
           icon: L.divIcon({
             className: 'monument-label',
-            html: `<div style="color: rgba(255,255,255,0.85); font-size: 10px; font-weight: 800; text-transform: uppercase; white-space: nowrap; text-shadow: 1px 1px 2px black; letter-spacing: 0.08em; pointer-events: none;">${cleanName}</div>`,
+            html: `<div style="
+              color: rgba(255,255,255,0.9);
+              font-size: 9px;
+              font-weight: 800;
+              text-transform: uppercase;
+              white-space: nowrap;
+              text-shadow: 0 0 6px black, 0 0 3px black;
+              letter-spacing: 0.1em;
+              pointer-events: none;
+              transform: translateX(-50%);
+            ">${cleanName}</div>`,
             iconSize: [0, 0],
             iconAnchor: [0, 0]
           }),
@@ -325,20 +340,19 @@ export default function RustMap({
 
     markers
       .filter(m => {
-        // Filtrar monumentos duplicados (tipo 1 en API de Rust)
-        if (m.type === 1 || m.type === "1") return false;
-        
-        if (m.type === MARKER_TYPES.PLAYER || m.type === "Death") return showPlayers;
+        // Tipo 0 = Undefined, ignorar
+        if (!m.type || m.type === 0) return false;
+        // Jugadores del equipo y marcadores de muerte → toggle showPlayers
+        if (m.type === MARKER_TYPES.PLAYER || m.type === 'Death') return showPlayers;
         if (m.type === MARKER_TYPES.VENDING) return showVending;
-        return showEvents;
+        return showEvents; // EXPLOSION, CH47, CARGO, CRATE, GENERIC, HELI
       })
       .forEach(marker => {
-        const popupHtml = `<div style="padding: 0.5rem; color: white;"><strong style="color: var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
-        const effectiveMargin = oceanMargin === 0 ? 2000 : oceanMargin;
-        const pos = getPosition(marker.x, marker.y, mapSize, effectiveMargin);
-        
+        const popupHtml = `<div style="padding:0.5rem;color:white;"><strong style="color:var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
+        // Usar oceanMargin directamente (ya correcto desde el backend)
+        const pos = getPosition(marker.x, marker.y, mapSize, oceanMargin);
         L.marker(pos, {
-          icon: getIcon(L, marker.type || marker.id, marker.name)
+          icon: getIcon(L, marker.type, marker.name)
         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
       });
   }, [L, markers, showEvents, showPlayers, showVending, mapSize, oceanMargin]);

@@ -1,7 +1,7 @@
 import RustPlus from "@liamcottle/rustplus.js";
 import * as protobuf from "protobufjs";
 import { EventEmitter } from "events";
-import db, { saveTeamMessage, getMapCache, saveMapCache } from "../db";
+import db, { saveTeamMessage, getMapCache, saveMapCache, getServers } from "../db";
 import { worldToGrid, worldToLeaflet, getRegionName } from "./coordUtils";
 import { FcmManager } from "../fcm/FcmManager";
 
@@ -155,9 +155,9 @@ class RustPlusManager extends EventEmitter {
 
           // Guardar en DB para persistencia
           try {
-            const server = db.getServers(steamId).find((s: any) => s.ip === connection.ip);
+            const server = getServers(steamId).find((s: any) => s.ip === connection.ip) as any;
             if (server) {
-              db.saveTeamMessage(server.id || `${steamId}-${connection.ip}`, fullMsg);
+              saveTeamMessage(server.id || `${steamId}-${connection.ip}`, fullMsg);
             }
           } catch (e) {
             console.error("[RustPlus] Error al persistir mensaje de chat:", e);
@@ -350,12 +350,13 @@ class RustPlusManager extends EventEmitter {
     // 1. Intentar cargar desde cache persistente si tenemos serverId
     if (serverId && !forceRefresh) {
       const cached: any = getMapCache(serverId);
-      // Rechazar caché con el viejo fallback incorrecto (mapSize/2, ej: 2000 para mapa de 4000)
+      // Rechazar caché con oceanMargin=0 (incorrecto) o con el viejo fallback mapSize/2
       if (cached && cached.mapSize &&
           cached.oceanMargin !== undefined &&
           cached.oceanMargin !== null &&
+          cached.oceanMargin > 0 &&
           cached.oceanMargin !== Math.floor(cached.mapSize / 2)) {
-        console.log(`${logPrefix} Usando caché de DB para ${serverId} (Size: ${cached.mapSize})`);
+        console.log(`${logPrefix} Usando caché de DB para ${serverId} (Size: ${cached.mapSize}, Ocean: ${cached.oceanMargin})`);
         return {
           response: {
             map: {
@@ -363,7 +364,7 @@ class RustPlusManager extends EventEmitter {
               width: cached.width,
               height: cached.height,
               mapSize: cached.mapSize,
-              oceanMargin: cached.oceanMargin || 0,
+              oceanMargin: cached.oceanMargin,
               monuments: cached.monuments,
               cached: true,
               updatedAt: cached.updatedAt
@@ -392,12 +393,17 @@ class RustPlusManager extends EventEmitter {
       if (map.jpgImage) {
           const base64 = Buffer.from(map.jpgImage).toString('base64');
           const mapSize = info?.mapSize || 4000;
-          // El servidor envía oceanMargin en unidades del mundo (igual que mapSize).
-          // El valor típico es ~500 para un mapa de 4000. Si no viene, usamos 0.
-          const oceanMargin = (map.oceanMargin !== undefined && map.oceanMargin !== null && map.oceanMargin > 0)
-            ? map.oceanMargin
-            : 0;
-          console.log(`${logPrefix} [COORD DEBUG] mapSize=${mapSize}, oceanMargin_raw=${map.oceanMargin}, oceanMargin_used=${oceanMargin}, img=${map.width}x${map.height}`);
+
+          // CORRECCIÓN CRÍTICA DE COORDENADAS:
+          // El campo map.oceanMargin del proto Rust+ llega frecuentemente como 0.
+          // El dato correcto se calcula a partir de las dimensiones de la imagen:
+          // map.width = totalWidth = mapSize + 2*oceanMargin (mundo Unity, incluye océano)
+          // Por lo tanto: oceanMargin = (map.width - mapSize) / 2
+          const oceanMargin = (map.width > mapSize && map.width > 0)
+            ? Math.round((map.width - mapSize) / 2)
+            : (map.oceanMargin > 0 ? map.oceanMargin : 0);
+
+          console.log(`${logPrefix} [COORD FIX] mapSize=${mapSize}, map.width=${map.width}, oceanMargin_proto=${map.oceanMargin}, oceanMargin_CALCULADO=${oceanMargin}`);
           
           if (serverId) {
               saveMapCache(serverId, {
@@ -408,10 +414,10 @@ class RustPlusManager extends EventEmitter {
                 mapSize: mapSize,
                 oceanMargin: oceanMargin
               });
-              console.log(`${logPrefix} Mapa y worldSize (${mapSize}) guardados en caché.`);
+              console.log(`${logPrefix} Mapa guardado en caché (mapSize=${mapSize}, ocean=${oceanMargin}).`);
           }
 
-          // Inyectamos metadatos en la respuesta para el frontend
+          // Inyectamos metadatos corregidos en la respuesta para el frontend
           map.mapSize = mapSize;
           map.oceanMargin = oceanMargin;
       }
@@ -577,7 +583,7 @@ class RustPlusManager extends EventEmitter {
             .catch(e => console.warn(`[Monitor] Error enviando mensaje de muerte para ${m.name}:`, e.message));
 
           // Alerta en Discord
-          const server = db.getServers(steamId).find((s: any) => s.ip === ip);
+          const server = getServers(steamId).find((s: any) => s.ip === ip) as any;
           if (server && (server.discordWebhook || server.discordChannelId)) {
             const { DiscordManager } = require('@/lib/discord/DiscordManager');
             DiscordManager.sendDeath({
@@ -641,6 +647,10 @@ class RustPlusManager extends EventEmitter {
     const hasPreviousState = this.lastMarkerStates.has(key);
     const lastMarkers = this.lastMarkerStates.get(key) || [];
     const mapSize = serverInfo?.mapSize || 4000;
+    // oceanMargin: igual que en processTeamMonitor, derivado de serverInfo si está disponible
+    const oceanMargin = (serverInfo?.oceanMargin !== undefined && serverInfo?.oceanMargin !== null && serverInfo?.oceanMargin > 0)
+      ? serverInfo.oceanMargin
+      : 0;
     
     const lastEventIds = lastMarkers.map(m => m.id);
     const currentEventIds = markers.map(m => m.id);
@@ -660,9 +670,9 @@ class RustPlusManager extends EventEmitter {
 
     // 2. Preparar detección de Atraque (Harbors)
     const harbors: any[] = [];
-    const server = db.getServers(steamId).find((s: any) => s.ip === ip);
+    const server = getServers(steamId).find((s: any) => s.ip === ip) as any;
     if (server) {
-      const cache = db.getMapCache(server.id || `${steamId}-${ip}`);
+      const cache = getMapCache(server.id || `${steamId}-${ip}`);
       if (cache?.monuments) {
         harbors.push(...cache.monuments.filter((mon: any) => 
           mon.token.toLowerCase().includes("harbor") || mon.token.toLowerCase().includes("puerto")
@@ -705,7 +715,9 @@ class RustPlusManager extends EventEmitter {
           msg = `Un Helicóptero de Patrulla está activo en ${region} (${grid})`;
           eventName = "🚁 Heli Patrulla";
         } else if (m.type === 6) {
-           const isFar = Math.abs(m.x - mapSize/2) > mapSize/3 || Math.abs(m.y - mapSize/2) > mapSize/3;
+           // En coordenadas centradas (0=centro mapa), Oil Rigs están en los bordes (> mapSize/3 del centro)
+           // CORRECCIÓN: antes usaba m.x - mapSize/2 que estaba completamente invertido
+           const isFar = Math.abs(m.x) > mapSize / 3 || Math.abs(m.y) > mapSize / 3;
            if (isFar) {
               msg = `:exclamation: ¡Oil Rig (Petro) activo en ${grid}! Caja fuerte detectada.`;
               eventName = "📦 Oil Rig (Petro)";
@@ -720,7 +732,7 @@ class RustPlusManager extends EventEmitter {
           this.addIntel(steamId, ip, 'EVENT', msg, { eventName, grid });
           
           // Alerta en Discord
-          const serverObj = db.getServers(steamId).find((s: any) => s.ip === ip);
+          const serverObj = getServers(steamId).find((s: any) => s.ip === ip) as any;
           if (serverObj && (serverObj.discordWebhook || serverObj.discordChannelId)) {
             const { DiscordManager } = require('@/lib/discord/DiscordManager');
             DiscordManager.sendEvent({
