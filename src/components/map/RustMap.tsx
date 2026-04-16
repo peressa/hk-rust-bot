@@ -84,9 +84,8 @@ export default function RustMap({
     return () => clearInterval(interval);
   }, [serverId]);
 
-  const getPosition = (x: number, y: number): [number, number] => {
-    if (mapSize <= 0) return [0, 0];
-    const projection = worldToLeaflet(x, y, mapSize, oceanMargin);
+  const getPosition = (x: number, y: number, currentMapSize: number, currentOceanMargin: number): [number, number] => {
+    const projection = worldToLeaflet(x, y, currentMapSize, currentOceanMargin);
     return [projection.lat, projection.lng];
   };
 
@@ -252,7 +251,7 @@ export default function RustMap({
         if (token.includes('assets/') || token.includes('tunnel') || token.includes('underwater') || token.includes('lab')) return;
 
         // Unificamos a world coordinates usando getPosition
-        const pos = getPosition(mon.x, mon.y);
+        const pos = getPosition(mon.x, mon.y, mapSize, oceanMargin);
         
         L.marker(pos, {
           icon: L.divIcon({
@@ -286,7 +285,9 @@ export default function RustMap({
       })
       .forEach(marker => {
         const popupHtml = `<div style="padding: 0.5rem; color: white;"><strong style="color: var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
-        L.marker(getPosition(marker.x, marker.y), {
+        const pos = getPosition(marker.x, marker.y, mapSize, oceanMargin);
+        
+        L.marker(pos, {
           icon: getIcon(L, marker.type || marker.id, marker.name)
         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
       });
