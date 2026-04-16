@@ -350,7 +350,7 @@ class RustPlusManager extends EventEmitter {
     // 1. Intentar cargar desde cache persistente si tenemos serverId
     if (serverId && !forceRefresh) {
       const cached: any = getMapCache(serverId);
-      if (cached && cached.mapSize) {
+      if (cached && cached.mapSize && cached.oceanMargin !== undefined && cached.oceanMargin !== null) {
         console.log(`${logPrefix} Usando caché de DB para ${serverId} (Size: ${cached.mapSize})`);
         return {
           response: {
@@ -388,6 +388,7 @@ class RustPlusManager extends EventEmitter {
       if (map.jpgImage) {
           const base64 = Buffer.from(map.jpgImage).toString('base64');
           const mapSize = info?.mapSize || 4000;
+          const oceanMargin = (map.oceanMargin !== undefined && map.oceanMargin !== null) ? map.oceanMargin : 500;
           
           if (serverId) {
               saveMapCache(serverId, {
@@ -396,13 +397,14 @@ class RustPlusManager extends EventEmitter {
                 height: map.height,
                 monuments: map.monuments || [],
                 mapSize: mapSize,
-                oceanMargin: map.oceanMargin || 0
+                oceanMargin: oceanMargin
               });
               console.log(`${logPrefix} Mapa y worldSize (${mapSize}) guardados en caché.`);
           }
 
-          // Inyectamos el mapSize en la respuesta para que el frontend lo reciba
+          // Inyectamos metadatos en la respuesta para el frontend
           map.mapSize = mapSize;
+          map.oceanMargin = oceanMargin;
       }
 
       return mapResp;
