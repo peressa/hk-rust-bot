@@ -170,8 +170,9 @@ export default function RustMap({
       layersRef.current['gridGroup'] = gridGroup;
 
       const GRID_SIZE = 146.25;
-      const worldHalf = mapSize / 2;
-      const numCells = Math.ceil(mapSize / GRID_SIZE);
+      const totalSize = mapSize + oceanMargin * 2;
+      const worldHalf = totalSize / 2;
+      const numCells = Math.ceil(totalSize / GRID_SIZE);
 
       for (let i = 0; i < numCells; i++) {
         for (let j = 0; j < numCells; j++) {
