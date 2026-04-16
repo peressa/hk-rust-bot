@@ -350,7 +350,11 @@ class RustPlusManager extends EventEmitter {
     // 1. Intentar cargar desde cache persistente si tenemos serverId
     if (serverId && !forceRefresh) {
       const cached: any = getMapCache(serverId);
-      if (cached && cached.mapSize && cached.oceanMargin !== undefined && cached.oceanMargin !== null) {
+      // Rechazar caché con el viejo fallback incorrecto (mapSize/2, ej: 2000 para mapa de 4000)
+      if (cached && cached.mapSize &&
+          cached.oceanMargin !== undefined &&
+          cached.oceanMargin !== null &&
+          cached.oceanMargin !== Math.floor(cached.mapSize / 2)) {
         console.log(`${logPrefix} Usando caché de DB para ${serverId} (Size: ${cached.mapSize})`);
         return {
           response: {
