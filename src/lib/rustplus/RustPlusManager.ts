@@ -395,28 +395,34 @@ class RustPlusManager extends EventEmitter {
           const mapSize = info?.mapSize || 4000;
 
           // CORRECCIÓN CRÍTICA DE COORDENADAS:
-          // El campo map.oceanMargin del proto Rust+ llega frecuentemente como 0.
-          // El dato correcto se calcula a partir de las dimensiones de la imagen:
-          // map.width = totalWidth = mapSize + 2*oceanMargin (mundo Unity, incluye océano)
-          // map.width = totalWidth = mapSize + 2*oceanMargin (mundo Unity, incluye océano)
-          // Por lo tanto: oceanMargin = (map.width - mapSize) / 2
-          // Nota: Si map.width es muy pequeño (ej < 1000) probablemente son pixeles y no unidades.
-          const oceanMargin = (map.width > mapSize && map.width > 2000)
-            ? Math.round((map.width - mapSize) / 2)
-            : (map.oceanMargin > 0 ? map.oceanMargin : 0);
+          // map.width = totalWidth (mundo Unity, incluye océano).
+          // El estándar es que totalWidth = mapSize + 2000.
+          const reportedMapSize = info?.mapSize || 4000;
+          const reportedMapWidth = map.width || 0;
 
-          console.log(`${logPrefix} [COORD FIX] mapSize=${mapSize}, map.width=${map.width}, oceanMargin_proto=${map.oceanMargin}, oceanMargin_CALCULADO=${oceanMargin}`);
-          
+          // Si el ancho del mapa reportado es mayor que el mapSize, lo usamos para calcular el margen real.
+          // Si no, asumimos el estándar de 1000 unidades de océano por lado.
+          let oceanMargin = 1000;
+          let mapSize = reportedMapSize;
+
+          if (reportedMapWidth > reportedMapSize + 500) {
+              oceanMargin = Math.round((reportedMapWidth - reportedMapSize) / 2);
+          } else if (reportedMapWidth > 2000 && reportedMapWidth < reportedMapSize) {
+              // Caso extraño: el width del mapa es menor que el mapSize (posiblemente píxeles).
+              // Mantenemos oceanMargin = 1000.
+          }
+
+          console.log(`${logPrefix} [COORD FIX] MapSize=${mapSize}, Ocean=${oceanMargin}, Total=${mapSize + 2*oceanMargin}`);
+
           if (serverId) {
               saveMapCache(serverId, {
                 jpgImage: base64,
-                width: map.width,
+                width: reportedMapWidth,
                 height: map.height,
                 monuments: map.monuments || [],
                 mapSize: mapSize,
                 oceanMargin: oceanMargin
               });
-              console.log(`${logPrefix} Mapa guardado en caché (mapSize=${mapSize}, ocean=${oceanMargin}).`);
           }
 
           // Inyectamos metadatos corregidos en la respuesta para el frontend

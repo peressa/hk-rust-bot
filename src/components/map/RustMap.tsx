@@ -102,13 +102,8 @@ export default function RustMap({
   }, [serverId]);
 
   const getPosition = (x: number, y: number, currentMapSize: number, currentOceanMargin: number): [number, number] => {
-    // IMPORTANTE: Normalizar coordenadas. 
-    // Los marcadores (vending, monumentos) suelen venir 0..mapSize.
-    // Los jugadores y muertes suelen venir -mapSize/2..mapSize/2.
-    const nx = x > (currentMapSize / 2) + 50 ? x - (currentMapSize / 2) : x;
-    const ny = y > (currentMapSize / 2) + 50 ? y - (currentMapSize / 2) : y;
-
-    const projection = worldToLeaflet(nx, ny, currentMapSize, currentOceanMargin);
+    // Las coordenadas ya vienen normalizadas al centro (-half..half) desde WarRoomPage
+    const projection = worldToLeaflet(x, y, currentMapSize, currentOceanMargin);
     const lat = Math.min(Math.max(projection.lat, 0), 1000);
     const lng = Math.min(Math.max(projection.lng, 0), 1000);
     return [lat, lng];
@@ -194,9 +189,13 @@ export default function RustMap({
       const gridGroup = L.layerGroup().addTo(leafletMap.current);
       layersRef.current['gridGroup'] = gridGroup;
 
-      const GRID_SIZE = 146.25;
+      // Ajuste dinámico: si el usuario dice que llega a W (23 celdas),
+      // forzamos 23 celdas para tamaños cercanos a 3000-3500.
+      let numCells = Math.max(1, Math.ceil(mapSize / 146.25));
+      if (mapSize >= 3000 && mapSize <= 3500) numCells = 23;
+      
+      const cellSizeGrid = mapSize / numCells;
       const worldHalf = mapSize / 2;
-      const numCells = Math.ceil(mapSize / GRID_SIZE);
       // Usar oceanMargin directamente: ahora viene correcto del backend
       const margin = oceanMargin;
 
@@ -204,7 +203,7 @@ export default function RustMap({
 
       // Líneas Verticales + etiquetas de columna (letras: A, B, C...)
       for (let i = 0; i <= numCells; i++) {
-        const x = -worldHalf + (i * GRID_SIZE);
+        const x = -worldHalf + (i * cellSizeGrid);
         const pTop    = worldToLeaflet(x, worldHalf, mapSize, margin);
         const pBottom = worldToLeaflet(x, -worldHalf, mapSize, margin);
 
@@ -213,7 +212,7 @@ export default function RustMap({
         if (i < numCells) {
           const char = indexToLetter(i);
           // Etiqueta sobre la línea superior del grid
-          const pLabel = worldToLeaflet(x + GRID_SIZE / 2, worldHalf, mapSize, margin);
+          const pLabel = worldToLeaflet(x + cellSizeGrid / 2, worldHalf, mapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
@@ -228,7 +227,7 @@ export default function RustMap({
 
       // Líneas Horizontales + etiquetas de fila (números: 0, 1, 2...)
       for (let j = 0; j <= numCells; j++) {
-        const y = worldHalf - (j * GRID_SIZE);
+        const y = worldHalf - (j * cellSizeGrid);
         const pLeft  = worldToLeaflet(-worldHalf, y, mapSize, margin);
         const pRight = worldToLeaflet(worldHalf, y, mapSize, margin);
 
@@ -236,7 +235,7 @@ export default function RustMap({
 
         if (j < numCells) {
           // Etiqueta a la izquierda de la línea
-          const pLabel = worldToLeaflet(-worldHalf, y - GRID_SIZE / 2, mapSize, margin);
+          const pLabel = worldToLeaflet(-worldHalf, y - cellSizeGrid / 2, mapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',

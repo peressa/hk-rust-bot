@@ -69,6 +69,17 @@ export default function WarRoomPage() {
       setServerInfo(current);
       
       const mData = await mRes.json();
+      
+      // Normalizar monumentos a centro
+      if (mData.monuments && mData.mapSize) {
+         const half = mData.mapSize / 2;
+         mData.monuments = mData.monuments.map((mon: any) => ({
+            ...mon,
+            x: mon.x > half + 50 ? mon.x - half : mon.x,
+            y: mon.y > half + 50 ? mon.y - half : mon.y
+         }));
+      }
+      
       setMapData(mData);
       
       await refreshTacticalData();
@@ -86,14 +97,27 @@ export default function WarRoomPage() {
       const res = await fetch(`/api/rustplus/markers?serverId=${serverId}`);
       const data = await res.json();
       
-      // Fusionar marcadores de mapa normales con muertes del equipo (type='Death')
+      const mapSize = data.mapSize || 4000;
+      const halfSize = mapSize / 2;
+
+      // Normalizar marcadores positivos (0..mapSize) a coordenadas de mundo (-half..half)
+      const normalizedMarkers = (data.markers || []).map((m: any) => {
+        const isPositive = m.x > halfSize + 100 || m.y > halfSize + 100;
+        return {
+          ...m,
+          x: isPositive ? m.x - halfSize : m.x,
+          y: isPositive ? m.y - halfSize : m.y
+        };
+      });
+
+      // Fusionar marcadores de mapa normales con muertes del equipo (que ya vienen en coordenadas de mundo)
       const deathMarkers = (data.deaths || []).map((d: any) => ({ ...d, type: 'Death' }));
-      setMarkers([...(data.markers || []), ...deathMarkers]);
+      setMarkers([...normalizedMarkers, ...deathMarkers]);
       setTeam(data.team || []);
       setIntel(data.intel || []);
 
-      // Extraer vending machines (type=3) del array de marcadores
-      const vms = (data.markers || []).filter((m: any) => m.type === 3);
+      // Extraer vending machines (usar coordenadas ya normalizadas)
+      const vms = normalizedMarkers.filter((m: any) => m.type === 3);
       const offers: any[] = [];
 
       vms.forEach((vm: any) => {

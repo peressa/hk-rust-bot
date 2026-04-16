@@ -3,7 +3,7 @@
  * El tamaño estándar de un cuadrante es 146.3 unidades de Unity.
  */
 
-export const GRID_SIZE = 146.25;
+export const GRID_CELL_SIZE = 150;
 
 /**
  * Convierte un índice numérico a letras (0 -> A, 1 -> B, 25 -> Z, 26 -> AA...)
@@ -40,12 +40,18 @@ export function normalizeToWorld(val: number, mapSize: number): number {
 export function worldToGrid(x: number, y: number, mapSize: number): string {
     const worldHalf = mapSize / 2;
     
+    // El número de celdas se redondea según el estándar de 146.25 unidades
+    let numCells = Math.max(1, Math.ceil(mapSize / 146.25));
+    if (mapSize >= 3000 && mapSize <= 3500) numCells = 23;
+    
+    const cellSize = mapSize / numCells;
+
     // Aseguramos que trabajamos con coordenadas centradas
     const nx = normalizeToWorld(x, mapSize);
     const ny = normalizeToWorld(y, mapSize);
 
-    const gridX = Math.floor((nx + worldHalf) / GRID_CELL_SIZE);
-    const gridY = Math.floor((worldHalf - ny) / GRID_CELL_SIZE);
+    const gridX = Math.floor((nx + worldHalf) / cellSize);
+    const gridY = Math.floor((worldHalf - ny) / cellSize);
     
     const safeX = Math.max(0, gridX);
     const safeY = Math.max(0, gridY);
