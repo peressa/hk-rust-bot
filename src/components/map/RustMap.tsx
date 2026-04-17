@@ -42,8 +42,8 @@ export default function RustMap({
   allowDrawing = true
 }: RustMapProps) {
   // Usar el margen de océano real. El valor 1000 era un fallback que causaba desplazamientos.
-  // El tamaño real de la isla/mapa suele venir en 'width'. 
-  // Si el servidor reporta mapSize=3500 pero la imagen es 1400, usamos 1400 para la grilla.
+  // Siempre usamos el mapSize nominal para la grilla para que coincida con A-W del juego
+  const gridMapSize = mapSize;
   const effectiveMapSize = (width && width > 0) ? width : mapSize;
   const scaleFactor = effectiveMapSize / mapSize;
   
@@ -113,17 +113,13 @@ export default function RustMap({
     let ny = y;
     
     // Rust+ API: Markers y Monumentos suelen venir en 0..mapSize (nominal).
-    // Solo centramos si los valores son positivos y están en el rango del mapa nominal.
     if (isAPIOrigin && nx >= 0 && nx <= mapSize && ny >= 0 && ny <= mapSize) {
       nx = nx - (mapSize / 2);
       ny = ny - (mapSize / 2);
-      
-      // Aplicar factor de escala si el mapa real es más pequeño que el nominal
-      nx *= scaleFactor;
-      ny *= scaleFactor;
     }
 
-    const projection = worldToLeaflet(nx, ny, effectiveMapSize, effectiveOceanMargin);
+    // Usamos el mapSize nominal para la proyección final para que coincida con la grilla A-W
+    const projection = worldToLeaflet(nx, ny, mapSize, effectiveOceanMargin);
     return [projection.lat, projection.lng];
   };
 
@@ -208,7 +204,7 @@ export default function RustMap({
       layersRef.current['gridGroup'] = gridGroup;
 
       const cellSizeGrid = 146.25;
-      const numCells = Math.max(1, Math.floor(effectiveMapSize / cellSizeGrid));
+      const numCells = Math.max(1, Math.floor(gridMapSize / cellSizeGrid));
       const gridTotalSize = numCells * cellSizeGrid;
       const gridHalf = gridTotalSize / 2;
       const margin = effectiveOceanMargin;
@@ -218,15 +214,14 @@ export default function RustMap({
       // Líneas Verticales + etiquetas de columna (letras: A, B, C...)
       for (let i = 0; i <= numCells; i++) {
         const x = -gridHalf + (i * cellSizeGrid);
-        const pTop    = worldToLeaflet(x, gridHalf, effectiveMapSize, margin);
-        const pBottom = worldToLeaflet(x, -gridHalf, effectiveMapSize, margin);
+        const pTop    = worldToLeaflet(x, gridHalf, gridMapSize, margin);
+        const pBottom = worldToLeaflet(x, -gridHalf, gridMapSize, margin);
 
         L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
 
         if (i < numCells) {
           const char = indexToLetter(i);
-          // Etiqueta sobre la línea superior del grid
-          const pLabel = worldToLeaflet(x + cellSizeGrid / 2, gridHalf, effectiveMapSize, margin);
+          const pLabel = worldToLeaflet(x + cellSizeGrid / 2, gridHalf, gridMapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
@@ -242,14 +237,13 @@ export default function RustMap({
       // Líneas Horizontales + etiquetas de fila (números: 0, 1, 2...)
       for (let j = 0; j <= numCells; j++) {
         const y = gridHalf - (j * cellSizeGrid);
-        const pLeft  = worldToLeaflet(-gridHalf, y, effectiveMapSize, margin);
-        const pRight = worldToLeaflet(gridHalf, y, effectiveMapSize, margin);
+        const pLeft  = worldToLeaflet(-gridHalf, y, gridMapSize, margin);
+        const pRight = worldToLeaflet(gridHalf, y, gridMapSize, margin);
 
         L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
 
         if (j < numCells) {
-          // Etiqueta a la izquierda de la línea
-          const pLabel = worldToLeaflet(-gridHalf, y - cellSizeGrid / 2, effectiveMapSize, margin);
+          const pLabel = worldToLeaflet(-gridHalf, y - cellSizeGrid / 2, gridMapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
@@ -327,7 +321,7 @@ export default function RustMap({
         if (!cleanName || cleanName === "OIL RIG") return; // Evitar etiquetas genéricas si ya hay específicas
 
         // Importante: los monumentos y markers del API suelen venir en 0..mapSize
-        const pos = getPosition(mon.x, mon.y, effectiveMapSize, true);
+        const pos = getPosition(mon.x, mon.y, gridMapSize, true);
 
         L.marker(pos, {
           icon: L.divIcon({
@@ -380,7 +374,7 @@ export default function RustMap({
         // Los markers genéricos de Rust+ (vending, etc) suelen venir en 0..mapSize
         // Los jugadores y muertes SIEMPRE vienen centrados.
         const isAPI = marker.type !== MARKER_TYPES.PLAYER && marker.type !== 'Death';
-        const pos = getPosition(marker.x, marker.y, effectiveMapSize, isAPI);
+        const pos = getPosition(marker.x, marker.y, gridMapSize, isAPI);
         L.marker(pos, {
           icon: getIcon(L, marker.type, marker.name)
         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
@@ -389,7 +383,7 @@ export default function RustMap({
     // Renderizar Team Members (Vienen en data.team separadamente)
     if (showPlayers && team) {
       team.filter(tm => tm.isAlive && tm.x !== undefined).forEach(tm => {
-        const pos = getPosition(tm.x, tm.y, effectiveMapSize);
+        const pos = getPosition(tm.x, tm.y, gridMapSize);
         const color = tm.isOnline ? "#22c55e" : "#555";
         const iconHtml = `
           <div style="position: relative; width: 16px; height: 16px;">
