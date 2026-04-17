@@ -53,6 +53,7 @@ export default function WarRoomPage() {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   
+  const [mounted, setMounted] = useState(false);
   const [serverInfo, setServerInfo] = useState<any>(null);
   const [markers, setMarkers] = useState<any[]>([]);
   const [team, setTeam] = useState<any[]>([]);
@@ -66,10 +67,15 @@ export default function WarRoomPage() {
   const [allOffers, setAllOffers] = useState<any[]>([]);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || !serverId) return;
     fetchInitialData();
     const interval = setInterval(refreshTacticalData, 5000);
     return () => clearInterval(interval);
-  }, [serverId]);
+  }, [serverId, mounted]);
 
   const fetchInitialData = async () => {
     setLoading(true);
@@ -153,11 +159,11 @@ export default function WarRoomPage() {
     o.machineName.toLowerCase().includes(vendingQuery.toLowerCase())
   ).sort((a, b) => a.costPerItem - b.costPerItem);
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <div style={{ height: '100vh', width: '100vw', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '2rem' }}>
          <div className="premium-loader" style={{ fontFamily: 'var(--font-roboto)', fontWeight: 300, color: 'var(--primary)', fontSize: '1.2rem', letterSpacing: '0.1rem' }}>
-            Estableciendo conexión segura...
+            {!mounted ? "INICIALIZANDO BINARIOS..." : "ESTABLECIENDO CONEXIÓN SEGURA..."}
          </div>
          <RefreshCw size={32} className="animate-spin" color="var(--primary)" style={{ opacity: 0.5 }} />
       </div>
@@ -454,9 +460,19 @@ export default function WarRoomPage() {
         .icon-btn:hover { color: #fff; border-color: rgba(255,255,255,0.2); background: rgba(0,0,0,0.8); }
         .icon-btn.highlight { color: var(--primary); border-color: rgba(232, 0, 28, 0.2); }
         
-        .modal-backdrop { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; alignItems: center; justifyContent: center; padding: 2rem; }
-        .premium-modal { width: 100%; maxWidth: 900px; background: #050505; border: 1px solid rgba(255,255,255,0.1); position: relative; padding: 1rem; border-radius: 12px; }
-        .premium-modal-sm { width: 100%; maxWidth: 400px; background: #080808; border: 1px solid rgba(255,255,255,0.1); position: relative; padding: 2rem; border-radius: 16px; text-align: center; }
+        .modal-backdrop { 
+          position: fixed; 
+          inset: 0; 
+          z-index: 10000; 
+          background: rgba(0,0,0,0.8); 
+          backdrop-filter: blur(8px); 
+          display: flex; 
+          align-items: center; 
+          justify-content: center; 
+          padding: 2rem; 
+        }
+        .premium-modal { width: 100%; max-width: 900px; background: #050505; border: 1px solid rgba(255,255,255,0.1); position: relative; padding: 1rem; border-radius: 12px; }
+        .premium-modal-sm { width: 100%; max-width: 400px; background: #080808; border: 1px solid rgba(255,255,255,0.1); position: relative; padding: 2rem; border-radius: 16px; text-align: center; }
         .close-btn { position: absolute; top: 1.5rem; right: 1.5rem; background: transparent; border: none; color: #444; cursor: pointer; transition: 0.2s; }
         .close-btn:hover { color: #fff; }
 
