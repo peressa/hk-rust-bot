@@ -246,6 +246,8 @@ export default function WarRoomPage() {
             <RustMap 
               mapJpg={mapData?.jpgImage} 
               mapSize={mapData?.mapSize || 4000} 
+              width={mapData?.width}
+              height={mapData?.height}
               oceanMargin={mapData?.oceanMargin}
               monuments={mapData?.monuments}
               markers={markers}
