@@ -350,7 +350,8 @@ export default function RustMap({
         }).addTo(monumentsGroup);
       });
     }
-  }, [L, monuments, showMonuments, mapSize, oceanMargin]);
+  }
+}, [L, monuments, showMonuments, mapSize, oceanMargin, gridMapSize, effectiveOceanMargin]);
 
   // Renderizar Marcadores (Jugadores, Equipos, Eventos)
   useEffect(() => {
@@ -386,6 +387,7 @@ export default function RustMap({
           icon: getIcon(L, marker.type, marker.name)
         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
       });
+    }
 
     // Renderizar Team Members (Vienen en data.team separadamente)
     if (showPlayers && team && Array.isArray(team)) {
