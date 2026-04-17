@@ -106,36 +106,43 @@ export default function WarRoomPage() {
     setRefreshing(true);
     try {
       const res = await fetch(`/api/rustplus/markers?serverId=${serverId}`);
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
       const data = await res.json();
       
-      // Fusionar marcadores de mapa normales con muertes del equipo (que ya vienen en coordenadas de mundo)
-      const deathMarkers = (data.deaths || []).map((d: any) => ({ ...d, type: 'Death' }));
-      setMarkers([...(data.markers || []), ...deathMarkers]);
-      setTeam(data.team || []);
-      setIntel(data.intel || []);
+      if (data && !data.error) {
+        // Fusionar marcadores de mapa normales con muertes del equipo
+        const rawMarkers = Array.isArray(data.markers) ? data.markers : [];
+        const deathMarkers = (Array.isArray(data.deaths) ? data.deaths : []).map((d: any) => ({ ...d, type: 'Death' }));
+        
+        setMarkers([...rawMarkers, ...deathMarkers]);
+        setTeam(Array.isArray(data.team) ? data.team : []);
+        setIntel(Array.isArray(data.intel) ? data.intel : []);
 
-      // Extraer vending machines (usar coordenadas crudas para filtrado/ubicación)
-      const vms = (data.markers || []).filter((m: any) => m.type === 3);
-      const offers: any[] = [];
+        // Extraer vending machines de forma segura
+        const vms = rawMarkers.filter((m: any) => m && m.type === 3);
+        const offers: any[] = [];
 
-      vms.forEach((vm: any) => {
-        const orders = vm.sellOrders || vm.sell_orders || vm.SellOrders || [];
-        orders.forEach((order: any) => {
-          offers.push({
-            machineName: vm.name || "Vending Desconocido",
-            itemToSell: order.itemId || order.item_id || order.ItemId || 0,
-            amountToSell: order.quantity || order.amount || order.Quantity || 0,
-            currencyReq: order.currencyId || order.currency_id || order.CurrencyId || 0,
-            costPerItem: order.costPerItem || order.cost_per_item || order.CostPerItem || 0,
-            amountInStock: order.amountInStock !== undefined ? order.amountInStock : (order.amount_in_stock !== undefined ? order.amount_in_stock : (order.AmountInStock || 0)),
-            x: vm.x,
-            y: vm.y
-          });
+        vms.forEach((vm: any) => {
+          const orders = vm.sellOrders || vm.sell_orders || vm.SellOrders || [];
+          if (Array.isArray(orders)) {
+            orders.forEach((order: any) => {
+              offers.push({
+                machineName: vm.name || "Vending Desconocido",
+                itemToSell: order.itemId || 0,
+                amountToSell: order.quantity || 0,
+                currencyReq: order.currencyId || 0,
+                costPerItem: order.costPerItem || 0,
+                amountInStock: order.amountInStock || 0,
+                x: vm.x,
+                y: vm.y
+              });
+            });
+          }
         });
-      });
-      setAllOffers(offers);
+        setAllOffers(offers);
+      }
     } catch (err) {
-      console.error("Tactical pulse failed:", err);
+      console.error("Fallo crítico en pulso táctico:", err);
     } finally {
       setRefreshing(false);
     }
@@ -260,8 +267,8 @@ export default function WarRoomPage() {
                     <span style={{ fontSize: '0.6rem', color: '#444', fontWeight: 800, textTransform: 'uppercase' }}>{team.length} Activos</span>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {team.map((m) => (
-                    <MemberCard key={m.steamId} member={m} />
+                    {Array.isArray(team) && team.map((m, idx) => (
+                      m && m.steamId ? <MemberCard key={String(m.steamId)} member={m} /> : <div key={idx} className="opacity-10 py-1 text-[0.6rem]">DESCRIPTOR DESCONOCIDO</div>
                     ))}
                 </div>
                 </section>
@@ -269,10 +276,12 @@ export default function WarRoomPage() {
                 <section style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '1.5rem' }}>
                     <h3 className="premium-title" style={{ opacity: 0.4, fontSize: '0.8rem' }}>Inteligencia en Vivo</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.25rem' }}>
-                        {intel.length === 0 ? (
+                        {!Array.isArray(intel) || intel.length === 0 ? (
                         <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.1, fontSize: '0.7rem', fontWeight: 700 }}>SIN DATOS REPORTADOS</div>
                         ) : (
-                        intel.map((log, i) => <IntelItem key={i} log={log} />)
+                        intel.map((log, i) => (
+                           log ? <IntelItem key={log.id || `intel-${i}`} log={log} /> : null
+                        ))
                         )}
                     </div>
                 </section>
@@ -321,7 +330,7 @@ export default function WarRoomPage() {
 
                 <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                       <thead style={{ position: 'sticky', top: 0, background: '#0a0a0b', zIndex: 5, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                      <thead style={{ position: 'sticky', top: 0, background: '#0a0a0b', zIndex: 5, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                         <tr style={{ textAlign: 'left', fontSize: '0.6rem', opacity: 0.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1rem', fontFamily: 'var(--font-barlow)' }}>
                           <th style={{ padding: '1rem 1.5rem' }}>Precio Venta</th>
                           <th style={{ padding: '1rem 1.5rem' }}>Artículo</th>
@@ -330,35 +339,37 @@ export default function WarRoomPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredOffers.map((o, idx) => (
-                           <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} className="table-row-premium">
-                              <td style={{ padding: '1.25rem' }}>
-                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <img src={getItemIcon(o.currencyReq)} style={{ width: '20px', height: '20px', objectFit: 'contain' }} alt="" />
-                                    <span style={{ color: '#fbbf24', fontWeight: 600 }}>{o.costPerItem}x</span> {getItemName(o.currencyReq)}
-                                 </div>
-                              </td>
-                              <td style={{ padding: '1.25rem' }}>
-                                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                    <img src={getItemIcon(o.itemToSell)} style={{ width: '24px', height: '24px', objectFit: 'contain', filter: 'drop-shadow(0 0 5px rgba(96, 165, 250, 0.4))' }} alt="" />
-                                    <span style={{ color: '#60a5fa', fontWeight: 600 }}>{o.amountToSell}x</span> {getItemName(o.itemToSell)}
-                                 </div>
-                              </td>
-                              <td style={{ padding: '1.25rem' }}>
-                                 <div style={{ 
-                                   background: o.amountInStock === 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                                   color: o.amountInStock === 0 ? '#ef4444' : '#22c55e',
-                                   padding: '4px 12px',
-                                   borderRadius: '4px',
-                                   display: 'inline-block',
-                                   fontSize: '0.75rem',
-                                   fontWeight: 700
-                                 }}>
-                                    {o.amountInStock} UNID
-                                 </div>
-                              </td>
-                               <td style={{ padding: '0.75rem 1.5rem', opacity: 0.3, fontSize: '0.7rem', fontWeight: 600 }}>{o.machineName.toUpperCase()}</td>
-                           </tr>
+                        {Array.isArray(filteredOffers) && filteredOffers.map((o, idx) => (
+                           o ? (
+                            <tr key={`${o.itemToSell}-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} className="table-row-premium">
+                                <td style={{ padding: '1.25rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <img src={getItemIcon(o.currencyReq)} style={{ width: '20px', height: '20px', objectFit: 'contain' }} alt="" />
+                                        <span style={{ color: '#fbbf24', fontWeight: 600 }}>{o.costPerItem}x</span> {getItemName(o.currencyReq)}
+                                    </div>
+                                </td>
+                                <td style={{ padding: '1.25rem' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                        <img src={getItemIcon(o.itemToSell)} style={{ width: '24px', height: '24px', objectFit: 'contain', filter: 'drop-shadow(0 0 5px rgba(96, 165, 250, 0.4))' }} alt="" />
+                                        <span style={{ color: '#60a5fa', fontWeight: 600 }}>{o.amountToSell}x</span> {getItemName(o.itemToSell)}
+                                    </div>
+                                </td>
+                                <td style={{ padding: '1.25rem' }}>
+                                    <div style={{ 
+                                      background: o.amountInStock === 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
+                                      color: o.amountInStock === 0 ? '#ef4444' : '#22c55e',
+                                      padding: '4px 12px',
+                                      borderRadius: '4px',
+                                      display: 'inline-block',
+                                      fontSize: '0.75rem',
+                                      fontWeight: 700
+                                    }}>
+                                        {o.amountInStock} UNID
+                                    </div>
+                                </td>
+                                <td style={{ padding: '0.75rem 1.5rem', opacity: 0.3, fontSize: '0.7rem', fontWeight: 600 }}>{(o.machineName || "TIENDA").toUpperCase()}</td>
+                            </tr>
+                           ) : null
                         ))}
                       </tbody>
                    </table>
