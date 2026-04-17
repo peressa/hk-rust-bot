@@ -199,25 +199,26 @@ export default function RustMap({
       const gridGroup = L.layerGroup().addTo(leafletMap.current);
       layersRef.current['gridGroup'] = gridGroup;
 
-      const worldHalf = mapSize / 2;
       const cellSizeGrid = 146.25;
-      const numCells = Math.round(mapSize / cellSizeGrid);
+      const numCells = Math.floor(mapSize / cellSizeGrid);
+      const gridTotalSize = numCells * cellSizeGrid;
+      const gridHalf = gridTotalSize / 2;
       const margin = effectiveOceanMargin;
 
       const lineOpts = { color: 'rgba(255,255,255,0.12)', weight: 1, opacity: 1, dashArray: '3, 6' };
 
       // Líneas Verticales + etiquetas de columna (letras: A, B, C...)
       for (let i = 0; i <= numCells; i++) {
-        const x = -worldHalf + (i * cellSizeGrid);
-        const pTop    = worldToLeaflet(x, worldHalf, mapSize, margin);
-        const pBottom = worldToLeaflet(x, -worldHalf, mapSize, margin);
+        const x = -gridHalf + (i * cellSizeGrid);
+        const pTop    = worldToLeaflet(x, gridHalf, mapSize, margin);
+        const pBottom = worldToLeaflet(x, -gridHalf, mapSize, margin);
 
         L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
 
         if (i < numCells) {
           const char = indexToLetter(i);
           // Etiqueta sobre la línea superior del grid
-          const pLabel = worldToLeaflet(x + cellSizeGrid / 2, worldHalf, mapSize, margin);
+          const pLabel = worldToLeaflet(x + cellSizeGrid / 2, gridHalf, mapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
@@ -232,15 +233,15 @@ export default function RustMap({
 
       // Líneas Horizontales + etiquetas de fila (números: 0, 1, 2...)
       for (let j = 0; j <= numCells; j++) {
-        const y = worldHalf - (j * cellSizeGrid);
-        const pLeft  = worldToLeaflet(-worldHalf, y, mapSize, margin);
-        const pRight = worldToLeaflet(worldHalf, y, mapSize, margin);
+        const y = gridHalf - (j * cellSizeGrid);
+        const pLeft  = worldToLeaflet(-gridHalf, y, mapSize, margin);
+        const pRight = worldToLeaflet(gridHalf, y, mapSize, margin);
 
         L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
 
         if (j < numCells) {
           // Etiqueta a la izquierda de la línea
-          const pLabel = worldToLeaflet(-worldHalf, y - cellSizeGrid / 2, mapSize, margin);
+          const pLabel = worldToLeaflet(-gridHalf, y - cellSizeGrid / 2, mapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',

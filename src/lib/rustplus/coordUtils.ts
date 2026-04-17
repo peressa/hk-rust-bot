@@ -28,17 +28,18 @@ export function normalizeToWorld(val: number, mapSize: number): number {
  */
 export function worldToGrid(x: number, y: number, mapSize: number): string {
     const cellSize = 146.25;
-    const half = mapSize / 2;
+    const numCells = Math.floor(mapSize / cellSize);
+    const half = (numCells * cellSize) / 2;
     
     // Centrar coordenadas si vienen de API (0..mapSize)
-    const nx = (x > half + 100) ? (x - half) : x;
-    const ny = (y > half + 100) ? (y - half) : y;
+    const nx = (x > mapSize * 0.6) ? (x - mapSize / 2) : x;
+    const ny = (y > mapSize * 0.6) ? (y - mapSize / 2) : y;
 
     const gridX = Math.floor((nx + half) / cellSize);
     const gridY = Math.floor((half - ny) / cellSize);
     
-    const safeX = Math.max(0, gridX);
-    const safeY = Math.max(0, gridY);
+    const safeX = Math.max(0, Math.min(gridX, numCells - 1));
+    const safeY = Math.max(0, Math.min(gridY, numCells - 1));
     return `${indexToLetter(safeX)}${safeY}`;
 }
 
