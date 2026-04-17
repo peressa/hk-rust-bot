@@ -41,8 +41,8 @@ export default function RustMap({
   serverId,
   allowDrawing = true
 }: RustMapProps) {
-  // Asegurar margen de océano estándar si no viene definido o es 0
-  const effectiveOceanMargin = (oceanMargin && oceanMargin > 0) ? oceanMargin : 1000;
+  // Usar el margen de océano real. El valor 1000 era un fallback que causaba desplazamientos.
+  const effectiveOceanMargin = oceanMargin || 0;
   const mapRef = useRef<HTMLDivElement>(null);
   const [L, setL] = useState<any>(null);
   const leafletMap = useRef<any>(null);
@@ -107,17 +107,16 @@ export default function RustMap({
     let nx = x;
     let ny = y;
     
-    // Si forzamos normalización o el valor parece estar en formato 0..mapSize (no centrado)
-    if (forceNormalize || (nx > currentMapSize / 2 && nx <= currentMapSize)) {
+    // Normalización: Si es un marcador (monumento/tienda) viene en 0..mapSize -> pasar a -half..half
+    // Si ya es negativo o forceNormalize es false para jugadores, se queda igual.
+    if (forceNormalize && nx >= 0 && ny >= 0) {
       nx = nx - (currentMapSize / 2);
-    }
-    if (forceNormalize || (ny > currentMapSize / 2 && ny <= currentMapSize)) {
       ny = ny - (currentMapSize / 2);
     }
 
     const projection = worldToLeaflet(nx, ny, currentMapSize, effectiveOceanMargin);
-    const lat = Math.min(Math.max(projection.lat, 0), 1000);
-    const lng = Math.min(Math.max(projection.lng, 0), 1000);
+    const lat = projection.lat;
+    const lng = projection.lng;
     return [lat, lng];
   };
 
