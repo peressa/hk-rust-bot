@@ -22,10 +22,21 @@ import {
   LogOut,
   ExternalLink
 } from "lucide-react";
-import RustMap from "@/components/map/RustMap";
+import dynamic from "next/dynamic";
 import CommsModule from "@/components/war-room/CommsModule";
 import InviteManager from "@/components/war-room/InviteManager";
 import { getItemName, getItemIcon } from "@/lib/data/items";
+
+// Carga dinámica para evitar errores de SSR con Leaflet (window is not defined)
+const RustMap = dynamic(() => import("@/components/map/RustMap"), { 
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full bg-[#050505] flex flex-col items-center justify-center gap-4">
+      <RefreshCw className="w-8 h-8 text-[#ff4b2b] animate-spin opacity-20" />
+      <span className="text-[10px] uppercase font-black tracking-widest text-white/20">Cargando Motores de Mapa</span>
+    </div>
+  )
+});
 
 type MissionModule = "RADAR" | "CCTV" | "ECONOMY" | "ENERGY" | "COMMS" | "DISCORD";
 
