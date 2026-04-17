@@ -107,8 +107,10 @@ export default function RustMap({
     let nx = x;
     let ny = y;
     
-    // Si viene de geMap/getMapMarkers (API Origin 0..mapSize) -> pasar a Mundo (-half..half)
-    if (isAPIOrigin) {
+    // Rust+ API: Markers y Monumentos suelen venir en 0..mapSize.
+    // Team y Deaths suelen venir en -half..half.
+    // Si es APIOrigin y no es negativo, lo centramos.
+    if (isAPIOrigin && nx >= 0 && ny >= 0) {
       nx = nx - (currentMapSize / 2);
       ny = ny - (currentMapSize / 2);
     }
@@ -198,12 +200,8 @@ export default function RustMap({
       layersRef.current['gridGroup'] = gridGroup;
 
       const worldHalf = mapSize / 2;
-      
-      // Cálculo dinámico para coincidir con coordUtils.ts
-      let numCells = Math.ceil(mapSize / 146.25);
-      if (mapSize >= 3000 && mapSize <= 4000) numCells = 24; 
-      
-      const cellSizeGrid = mapSize / numCells;
+      const cellSizeGrid = 146.25;
+      const numCells = Math.round(mapSize / cellSizeGrid);
       const margin = effectiveOceanMargin;
 
       const lineOpts = { color: 'rgba(255,255,255,0.12)', weight: 1, opacity: 1, dashArray: '3, 6' };

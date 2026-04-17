@@ -399,19 +399,15 @@ class RustPlusManager extends EventEmitter {
           const reportedMapSize = info?.mapSize || 4000;
           const reportedMapWidth = map.width || 0;
 
-          // Si el ancho del mapa reportado es mayor que el mapSize, lo usamos para calcular el margen real.
-          // Si no, asumimos el estándar de 1000 unidades de océano por lado.
-          let oceanMargin = 0;
+          // Margen estándar de Rust+ es 1000 unidades de océano por cada lado.
+          let oceanMargin = 1000; 
           let mapSize = reportedMapSize;
 
-          // Si el ancho de la imagen es significativamente mayor que el mapSize,
-          // calculamos el margen real basándonos en la diferencia.
-          // Ej: MapSize 3500, Image Width 5500 -> Margin 1000 por lado.
           if (reportedMapWidth > reportedMapSize + 100) {
+              // Si el ancho reportado es coherente, calculamos el margen exacto
               oceanMargin = Math.round((reportedMapWidth - reportedMapSize) / 2);
-          } else if (reportedMapWidth < reportedMapSize - 100 && reportedMapWidth > 0) {
-              // Si la imagen es más pequeña que el mapSize (ej: pixels), 
-              // el oceanMargin suele ser 0 o ya está recortado.
+          } else if (reportedMapWidth > 0 && reportedMapWidth <= reportedMapSize) {
+              // Caso donde el mapa viene recortado a la isla exacta
               oceanMargin = 0;
           }
 
