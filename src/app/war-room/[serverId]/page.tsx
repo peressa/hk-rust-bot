@@ -23,19 +23,23 @@ import {
   ExternalLink
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import CommsModule from "@/components/war-room/CommsModule";
-import InviteManager from "@/components/war-room/InviteManager";
 import { getItemName, getItemIcon } from "@/lib/data/items";
 
-// Carga dinámica para evitar errores de SSR con Leaflet (window is not defined)
+// CARGA DINÁMICA TOTAL (SSR: FALSE)
+// Obligatorio para evitar errores de "window is not defined" y RangeError de fechas desincronizadas.
 const RustMap = dynamic(() => import("@/components/map/RustMap"), { 
   ssr: false,
-  loading: () => (
-    <div className="w-full h-full bg-[#050505] flex flex-col items-center justify-center gap-4">
-      <RefreshCw className="w-8 h-8 text-[#ff4b2b] animate-spin opacity-20" />
-      <span className="text-[10px] uppercase font-black tracking-widest text-white/20">Cargando Motores de Mapa</span>
-    </div>
-  )
+  loading: () => <div className="w-full h-full bg-[#050505] flex items-center justify-center opacity-20">Cargando Mapa...</div>
+});
+
+const CommsModule = dynamic(() => import("@/components/war-room/CommsModule"), { 
+  ssr: false,
+  loading: () => <div className="p-8 opacity-10">Sincronizando Radio...</div>
+});
+
+const InviteManager = dynamic(() => import("@/components/war-room/InviteManager"), { 
+  ssr: false,
+  loading: () => <div className="p-8 opacity-10">Cargando Accesos...</div>
 });
 
 type MissionModule = "RADAR" | "CCTV" | "ECONOMY" | "ENERGY" | "COMMS" | "DISCORD";
@@ -504,6 +508,17 @@ function MemberCard({ member }: { member: any }) {
 function IntelItem({ log }: { log: any }) {
   const isDeath = log.type === 'DEATH';
   const isEvent = log.type === 'EVENT';
+  
+  const formatTime = (ts: any) => {
+    try {
+      const d = new Date(ts);
+      if (isNaN(d.getTime())) return "Reciente";
+      return d.toLocaleTimeString();
+    } catch (e) {
+      return "Reciente";
+    }
+  };
+
   return (
     <div style={{ 
       borderLeft: `2px solid ${isDeath ? '#ef4444' : (isEvent ? '#fbbf24' : '#222')}`, 
@@ -512,7 +527,7 @@ function IntelItem({ log }: { log: any }) {
       paddingTop: '0.5rem',
       paddingBottom: '0.5rem'
     }}>
-       <div style={{ fontSize: '0.6rem', color: '#555', marginBottom: '0.3rem', fontWeight: 700 }}>{new Date(log.timestamp).toLocaleTimeString()}</div>
+       <div style={{ fontSize: '0.6rem', color: '#555', marginBottom: '0.3rem', fontWeight: 700 }}>{formatTime(log.timestamp)}</div>
        <div style={{ fontSize: '0.85rem', color: isDeath ? '#ef4444' : (isEvent ? '#fbbf24' : '#ccc'), fontWeight: isDeath || isEvent ? 600 : 400, lineHeight: 1.4 }}>
           {log.message}
        </div>

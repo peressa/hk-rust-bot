@@ -119,7 +119,15 @@ export default function InviteManager({ serverId }: { serverId: string }) {
                 <div style={{ display: 'flex', gap: '1rem', marginTop: '0.2rem', fontSize: '0.65rem', color: '#666', fontWeight: 700 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
                     <Clock size={10} /> 
-                    {invite.expiresAt ? new Date(invite.expiresAt).toLocaleDateString() : "Fin del Wipe"}
+                    {(() => {
+                      if (!invite.expiresAt) return "Fin del Wipe";
+                      try {
+                        const d = new Date(invite.expiresAt);
+                        return isNaN(d.getTime()) ? "Expirado" : d.toLocaleDateString();
+                      } catch (e) {
+                        return "Expirado";
+                      }
+                    })()}
                   </span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Key size={10} /> PIN: {invite.code}</span>
                 </div>

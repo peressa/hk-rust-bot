@@ -75,7 +75,14 @@ export default function CommsModule({ serverId }: { serverId: string }) {
                 {msg.sender.toUpperCase()}
               </span>
               <span style={{ fontSize: '0.6rem', color: '#333' }}>
-                {new Date(msg.timestamp).toLocaleTimeString()}
+                {(() => {
+                  try {
+                    const d = new Date(msg.timestamp);
+                    return isNaN(d.getTime()) ? "..." : d.toLocaleTimeString();
+                  } catch (e) {
+                    return "...";
+                  }
+                })()}
               </span>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.6rem 0.8rem', borderLeft: '2px solid #222', fontSize: '0.85rem', color: '#ccc', lineHeight: 1.4 }}>
