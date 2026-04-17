@@ -28,19 +28,28 @@ export function normalizeToWorld(val: number, mapSize: number): number {
  */
 export function worldToGrid(x: number, y: number, mapSize: number): string {
     const cellSize = 146.25;
-    const numCells = Math.floor(mapSize / cellSize);
-    const half = (numCells * cellSize) / 2;
+    const half = mapSize / 2;
     
-    // Centrar coordenadas si vienen de API (0..mapSize)
-    const nx = (x > mapSize * 0.6) ? (x - mapSize / 2) : x;
-    const ny = (y > mapSize * 0.6) ? (y - mapSize / 2) : y;
+    // Desfase reportado: E3 (App) -> C1 (Juego)
+    // E(4) -> C(2) = Offset 2
+    // 3(3) -> 1(0) = Offset 3
+    const X_OFFSET = 2;
+    const Y_OFFSET = 3;
 
-    const gridX = Math.floor((nx + half) / cellSize);
-    const gridY = Math.floor((half - ny) / cellSize);
+    // Asumimos que x, y ya vienen normalizados a world space (-half..half)
+    // Si no lo están (vienen en 0..mapSize), los centramos aquí
+    const nx = (x > mapSize * 0.6) ? (x - half) : x;
+    const ny = (y > mapSize * 0.6) ? (y - half) : y;
+
+    const colIndex = Math.floor((nx + half) / cellSize) - X_OFFSET;
+    const rowIndex = Math.floor((half - ny) / cellSize) - Y_OFFSET;
     
-    const safeX = Math.max(0, Math.min(gridX, numCells - 1));
-    const safeY = Math.max(0, Math.min(gridY, numCells - 1));
-    return `${indexToLetter(safeX)}${safeY}`;
+    // El juego usa 1-based (A1, A2...)
+    const displayRow = rowIndex + 1;
+
+    if (colIndex < 0 || displayRow < 1) return "Water";
+    
+    return `${indexToLetter(colIndex)}${displayRow}`;
 }
 
 /**
