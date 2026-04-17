@@ -299,7 +299,8 @@ export default function RustMap({
       const monumentsGroup = L.layerGroup().addTo(leafletMap.current);
       layersRef.current['monumentsGroup'] = monumentsGroup;
 
-      monuments.forEach((mon: any) => {
+      if (monuments && Array.isArray(monuments)) {
+        monuments.forEach((mon: any) => {
         const token = mon.token || "";
 
         // Filtrar ruido técnico (túneles, laboratorios, paths de assets)
@@ -359,8 +360,9 @@ export default function RustMap({
     const markersGroup = L.layerGroup().addTo(leafletMap.current);
     layersRef.current['markersGroup'] = markersGroup;
 
-    markers
-      .filter(m => {
+    if (markers && Array.isArray(markers)) {
+      markers
+        .filter(m => {
         // Tipo 0 = Undefined, ignorar
         if (!m.type || m.type === 0) return false;
         
@@ -386,7 +388,7 @@ export default function RustMap({
       });
 
     // Renderizar Team Members (Vienen en data.team separadamente)
-    if (showPlayers && team) {
+    if (showPlayers && team && Array.isArray(team)) {
       team.filter(tm => tm.isAlive && tm.x !== undefined).forEach(tm => {
         const pos = getPosition(tm.x, tm.y, gridMapSize);
         const color = tm.isOnline ? "#22c55e" : "#555";

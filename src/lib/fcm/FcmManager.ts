@@ -29,14 +29,20 @@ export class FcmManager {
     // Generate a random DeviceId that looks more standard
     const deviceId = require('crypto').randomBytes(8).toString('hex');
     
-    const fcmCredentials = await AndroidFCM.register(
-      FCM_CONFIG.apiKey,
-      FCM_CONFIG.projectId,
-      FCM_CONFIG.gcmSenderId,
-      FCM_CONFIG.gmsAppId,
-      FCM_CONFIG.androidPackageName,
-      FCM_CONFIG.androidPackageCert
-    );
+    let fcmCredentials;
+    try {
+      fcmCredentials = await AndroidFCM.register(
+        FCM_CONFIG.apiKey,
+        FCM_CONFIG.projectId,
+        FCM_CONFIG.gcmSenderId,
+        FCM_CONFIG.gmsAppId,
+        FCM_CONFIG.androidPackageName,
+        FCM_CONFIG.androidPackageCert
+      );
+    } catch (err: any) {
+      console.error(`[FCM] FATAL: Error registrando dispositivo con Google: ${err.message}`);
+      throw new Error("No se pudo registrar el bot con Google (PHONE_REGISTRATION_ERROR). Esto suele ser un bloqueo temporal por parte de Facepunch/Google. Espera unos minutos e intenta de nuevo.");
+    }
 
     // Validar expiración localmente para dar feedback claro
     try {

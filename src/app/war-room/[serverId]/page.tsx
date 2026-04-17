@@ -65,8 +65,14 @@ export default function WarRoomPage() {
       ]);
       
       const servers = await sRes.json();
-      const current = servers.find((s: any) => s.id === serverId);
-      setServerInfo(current);
+      if (Array.isArray(servers)) {
+        // Buscar por ID exacto de la URL (SteamID-IP) o fallback a IP pura por si es un registro antiguo
+        const ipFromId = serverId.includes('-') ? serverId.split('-')[1] : serverId;
+        const current = servers.find((s: any) => s.id === serverId || s.ip === serverId || s.ip === ipFromId);
+        setServerInfo(current || null);
+      } else {
+        setServerInfo(null);
+      }
       
       const mData = await mRes.json();
       
@@ -132,6 +138,26 @@ export default function WarRoomPage() {
             Estableciendo conexión segura...
          </div>
          <RefreshCw size={32} className="animate-spin" color="var(--primary)" style={{ opacity: 0.5 }} />
+      </div>
+    );
+  }
+
+  if (!serverInfo) {
+    return (
+      <div style={{ height: '100vh', width: '100vw', background: '#050505', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', padding: '2rem', textAlign: 'center' }}>
+         <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '2rem', borderRadius: '1rem', maxWidth: '400px' }}>
+            <X size={48} color="#ef4444" style={{ marginBottom: '1.5rem' }} />
+            <h1 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '1rem' }}>SERVIDOR NO ENCONTRADO</h1>
+            <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '2rem', lineHeight: 1.6 }}>
+              No hemos podido localizar los registros tácticos de este servidor. Asegúrate de que el IP y el puerto sean correctos o re-vincula el bot.
+            </p>
+            <button 
+              onClick={() => router.push('/dashboard')}
+              style={{ background: '#1a1a1c', color: '#fff', border: '1px solid rgba(255,255,255,0.05)', padding: '0.75rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontWeight: 700 }}
+            >
+              Volver al Dashboard
+            </button>
+         </div>
       </div>
     );
   }
