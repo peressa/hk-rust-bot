@@ -103,21 +103,18 @@ export default function RustMap({
     return () => clearInterval(interval);
   }, [serverId]);
 
-  const getPosition = (x: number, y: number, currentMapSize: number, forceNormalize: boolean = false): [number, number] => {
+  const getPosition = (x: number, y: number, currentMapSize: number, isAPIOrigin: boolean = false): [number, number] => {
     let nx = x;
     let ny = y;
     
-    // Normalización: Si es un marcador (monumento/tienda) viene en 0..mapSize -> pasar a -half..half
-    // Si ya es negativo o forceNormalize es false para jugadores, se queda igual.
-    if (forceNormalize && nx >= 0 && ny >= 0) {
+    // Si viene de geMap/getMapMarkers (API Origin 0..mapSize) -> pasar a Mundo (-half..half)
+    if (isAPIOrigin) {
       nx = nx - (currentMapSize / 2);
       ny = ny - (currentMapSize / 2);
     }
 
     const projection = worldToLeaflet(nx, ny, currentMapSize, effectiveOceanMargin);
-    const lat = projection.lat;
-    const lng = projection.lng;
-    return [lat, lng];
+    return [projection.lat, projection.lng];
   };
 
   const getIcon = (leaflet: any, type: any, name: string) => {
@@ -359,15 +356,23 @@ export default function RustMap({
       .filter(m => {
         // Tipo 0 = Undefined, ignorar
         if (!m.type || m.type === 0) return false;
+        
+        // Evitar duplicados: Si el marcador es un Monumento (tipo 7 u otros según servidor),
+        // no lo dibujamos aquí porque ya los dibujamos desde la prop 'monuments' con sus nombres limpios.
+        // El tipo 7 suele ser GenericRadius pero a veces se usa para monumentos en getMapMarkers.
+        if (m.type === MARKER_TYPES.GENERIC && m.name) return false;
+
         // Jugadores del equipo y marcadores de muerte → toggle showPlayers
         if (m.type === MARKER_TYPES.PLAYER || m.type === 'Death') return showPlayers;
         if (m.type === MARKER_TYPES.VENDING) return showVending;
-        return showEvents; // EXPLOSION, CH47, CARGO, CRATE, GENERIC, HELI
+        return showEvents; // EXPLOSION, CH47, CARGO, CRATE, HELI
       })
       .forEach(marker => {
         const popupHtml = `<div style="padding:0.5rem;color:white;"><strong style="color:var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
-        const shouldNormalize = marker.type !== MARKER_TYPES.PLAYER && marker.type !== 'Death';
-        const pos = getPosition(marker.x, marker.y, mapSize, shouldNormalize);
+        // Los markers genéricos de Rust+ (vending, etc) suelen venir en 0..mapSize
+        // Los jugadores y muertes SIEMPRE vienen centrados.
+        const isAPI = marker.type !== MARKER_TYPES.PLAYER && marker.type !== 'Death';
+        const pos = getPosition(marker.x, marker.y, mapSize, isAPI);
         L.marker(pos, {
           icon: getIcon(L, marker.type, marker.name)
         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
