@@ -209,7 +209,9 @@ export default function RustMap({
       const gridHalf = gridTotalSize / 2;
       const margin = effectiveOceanMargin;
 
-      const lineOpts = { color: 'rgba(255,255,255,0.12)', weight: 1, opacity: 1, dashArray: '3, 6' };
+      // Desfase para coincidir con el juego (E3 -> C1)
+      const X_OFFSET = 2;
+      const Y_OFFSET = 3;
 
       // Líneas Verticales + etiquetas de columna (letras: A, B, C...)
       for (let i = 0; i <= numCells; i++) {
@@ -219,8 +221,9 @@ export default function RustMap({
 
         L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
 
-        if (i < numCells) {
-          const char = indexToLetter(i);
+        const colLabelIndex = i - X_OFFSET;
+        if (i < numCells && colLabelIndex >= 0) {
+          const char = indexToLetter(colLabelIndex);
           const pLabel = worldToLeaflet(x + cellSizeGrid / 2, gridHalf, gridMapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
@@ -234,7 +237,7 @@ export default function RustMap({
         }
       }
 
-      // Líneas Horizontales + etiquetas de fila (números: 0, 1, 2...)
+      // Líneas Horizontales + etiquetas de fila (números: 1, 2, 3...)
       for (let j = 0; j <= numCells; j++) {
         const y = gridHalf - (j * cellSizeGrid);
         const pLeft  = worldToLeaflet(-gridHalf, y, gridMapSize, margin);
@@ -242,12 +245,14 @@ export default function RustMap({
 
         L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
 
-        if (j < numCells) {
+        const rowLabelIndex = j - Y_OFFSET;
+        if (j < numCells && rowLabelIndex >= 0) {
+          const displayRow = rowLabelIndex + 1;
           const pLabel = worldToLeaflet(-gridHalf, y - cellSizeGrid / 2, gridMapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
-              html: `<div style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:800;line-height:1;transform:translateY(-50%);pointer-events:none;">${j}</div>`,
+              html: `<div style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:800;line-height:1;transform:translateY(-50%);pointer-events:none;">${displayRow}</div>`,
               iconSize: [0, 0],
               iconAnchor: [0, 0]
             }),
