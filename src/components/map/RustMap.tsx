@@ -108,9 +108,10 @@ export default function RustMap({
     let ny = y;
     
     // Rust+ API: Markers y Monumentos suelen venir en 0..mapSize.
-    // Team y Deaths suelen venir en -half..half.
-    // Si es APIOrigin y no es negativo, lo centramos.
-    if (isAPIOrigin && nx >= 0 && ny >= 0) {
+    // Team y Deaths vienen en -half..half.
+    // Solo centramos si los valores son positivos y están en el rango del mapa
+    // y si explícitamente es origen API.
+    if (isAPIOrigin && nx >= 0 && nx <= currentMapSize && ny >= 0 && ny <= currentMapSize) {
       nx = nx - (currentMapSize / 2);
       ny = ny - (currentMapSize / 2);
     }
@@ -311,11 +312,12 @@ export default function RustMap({
           .replace(/\bmonument name\b/gi, '')
           .replace(/\bmonument\b/gi, '')
           .replace(/\bname\b/gi, '')
+          .replace(/\d+$/, '') // Quitar números al final (Ej: Harbor 1 -> Harbor)
           .replace(/\s+/g, ' ')
           .trim()
           .toUpperCase();
 
-        if (!cleanName) return;
+        if (!cleanName || cleanName === "OIL RIG") return; // Evitar etiquetas genéricas si ya hay específicas
 
         // Importante: los monumentos y markers del API suelen venir en 0..mapSize
         const pos = getPosition(mon.x, mon.y, mapSize, true);
