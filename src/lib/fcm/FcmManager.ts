@@ -25,9 +25,10 @@ export class FcmManager {
   static async register(steamId: string, authToken: string) {
     console.log(`[FCM] Registering for ${steamId}`);
     
-    // Generate a permanent DeviceId for this user
-    // Generate a random DeviceId that looks more standard
-    const deviceId = require('crypto').randomBytes(8).toString('hex');
+    // Intentar recuperar el DeviceId existente de la DB para evitar rotaciones innecesarias
+    const existingRow = db.prepare("SELECT deviceId FROM fcm_keys WHERE steamId = ?").get(steamId) as any;
+    const deviceId = existingRow?.deviceId || require('crypto').randomBytes(8).toString('hex');
+    console.log(`[FCM] Usando DeviceId: ${deviceId} ${existingRow ? '(Recuperado de DB)' : '(Nuevo)'}`);
     
     let fcmCredentials;
     try {
@@ -41,7 +42,10 @@ export class FcmManager {
       );
     } catch (err: any) {
       console.error(`[FCM] FATAL: Error registrando dispositivo con Google: ${err.message}`);
-      throw new Error("No se pudo registrar el bot con Google (PHONE_REGISTRATION_ERROR). Esto suele ser un bloqueo temporal por parte de Facepunch/Google. Espera unos minutos e intenta de nuevo.");
+      if (err.message?.includes("PHONE_REGISTRATION_ERROR")) {
+        throw new Error("ERROR DE REGISTRO (Google/Facepunch): El servicio de notificaciones ha bloqueado temporalmente el registro. Esto ocurre por intentar registrarse demasiadas veces seguidas. Por favor, ESPERA 10-15 MINUTOS antes de intentar de nuevo.");
+      }
+      throw new Error(`No se pudo registrar el bot con Google: ${err.message}`);
     }
 
     // Validar expiración localmente para dar feedback claro

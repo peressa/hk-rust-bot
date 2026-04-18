@@ -172,20 +172,36 @@ class RustPlusManager extends EventEmitter {
 
       rustplus.on("disconnected", () => {
         console.log(`[RustPlus] Disconnected from ${connection.ip}`);
+        const wasReady = this.ready.get(key);
         this.ready.set(key, false);
         this.connections.delete(key);
         this.connecting.delete(key);
         this.emit("disconnected", { steamId, ip: connection.ip });
+
+        // Si se desconectó inmediatamente después de conectar, intentar Proxy como fallback
+        if (wasReady && !connection.useProxy && !isRetry) {
+           console.log(`[RustPlus] Inestabilidad detectada en ${connection.ip}. Reintentado vía Proxy...`);
+           this.connect(steamId, { ...connection, useProxy: true }, true).catch(() => {});
+        }
       });
 
       rustplus.on("error", (error: any) => {
         clearTimeout(timeout);
-        console.error(`[RustPlus] Error on ${connection.ip}:`, error?.message || error);
+        const errMsg = error?.message || String(error);
+        console.error(`[RustPlus] Error on ${connection.ip}:`, errMsg);
+        
         this.ready.set(key, false);
         this.connections.delete(key);
         this.connecting.delete(key);
         this.emit("error", { steamId, ip: connection.ip, error });
-        reject(error);
+
+        // Fallback a Proxy en caso de errores de socket o rechazo
+        if (!connection.useProxy && !isRetry && (errMsg.includes('socket') || errMsg.includes('ECONNREFUSED') || errMsg.includes('hang up'))) {
+          console.log(`[RustPlus] Error de red en ${connection.ip}. Reintentando vía Proxy...`);
+          this.internalConnect(steamId, { ...connection, useProxy: true }, true).then(resolve).catch(reject);
+        } else {
+          reject(error);
+        }
       });
 
       rustplus.connect();
