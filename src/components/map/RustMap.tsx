@@ -47,7 +47,7 @@ export default function RustMap({
   const effectiveMapSize = (width && width > 0) ? width : mapSize;
   const scaleFactor = effectiveMapSize / mapSize;
   
-  const effectiveOceanMargin = oceanMargin || 0;
+  const effectiveOceanMargin = (oceanMargin && oceanMargin > 0) ? oceanMargin : 500;
   const mapRef = useRef<HTMLDivElement>(null);
   const [L, setL] = useState<any>(null);
   const leafletMap = useRef<any>(null);
@@ -205,27 +205,28 @@ export default function RustMap({
 
       const lineOpts = { color: 'rgba(255,255,255,0.08)', weight: 1, interactive: false };
       const cellSizeGrid = 146.25;
-      const numCells = Math.max(1, Math.floor(gridMapSize / cellSizeGrid));
-      const gridTotalSize = numCells * cellSizeGrid;
-      const gridHalf = gridTotalSize / 2;
+      const numCells = Math.ceil(gridMapSize / cellSizeGrid);
+      const worldHalf = gridMapSize / 2;
       const margin = effectiveOceanMargin;
 
-      // Desfase para coincidir con el juego (E3 -> C1)
-      const X_OFFSET = 2;
-      const Y_OFFSET = 3;
+      // Sin desfase porque ahora usamos el margin correcto (500) que contrae la grilla a la tierra
+      const X_OFFSET = 0;
+      const Y_OFFSET = 0;
 
       // Líneas Verticales + etiquetas de columna (letras: A, B, C...)
       for (let i = 0; i <= numCells; i++) {
-        const x = -gridHalf + (i * cellSizeGrid);
-        const pTop    = worldToLeaflet(x, gridHalf, gridMapSize, margin);
-        const pBottom = worldToLeaflet(x, -gridHalf, gridMapSize, margin);
+        const x = -worldHalf + (i * cellSizeGrid);
+        // Evitaremos estirar excesivamente fuera del mundo si es la última línea
+        const clampedX = Math.min(x, worldHalf);
+        const pTop    = worldToLeaflet(clampedX, worldHalf, gridMapSize, margin);
+        const pBottom = worldToLeaflet(clampedX, -worldHalf, gridMapSize, margin);
 
         L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
 
         const colLabelIndex = i - X_OFFSET;
         if (i < numCells && colLabelIndex >= 0) {
           const char = indexToLetter(colLabelIndex);
-          const pLabel = worldToLeaflet(x + cellSizeGrid / 2, gridHalf, gridMapSize, margin);
+          const pLabel = worldToLeaflet(clampedX + cellSizeGrid / 2, worldHalf, gridMapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
@@ -240,16 +241,17 @@ export default function RustMap({
 
       // Líneas Horizontales + etiquetas de fila (números: 1, 2, 3...)
       for (let j = 0; j <= numCells; j++) {
-        const y = gridHalf - (j * cellSizeGrid);
-        const pLeft  = worldToLeaflet(-gridHalf, y, gridMapSize, margin);
-        const pRight = worldToLeaflet(gridHalf, y, gridMapSize, margin);
+        const y = worldHalf - (j * cellSizeGrid);
+        const clampedY = Math.max(y, -worldHalf);
+        const pLeft  = worldToLeaflet(-worldHalf, clampedY, gridMapSize, margin);
+        const pRight = worldToLeaflet(worldHalf, clampedY, gridMapSize, margin);
 
         L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
 
         const rowLabelIndex = j - Y_OFFSET;
         if (j < numCells && rowLabelIndex >= 0) {
           const displayRow = rowLabelIndex + 1;
-          const pLabel = worldToLeaflet(-gridHalf, y - cellSizeGrid / 2, gridMapSize, margin);
+          const pLabel = worldToLeaflet(-worldHalf, clampedY - cellSizeGrid / 2, gridMapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',

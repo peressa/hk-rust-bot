@@ -30,11 +30,9 @@ export function worldToGrid(x: number, y: number, mapSize: number): string {
     const cellSize = 146.25;
     const half = mapSize / 2;
     
-    // Desfase reportado: E3 (App) -> C1 (Juego)
-    // E(4) -> C(2) = Offset 2
-    // 3(3) -> 1(0) = Offset 3
-    const X_OFFSET = 2;
-    const Y_OFFSET = 3;
+    // Desfase reportado E3 -> C1 era debido a la falta de oceanMargin (500) en el mapa base, causando una expansión de la grilla. Ahora usando margin real, el offset es 0.
+    const X_OFFSET = 0;
+    const Y_OFFSET = 0;
 
     // Asumimos que x, y ya vienen normalizados a world space (-half..half)
     // Si no lo están (vienen en 0..mapSize), los centramos aquí

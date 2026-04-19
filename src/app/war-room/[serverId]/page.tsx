@@ -311,7 +311,7 @@ export default function WarRoomPage() {
               mapSize={mapData?.mapSize || 4000} 
               width={mapData?.width}
               height={mapData?.height}
-              oceanMargin={mapData?.oceanMargin}
+              oceanMargin={mapData?.margin ?? mapData?.oceanMargin ?? 0}
               monuments={mapData?.monuments}
               markers={markers}
               team={team}

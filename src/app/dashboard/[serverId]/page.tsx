@@ -153,7 +153,7 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
                ]} 
                mapJpg={mapData?.jpgImage}
                mapSize={mapData?.mapSize}
-               oceanMargin={mapData?.oceanMargin}
+               oceanMargin={mapData?.margin ?? mapData?.oceanMargin ?? 0}
                width={mapData?.width}
                height={mapData?.height}
                monuments={mapData?.monuments || []}
