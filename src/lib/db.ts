@@ -139,7 +139,7 @@ try {
   db.exec("ALTER TABLE servers ADD COLUMN botPrefix TEXT DEFAULT ':exclamation:';");
 } catch(e) {}
 try {
-  db.exec("ALTER TABLE servers ADD COLUMN botTemplates TEXT;"); -- JSON string
+  db.exec("ALTER TABLE servers ADD COLUMN botTemplates TEXT;"); // JSON string
 } catch(e) {}
 
 // MIGRACIÓN CRÍTICA: Borrar caché de mapas con oceanMargin=0 (datos incorrectos).
