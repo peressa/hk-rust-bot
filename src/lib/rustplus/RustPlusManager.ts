@@ -249,7 +249,8 @@ class RustPlusManager extends EventEmitter {
     
     console.log(`[HK Bot] Procesando comando de equipo: "${baseCommand}" (Args: "${args}") desde ${steamId} en ${ip}`);
     
-         if (baseCommand === "!time" || baseCommand === "!hora") {
+    try {
+      if (baseCommand === "!time" || baseCommand === "!hora") {
         const timeResp = await this.sendRequest(steamId, ip, { getTime: {} });
         const t = timeResp.response.time;
         const hours = Math.floor(t.time);
