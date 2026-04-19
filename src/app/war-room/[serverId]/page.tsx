@@ -97,7 +97,13 @@ export default function WarRoomPage() {
       
       const mData = await mRes.json();
       
-      setMapData(mData);
+      // Saneamiento de datos de mapa
+      if (mData && !mData.error) {
+        setMapData(mData);
+      } else {
+        console.warn("Map data is invalid or contains error:", mData?.error);
+        setMapData(null);
+      }
       
       await refreshTacticalData();
     } catch (err) {
@@ -121,17 +127,19 @@ export default function WarRoomPage() {
         const deathMarkers = (Array.isArray(data.deaths) ? data.deaths : []).map((d: any) => ({ ...d, type: 'Death' }));
         
         setMarkers([...rawMarkers, ...deathMarkers]);
-        setTeam(Array.isArray(data.team) ? data.team : []);
-        setIntel(Array.isArray(data.intel) ? data.intel : []);
+        setTeam(Array.isArray(data.team) ? data.team.filter(Boolean) : []);
+        setIntel(Array.isArray(data.intel) ? data.intel.filter(Boolean) : []);
 
         // Extraer vending machines de forma segura
         const vms = rawMarkers.filter((m: any) => m && m.type === 3);
         const offers: any[] = [];
 
         vms.forEach((vm: any) => {
+          if (!vm) return;
           const orders = vm.sellOrders || vm.sell_orders || vm.SellOrders || [];
           if (Array.isArray(orders)) {
             orders.forEach((order: any) => {
+              if (!order) return;
               offers.push({
                 machineName: vm.name || "Vending Desconocido",
                 itemToSell: order.itemId || 0,
@@ -139,8 +147,8 @@ export default function WarRoomPage() {
                 currencyReq: order.currencyId || 0,
                 costPerItem: order.costPerItem || 0,
                 amountInStock: order.amountInStock || 0,
-                x: vm.x,
-                y: vm.y
+                x: vm.x || 0,
+                y: vm.y || 0
               });
             });
           }

@@ -282,11 +282,14 @@ export default function RustMap({
 
     drawings.forEach((d: any) => {
       try {
-        const points = JSON.parse(d.data);
+        if (!d || !d.data) return;
+        const points = typeof d.data === 'string' ? JSON.parse(d.data) : d.data;
         if (Array.isArray(points)) {
           L.polyline(points, { color: d.color || '#ce422b', weight: 4, opacity: 0.8 }).addTo(drawingsGroup);
         }
-      } catch (e) { }
+      } catch (e) {
+        console.warn("[HK Map] Error al parsear dibujo táctico:", e);
+      }
     });
   }, [L, drawings]);
 
@@ -472,7 +475,8 @@ export default function RustMap({
 
   return (
     <div className="rust-map-wrapper" style={{ height: '100%', width: '100%', background: '#0a0a0b', position: 'relative' }}>
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+      {/* Estilos de Leaflet cargados de forma segura */}
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossOrigin="" />
 
       <div style={{ position: 'absolute', bottom: '2rem', left: '2rem', zIndex: 1000, display: 'flex', gap: '0.5rem', background: 'rgba(5, 5, 5, 0.9)', padding: '0.5rem', border: '1px solid var(--border)' }}>
         <MapControlButton active={showGrid} icon={<Layers size={18} />} onClick={() => setShowGrid(!showGrid)} title="Grilla Táctica" />
