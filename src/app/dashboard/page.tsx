@@ -2,17 +2,28 @@
 
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Server, RefreshCw, PlusCircle, Settings as SettingsIcon, LayoutGrid } from "lucide-react";
+import { Server, RefreshCw, PlusCircle, Settings as SettingsIcon, LayoutGrid, Plus, ExternalLink, MessageSquare } from "lucide-react";
 import ServerCard from "@/components/dashboard/ServerCard";
 import Link from "next/link";
+import dynamic from "next/dynamic";
+
+const BotConfigModule = dynamic(() => import("@/components/war-room/BotConfigModule"), { ssr: false });
 
 export default function DashboardPage() {
   const [servers, setServers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"SERVERS" | "BOT" | "DISCORD">("SERVERS");
+  const [selectedBotServer, setSelectedBotServer] = useState<string | null>(null);
 
   useEffect(() => {
     fetchServers();
   }, []);
+
+  useEffect(() => {
+    if (servers.length > 0 && !selectedBotServer) {
+        setSelectedBotServer(servers[0].id);
+    }
+  }, [servers, selectedBotServer]);
 
   const fetchServers = async () => {
     try {
@@ -58,38 +69,176 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {servers.length === 0 ? (
-          <div className="premium-card" style={{ textAlign: 'center', padding: '6rem 2rem', borderStyle: 'dashed' }}>
-             <Server size={64} color="var(--primary)" style={{ opacity: 0.1, marginBottom: '1.5rem' }} />
-             <h2 style={{ fontFamily: 'var(--font-barlow)', fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>No se detectan señales</h2>
-             <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto 2.5rem' }}>
-                Aún no has vinculado ningún servidor de Rust. Utiliza el terminal de enlace para comenzar la monitorización.
-             </p>
-             <Link href="/dashboard/settings" className="btn-primary">IR AL TERMINAL DE ENLACE</Link>
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
+           <button onClick={() => setActiveTab("SERVERS")} style={{ background: 'none', border: 'none', color: activeTab === 'SERVERS' ? '#fff' : '#666', borderBottom: activeTab === 'SERVERS' ? '2px solid var(--primary)' : '2px solid transparent', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--font-barlow)', fontSize: '1.1rem', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <LayoutGrid size={18} /> MIS SERVIDORES
+           </button>
+           <button onClick={() => setActiveTab("BOT")} style={{ background: 'none', border: 'none', color: activeTab === 'BOT' ? '#fff' : '#666', borderBottom: activeTab === 'BOT' ? '2px solid var(--primary)' : '2px solid transparent', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--font-barlow)', fontSize: '1.1rem', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <SettingsIcon size={18} /> CONFIGURACIÓN BOT
+           </button>
+           <button onClick={() => setActiveTab("DISCORD")} style={{ background: 'none', border: 'none', color: activeTab === 'DISCORD' ? '#fff' : '#666', borderBottom: activeTab === 'DISCORD' ? '2px solid var(--primary)' : '2px solid transparent', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--font-barlow)', fontSize: '1.1rem', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <MessageSquare size={18} /> ALARMAS DISCORD
+           </button>
+        </div>
+
+        {activeTab === "SERVERS" && (
+          servers.length === 0 ? (
+            <div className="premium-card" style={{ textAlign: 'center', padding: '6rem 2rem', borderStyle: 'dashed' }}>
+               <Server size={64} color="var(--primary)" style={{ opacity: 0.1, marginBottom: '1.5rem' }} />
+               <h2 style={{ fontFamily: 'var(--font-barlow)', fontSize: '2rem', fontWeight: 700, marginBottom: '1rem' }}>No se detectan señales</h2>
+               <p style={{ color: 'var(--text-muted)', maxWidth: '500px', margin: '0 auto 2.5rem' }}>
+                  Aún no has vinculado ningún servidor de Rust. Utiliza el terminal de enlace para comenzar la monitorización.
+               </p>
+               <Link href="/dashboard/settings" className="btn-primary">IR AL TERMINAL DE ENLACE</Link>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '2rem' }}>
+              {servers.map(server => (
+                <ServerCard key={server.id} server={server} />
+              ))}
+              
+              {/* Blank Card for Adding New */}
+              <Link href="/dashboard/settings" style={{ textDecoration: 'none' }}>
+                <div className="premium-card" style={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  gap: '1rem',
+                  borderStyle: 'dashed',
+                  opacity: 0.5,
+                  transition: 'var(--transition)'
+                }} onPointerOver={(e) => (e.currentTarget.style.opacity = '1')} onPointerOut={(e) => (e.currentTarget.style.opacity = '0.5')}>
+                  <PlusCircle size={40} />
+                  <span style={{ fontFamily: 'var(--font-barlow)', fontSize: '1.25rem', fontWeight: 600 }}>Vincular Servidor</span>
+                </div>
+              </Link>
+            </div>
+          )
+        )}
+
+        {activeTab === "BOT" && (
+          <div className="premium-card" style={{ padding: '0', overflow: 'hidden' }}>
+            {servers.length === 0 ? (
+               <div style={{ padding: '4rem', textAlign: 'center', color: '#666' }}>No hay servidores vinculados para configurar.</div>
+            ) : (
+               <div style={{ display: 'flex', height: '70vh' }}>
+                 <div style={{ width: '250px', borderRight: '1px solid rgba(255,255,255,0.05)', padding: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', marginBottom: '1rem', textTransform: 'uppercase' }}>Selecciona Servidor</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {servers.map(s => (
+                        <button 
+                          key={s.id} 
+                          onClick={() => setSelectedBotServer(s.id)}
+                          style={{ 
+                            background: selectedBotServer === s.id ? 'rgba(255,255,255,0.05)' : 'transparent',
+                            border: `1px solid ${selectedBotServer === s.id ? 'var(--primary)' : 'transparent'}`,
+                            color: selectedBotServer === s.id ? '#fff' : '#888',
+                            padding: '0.75rem 1rem',
+                            borderRadius: '8px',
+                            textAlign: 'left',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                 </div>
+                 <div style={{ flex: 1, overflowY: 'auto' }}>
+                    {selectedBotServer && (
+                      <BotConfigModule 
+                        serverId={selectedBotServer} 
+                        initialPrefix={servers.find(s => s.id === selectedBotServer)?.botPrefix} 
+                        initialTemplates={servers.find(s => s.id === selectedBotServer)?.botTemplates ? 
+                          (typeof servers.find(s => s.id === selectedBotServer)?.botTemplates === 'string' ? 
+                            JSON.parse(servers.find(s => s.id === selectedBotServer)?.botTemplates) : 
+                            servers.find(s => s.id === selectedBotServer)?.botTemplates) : undefined}
+                      />
+                    )}
+                 </div>
+               </div>
+            )}
           </div>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '2rem' }}>
-            {servers.map(server => (
-              <ServerCard key={server.id} server={server} />
-            ))}
-            
-            {/* Blank Card for Adding New */}
-            <Link href="/dashboard/settings" style={{ textDecoration: 'none' }}>
-              <div className="premium-card" style={{ 
-                height: '100%', 
-                display: 'flex', 
-                flexDirection: 'column', 
-                alignItems: 'center', 
-                justifyContent: 'center', 
-                gap: '1rem',
-                borderStyle: 'dashed',
-                opacity: 0.5,
-                transition: 'var(--transition)'
-              }} onPointerOver={(e) => (e.currentTarget.style.opacity = '1')} onPointerOut={(e) => (e.currentTarget.style.opacity = '0.5')}>
-                <PlusCircle size={40} />
-                <span style={{ fontFamily: 'var(--font-barlow)', fontSize: '1.25rem', fontWeight: 600 }}>Vincular Servidor</span>
-              </div>
-            </Link>
+        )}
+
+        {activeTab === "DISCORD" && (
+          <div className="premium-card" style={{ padding: '0', overflow: 'hidden' }}>
+            {servers.length === 0 ? (
+               <div style={{ padding: '4rem', textAlign: 'center', color: '#666' }}>No hay servidores vinculados para configurar Discord.</div>
+            ) : (
+               <div style={{ display: 'flex', height: '70vh' }}>
+                 <div style={{ width: '250px', borderRight: '1px solid rgba(255,255,255,0.05)', padding: '1rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'rgba(255,255,255,0.3)', marginBottom: '1rem', textTransform: 'uppercase' }}>Selecciona Servidor</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {servers.map(s => (
+                        <button 
+                          key={s.id} 
+                          onClick={() => setSelectedBotServer(s.id)}
+                          style={{ 
+                            background: selectedBotServer === s.id ? 'rgba(255,255,255,0.05)' : 'transparent',
+                            border: `1px solid ${selectedBotServer === s.id ? 'var(--primary)' : 'transparent'}`,
+                            color: selectedBotServer === s.id ? '#fff' : '#888',
+                            padding: '0.75rem 1rem',
+                            borderRadius: '8px',
+                            textAlign: 'left',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {s.name}
+                        </button>
+                      ))}
+                    </div>
+                 </div>
+                 
+                 <div style={{ flex: 1, padding: '4rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', overflowY: 'auto' }}>
+                    <div style={{ maxWidth: '600px', width: '100%' }}>
+                        <div style={{ background: 'rgba(88, 101, 242, 0.1)', padding: '2rem', borderRadius: '50%', width: 'fit-content', margin: '0 auto 2rem' }}>
+                            <Plus size={64} color="#5865F2" />
+                        </div>
+                        <h2 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1rem' }}>Integración con Discord</h2>
+                        <p style={{ color: '#888', fontSize: '1.2rem', marginBottom: '3rem' }}>Conecta RUST OPS con tu servidor de Discord para recibir alertas en tiempo real.</p>
+                        
+                        <div style={{ textAlign: 'left', background: 'rgba(255,255,255,0.03)', padding: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '2rem' }}>
+                           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Webhook URL o ID del Canal</label>
+                           <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '1rem' }}>Introduce el ID del canal de texto de Discord donde quieres recibir las alertas de raideos, muertes y eventos para el servidor seleccionado. (El bot oficial debe estar invitado).</p>
+                           
+                           <div style={{ display: 'flex', gap: '0.5rem' }}>
+                              <input 
+                                type="text" 
+                                placeholder="ID del Canal (ej. 123456789012345678) o Webhook URL"
+                                defaultValue={servers.find(s => s.id === selectedBotServer)?.discordChannelId || servers.find(s => s.id === selectedBotServer)?.discordWebhook || ""}
+                                style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '0.8rem 1rem', color: '#fff' }}
+                                onBlur={async (e) => {
+                                  const val = e.target.value;
+                                  const isWebhook = val.includes("discord.com/api/webhooks");
+                                  const body = { serverId: selectedBotServer, [isWebhook ? "discordWebhook" : "discordChannelId"]: val, [isWebhook ? "discordChannelId" : "discordWebhook"]: null };
+                                  await fetch("/api/servers", { method: "POST", body: JSON.stringify(body) });
+                                  // Minimal feedback...
+                                }}
+                              />
+                           </div>
+                        </div>
+
+                        <a 
+                          href="https://discord.com/oauth2/authorize?client_id=1130541740924764261&permissions=8&scope=bot%20applications.commands" 
+                          target="_blank"
+                          className="premium-btn-action"
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.8rem', background: '#5865F2', color: 'white', padding: '1.2rem 2.5rem', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 700, textDecoration: 'none', transition: '0.2s', width: 'fit-content', margin: '0 auto' }}
+                        >
+                            Invitar Bot al Servidor <ExternalLink size={20} />
+                        </a>
+                    </div>
+                 </div>
+               </div>
+            )}
           </div>
         )}
 

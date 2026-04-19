@@ -38,9 +38,7 @@ const CommsModule = dynamic(() => import("@/components/war-room/CommsModule"), {
 });
 
 const InviteManager = dynamic(() => import("@/components/war-room/InviteManager"), { ssr: false });
-const BotConfigModule = dynamic(() => import("@/components/war-room/BotConfigModule"), { ssr: false });
-
-type MissionModule = "RADAR" | "CCTV" | "ECONOMY" | "ENERGY" | "COMMS" | "DISCORD" | "BOT";
+type MissionModule = "RADAR" | "CCTV" | "ECONOMY" | "ENERGY" | "COMMS";
 
 export default function WarRoomPage() {
   const params = useParams();
@@ -230,8 +228,6 @@ export default function WarRoomPage() {
           <NavBtn active={activeModule === "RADAR"} icon={<MapIcon size={16} />} label="Radar" onClick={() => setActiveModule("RADAR")} />
           <NavBtn active={activeModule === "COMMS"} icon={<MessageSquare size={16} />} label="Comunicaciones" onClick={() => setActiveModule("COMMS")} />
           <NavBtn active={activeModule === "ECONOMY"} icon={<ShoppingCart size={16} />} label="Logística" onClick={() => setActiveModule("ECONOMY")} />
-          <NavBtn active={activeModule === "BOT"} icon={<Settings size={16} />} label="Bot" onClick={() => setActiveModule("BOT")} />
-          <NavBtn active={activeModule === "DISCORD"} icon={<Plus size={16} />} label="Discord" onClick={() => setActiveModule("DISCORD")} />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
@@ -390,45 +386,6 @@ export default function WarRoomPage() {
             </div>
           )}
 
-          {activeModule === "BOT" && (
-            <BotConfigModule 
-              serverId={serverId} 
-              initialPrefix={serverInfo?.botPrefix} 
-              initialTemplates={serverInfo?.botTemplates ? (typeof serverInfo.botTemplates === 'string' ? JSON.parse(serverInfo.botTemplates) : serverInfo.botTemplates) : undefined}
-            />
-          )}
-
-          {activeModule === "DISCORD" && (
-            <div style={{ height: '100%', padding: '8rem 4rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-                <div style={{ maxWidth: '600px' }}>
-                    <div style={{ background: 'rgba(88, 101, 242, 0.1)', padding: '2rem', borderRadius: '50%', width: 'fit-content', margin: '0 auto 2rem' }}>
-                        <Plus size={64} color="#5865F2" />
-                    </div>
-                    <h2 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1rem' }}>Integración con Discord</h2>
-                    <p style={{ color: '#888', fontSize: '1.2rem', marginBottom: '3rem' }}>Conecta RUST OPS con tu servidor de Discord para recibir alertas de muertes, eventos globales y alarmas inteligentes en tiempo real.</p>
-                    
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '3rem' }}>
-                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Alertas Tácticas</div>
-                            <div style={{ fontSize: '0.85rem', opacity: 0.5 }}>Notificaciones de RAID y eventos globales.</div>
-                        </div>
-                        <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                            <div style={{ fontWeight: 700, marginBottom: '0.5rem' }}>Estado del Clan</div>
-                            <div style={{ fontSize: '0.85rem', opacity: 0.5 }}>Logs de muertes y estatus operativo.</div>
-                        </div>
-                    </div>
-
-                    <a 
-                      href="https://discord.com/oauth2/authorize?client_id=1130541740924764261&permissions=8&scope=bot%20applications.commands" 
-                      target="_blank"
-                      className="premium-btn-action"
-                      style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.8rem', background: '#5865F2', color: 'white', padding: '1.2rem 2.5rem', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 700, textDecoration: 'none', transition: '0.2s' }}
-                    >
-                        Invitar Bot al Servidor <ExternalLink size={20} />
-                    </a>
-                </div>
-            </div>
-          )}
 
           {(activeModule === "CCTV") && (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: 0.2 }}>

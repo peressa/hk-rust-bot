@@ -972,6 +972,10 @@ export async function bootstrap() {
     // Importación dinámica para evitar ciclos en el arranque
     const { FcmManager } = await import("../fcm/FcmManager");
     await FcmManager.initAllListeners();
+
+    // Inicializar el Bot de Discord en segundo plano
+    const { discordBotManager } = await import("../discord/DiscordBotManager");
+    discordBotManager.init().catch(e => console.error("[Discord] Fallo al iniciar el bot:", e));
     
     console.log("[RustPlus] Bootstrapping completado con éxito.");
   } catch (err) {
