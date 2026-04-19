@@ -135,6 +135,12 @@ try {
 try {
   db.exec("ALTER TABLE entities ADD COLUMN hasCapacity INTEGER DEFAULT 0;");
 } catch(e) {}
+try {
+  db.exec("ALTER TABLE servers ADD COLUMN botPrefix TEXT DEFAULT ':exclamation:';");
+} catch(e) {}
+try {
+  db.exec("ALTER TABLE servers ADD COLUMN botTemplates TEXT;"); -- JSON string
+} catch(e) {}
 
 // MIGRACIÓN CRÍTICA: Borrar caché de mapas con oceanMargin=0 (datos incorrectos).
 // Con el fix de RustPlusManager, los mapas ahora calculan oceanMargin desde map.width - mapSize.
@@ -163,8 +169,8 @@ export function saveServer(server: any) {
   }
 
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO servers (id, steamId, ip, port, playerId, playerToken, name, useProxy, discordWebhook, discordChannelId, bmId)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO servers (id, steamId, ip, port, playerId, playerToken, name, useProxy, discordWebhook, discordChannelId, bmId, botPrefix, botTemplates)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   stmt.run(
     server.id || `${server.steamId}-${server.ip}`, 
@@ -177,7 +183,9 @@ export function saveServer(server: any) {
     server.useProxy ? 1 : 0,
     server.discordWebhook || null,
     server.discordChannelId || null,
-    server.bmId || null
+    server.bmId || null,
+    server.botPrefix || ':exclamation:',
+    server.botTemplates ? JSON.stringify(server.botTemplates) : null
   );
 }
 

@@ -37,12 +37,10 @@ const CommsModule = dynamic(() => import("@/components/war-room/CommsModule"), {
   loading: () => <div className="p-8 opacity-10">Sincronizando Radio...</div>
 });
 
-const InviteManager = dynamic(() => import("@/components/war-room/InviteManager"), { 
-  ssr: false,
-  loading: () => <div className="p-8 opacity-10">Cargando Accesos...</div>
-});
+const InviteManager = dynamic(() => import("@/components/war-room/InviteManager"), { ssr: false });
+const BotConfigModule = dynamic(() => import("@/components/war-room/BotConfigModule"), { ssr: false });
 
-type MissionModule = "RADAR" | "CCTV" | "ECONOMY" | "ENERGY" | "COMMS" | "DISCORD";
+type MissionModule = "RADAR" | "CCTV" | "ECONOMY" | "ENERGY" | "COMMS" | "DISCORD" | "BOT";
 
 export default function WarRoomPage() {
   const params = useParams();
@@ -232,6 +230,7 @@ export default function WarRoomPage() {
           <NavBtn active={activeModule === "RADAR"} icon={<MapIcon size={16} />} label="Radar" onClick={() => setActiveModule("RADAR")} />
           <NavBtn active={activeModule === "COMMS"} icon={<MessageSquare size={16} />} label="Comunicaciones" onClick={() => setActiveModule("COMMS")} />
           <NavBtn active={activeModule === "ECONOMY"} icon={<ShoppingCart size={16} />} label="Logística" onClick={() => setActiveModule("ECONOMY")} />
+          <NavBtn active={activeModule === "BOT"} icon={<Settings size={16} />} label="Bot" onClick={() => setActiveModule("BOT")} />
           <NavBtn active={activeModule === "DISCORD"} icon={<Plus size={16} />} label="Discord" onClick={() => setActiveModule("DISCORD")} />
         </div>
 
@@ -389,6 +388,14 @@ export default function WarRoomPage() {
                    </table>
                 </div>
             </div>
+          )}
+
+          {activeModule === "BOT" && (
+            <BotConfigModule 
+              serverId={serverId} 
+              initialPrefix={serverInfo?.botPrefix} 
+              initialTemplates={serverInfo?.botTemplates ? (typeof serverInfo.botTemplates === 'string' ? JSON.parse(serverInfo.botTemplates) : serverInfo.botTemplates) : undefined}
+            />
           )}
 
           {activeModule === "DISCORD" && (

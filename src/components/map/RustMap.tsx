@@ -203,6 +203,7 @@ export default function RustMap({
       const gridGroup = L.layerGroup().addTo(leafletMap.current);
       layersRef.current['gridGroup'] = gridGroup;
 
+      const lineOpts = { color: 'rgba(255,255,255,0.08)', weight: 1, interactive: false };
       const cellSizeGrid = 146.25;
       const numCells = Math.max(1, Math.floor(gridMapSize / cellSizeGrid));
       const gridTotalSize = numCells * cellSizeGrid;

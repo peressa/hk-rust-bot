@@ -41,6 +41,7 @@ class RustPlusManager extends EventEmitter {
   private lastMarkerStates: Map<string, any[]> = new Map(); // key -> markerIds[]
   private intelLogs: Map<string, any[]> = new Map(); // key -> intel items[]
   private lastDockedStates: Map<string, Set<number>> = new Map(); // key -> markerIds docked
+  private botSettings: Map<string, { prefix: string, templates: any }> = new Map(); // key -> settings
 
   constructor() {
     super();
@@ -208,6 +209,34 @@ class RustPlusManager extends EventEmitter {
     });
   }
 
+  private getBotSettings(steamId: string, ip: string) {
+    const key = `${steamId}-${ip}`;
+    if (this.botSettings.has(key)) return this.botSettings.get(key)!;
+
+    try {
+      const server = db.prepare("SELECT botPrefix, botTemplates FROM servers WHERE steamId = ? AND ip = ?").get(steamId, ip) as any;
+      const settings = {
+        prefix: server?.botPrefix || ':exclamation:',
+        templates: server?.botTemplates ? JSON.parse(server.botTemplates) : {}
+      };
+      this.botSettings.set(key, settings);
+      return settings;
+    } catch (e) {
+      return { prefix: ':exclamation:', templates: {} };
+    }
+  }
+
+  private formatMsg(steamId: string, ip: string, templateKey: string, defaultText: string, vars: Record<string, any> = {}) {
+    const settings = this.getBotSettings(steamId, ip);
+    let msg = settings.templates[templateKey] || defaultText;
+    
+    Object.entries(vars).forEach(([k, v]) => {
+      msg = msg.replace(new RegExp(`{${k}}`, 'g'), String(v));
+    });
+
+    return `${settings.prefix} ${msg}`;
+  }
+
   private async handleTeamCommand(steamId: string, ip: string, cmd: string) {
     const key = `${steamId}-${ip}`;
     const rustplus = this.connections.get(key);
@@ -220,13 +249,9 @@ class RustPlusManager extends EventEmitter {
     
     console.log(`[HK Bot] Procesando comando de equipo: "${baseCommand}" (Args: "${args}") desde ${steamId} en ${ip}`);
     
-    try {
-      if (baseCommand === "!time" || baseCommand === "!hora") {
-        console.log(`[HK Bot] Ejecutando !time...`);
+         if (baseCommand === "!time" || baseCommand === "!hora") {
         const timeResp = await this.sendRequest(steamId, ip, { getTime: {} });
         const t = timeResp.response.time;
-        
-        // Formatear hora de Rust (viene en decimal 0.0 - 24.0)
         const hours = Math.floor(t.time);
         const mins = Math.floor((t.time - hours) * 60);
         const formattedTime = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
@@ -234,7 +259,7 @@ class RustPlusManager extends EventEmitter {
         let remainingMsg = "";
         const sunrise = t.sunrise || 8.0;
         const sunset = t.sunset || 20.0;
-        const dayLength = t.dayLengthMinutes || 60; // default safe fallback
+        const dayLength = t.dayLengthMinutes || 60;
         
         if (t.time >= sunrise && t.time < sunset) {
             const inGameHours = sunset - t.time;
@@ -242,35 +267,37 @@ class RustPlusManager extends EventEmitter {
             remainingMsg = `Faltan ${realMins}m para la noche 🌙`;
         } else {
             const inGameHours = (t.time >= sunset) ? (24 - t.time) + sunrise : (sunrise - t.time);
-            // La noche comúnmente va más rápido o igual, calculamos en base proporcional:
             const realMins = Math.round(inGameHours * (dayLength / 24));
             remainingMsg = `Faltan ${realMins}m para el día ☀️`;
         }
         
-        rustplus.sendTeamMessage(`:exclamation: Hora: ${formattedTime} (${remainingMsg})`);
+        const msg = this.formatMsg(steamId, ip, 'cmd_time', `Hora: {time} ({remaining})`, { time: formattedTime, remaining: remainingMsg });
+        rustplus.sendTeamMessage(msg);
       } 
       else if (baseCommand === "!pop" || baseCommand === "!jugadores") {
-        console.log(`[HK Bot] Ejecutando !pop...`);
         const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
         const i = infoResp.response.info;
-        console.log(`[HK Bot] Pop info obtenida: ${i.players}/${i.maxPlayers}. Enviando mensaje...`);
-        rustplus.sendTeamMessage(`:exclamation: Población: ${i.players}/${i.maxPlayers} online (Cola: ${i.queued || 0})`);
+        const msg = this.formatMsg(steamId, ip, 'cmd_pop', `Población: {players}/{maxPlayers} online (Cola: {queued})`, { 
+          players: i.players, 
+          maxPlayers: i.maxPlayers, 
+          queued: i.queued || 0 
+        });
+        rustplus.sendTeamMessage(msg);
       }
       else if (baseCommand === "!wipe") {
         const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
         const wipeTime = infoResp.response.info.wipeTime;
         if (wipeTime) {
           const wipeDate = new Date(wipeTime * 1000).toLocaleString('es-AR');
-          rustplus.sendTeamMessage(`:exclamation: Último Wipe: ${wipeDate}`);
+          const msg = this.formatMsg(steamId, ip, 'cmd_wipe', `Último Wipe: {date}`, { date: wipeDate });
+          rustplus.sendTeamMessage(msg);
         } else {
-          rustplus.sendTeamMessage(`:exclamation: No hay datos del Wipe.`);
+          rustplus.sendTeamMessage(this.formatMsg(steamId, ip, 'cmd_wipe_none', `No hay datos del Wipe.`));
         }
       }
       else if (baseCommand === "!eventos" || baseCommand === "!events" || baseCommand === "!evento") {
-        console.log(`[HK Bot] Ejecutando !eventos...`);
         const markersResp = await this.sendRequest(steamId, ip, { getMapMarkers: {} });
         const markers = markersResp.response.mapMarkers.markers || [];
-        
         const activeEvents: string[] = [];
         
         markers.forEach((m: any) => {
@@ -282,36 +309,44 @@ class RustPlusManager extends EventEmitter {
         });
 
         if (activeEvents.length > 0) {
-          // Count occurrences to make it cleaner (e.g. "2x 💥 Explosión")
           const counts: any = {};
           activeEvents.forEach((e: string) => counts[e] = (counts[e] || 0) + 1);
           const eventList = Object.entries(counts).map(([k, v]) => v === 1 ? k : `${v}x ${k}`).join(", ");
-          rustplus.sendTeamMessage(`:exclamation: Eventos Activos: ${eventList}`);
+          const msg = this.formatMsg(steamId, ip, 'cmd_events', `Eventos Activos: {list}`, { list: eventList });
+          rustplus.sendTeamMessage(msg);
         } else {
-          rustplus.sendTeamMessage(`:exclamation: No hay eventos globales activos en este momento.`);
+          rustplus.sendTeamMessage(this.formatMsg(steamId, ip, 'cmd_events_none', `No hay eventos globales activos en este momento.`));
         }
       }
       else if (baseCommand === "!team" || baseCommand === "!equipo") {
-        console.log(`[HK Bot] Ejecutando !team...`);
         const teamResp = await this.sendRequest(steamId, ip, { getTeamInfo: {} });
         const members = teamResp.response.teamInfo.members || [];
-        
         let online = 0;
         let dead = 0;
         members.forEach((m: any) => {
           if (m.isOnline) online++;
           if (!m.isAlive) dead++;
         });
-        rustplus.sendTeamMessage(`:exclamation: Equipo: ${online}/${members.length} Online. ${dead > 0 ? ('(' + dead + ' Muertos 💀)') : '¡Todos Vivos!'}`);
+        const details = dead > 0 ? `({dead} Muertos 💀)` : `¡Todos Vivos!`;
+        const msg = this.formatMsg(steamId, ip, 'cmd_team', `Equipo: {online}/{total} Online. {details}`, { 
+          online, 
+          total: members.length, 
+          details: dead > 0 ? details.replace('{dead}', String(dead)) : details 
+        });
+        rustplus.sendTeamMessage(msg);
       }
       else if (baseCommand === "!mapa" || baseCommand === "!seed" || baseCommand === "!map") {
-        console.log(`[HK Bot] Ejecutando !mapa...`);
         const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
         const info = infoResp.response.info;
-        rustplus.sendTeamMessage(`:exclamation: Mapa: ${info.map} (Tamaño: ${info.mapSize} | Seed: ${info.seed})`);
+        const msg = this.formatMsg(steamId, ip, 'cmd_map', `Mapa: {map} (Tamaño: {size} | Seed: {seed})`, { 
+          map: info.map, 
+          size: info.mapSize, 
+          seed: info.seed 
+        });
+        rustplus.sendTeamMessage(msg);
       }
       else if (baseCommand === "!upkeep" || baseCommand === "!tc") {
-        rustplus.sendTeamMessage(`:exclamation: Utiliza el Dashboard para ver el mapa y cámaras.`);
+        rustplus.sendTeamMessage(this.formatMsg(steamId, ip, 'cmd_dashboard_reminder', `Utiliza el Dashboard para ver el mapa y cámaras.`));
       }
       else if (baseCommand === "!lider" || baseCommand === "!leader") {
         if (!args) {
@@ -598,7 +633,15 @@ class RustPlusManager extends EventEmitter {
           const timeLived = m.spawnTime ? Math.round((Date.now() / 1000) - m.spawnTime) : null;
           const timeStr = timeLived ? ` | Vida: ${Math.floor(timeLived / 60)}m ${timeLived % 60}s` : "";
 
-          const deathMsg = `[HK-BOT] :exclamation: El miembro del equipo '${m.name}' ha muerto mientras estaba ${status} @ ${grid} (Coordenadas: ${Math.round(m.x)}, ${Math.round(m.y)}${timeStr})`;
+          const deathMsg = this.formatMsg(steamId, ip, 'alert_death', `El miembro del equipo '{name}' ha muerto mientras estaba {status} @ {grid} (Coord: {x}, {y}{timeStr})`, {
+            name: m.name,
+            status,
+            grid,
+            x: Math.round(m.x),
+            y: Math.round(m.y),
+            timeStr
+          });
+          
           console.log(`[Monitor] Muerte detectada para miembro del equipo: ${m.name} en ${grid} (${Math.round(m.x)}, ${Math.round(m.y)})`);
           this.addIntel(steamId, ip, 'DEATH', deathMsg, { name: m.name, grid, x: m.x, y: m.y, status, timeLived });
           
@@ -625,13 +668,15 @@ class RustPlusManager extends EventEmitter {
             const afkMins = Math.floor((Date.now() - m.afkSince) / 60000);
             const prevAfkMins = Math.floor((Date.now() - 15100 - m.afkSince) / 60000);
             if (afkMins >= 5 && afkMins > prevAfkMins) {
-              this.botSendTeamMessage(steamId, ip, `:exclamation: El miembro del equipo '${m.name}' lleva AFK ${afkMins} minutos en ${grid}`);
+              const msg = this.formatMsg(steamId, ip, 'alert_afk_start', `El miembro del equipo '{name}' lleva AFK {mins} minutos en {grid}`, { name: m.name, mins: afkMins, grid });
+              this.botSendTeamMessage(steamId, ip, msg);
             }
           }
         } else if (m.isOnline && hasMoved && last.afkSince) {
           const afkDuration = Math.round((Date.now() - last.afkSince) / 60000);
-          if (afkDuration >= 5) { // Solo avisar si estuvo > 5 min quieto
-            this.botSendTeamMessage(steamId, ip, `:exclamation: El miembro del equipo '${m.name}' ya no está AFK después de ${afkDuration} minutos en ${grid}`);
+          if (afkDuration >= 5) {
+            const msg = this.formatMsg(steamId, ip, 'alert_afk_end', `El miembro del equipo '{name}' ya no está AFK después de {mins} minutos en {grid}`, { name: m.name, mins: afkDuration, grid });
+            this.botSendTeamMessage(steamId, ip, msg);
           }
           m.afkSince = null;
         }
@@ -685,7 +730,7 @@ class RustPlusManager extends EventEmitter {
 
     lastCargoMarkers.forEach(oldM => {
       if (!currentCargoIds.includes(oldM.id)) {
-        const msg = "El Barco de Carga (Cargo Ship) ha salido del mapa.";
+        const msg = this.formatMsg(steamId, ip, 'event_cargo_exit', `El Barco de Carga (Cargo Ship) ha salido del mapa.`);
         this.botSendTeamMessage(steamId, ip, msg);
         this.addIntel(steamId, ip, 'EVENT', msg);
       }
@@ -715,7 +760,7 @@ class RustPlusManager extends EventEmitter {
     if (deepSeaVendor && !prevDeepSeaVendor) {
       const grid = worldToGrid(deepSeaVendor.x, deepSeaVendor.y, mapSize);
       const region = getRegionName(deepSeaVendor.x, deepSeaVendor.y, mapSize);
-      const msg = `❗ ¡Deepsea Event iniciado en el ${region} (${grid})! Vendedor de Casino detectado.`;
+      const msg = this.formatMsg(steamId, ip, 'event_deepsea', `¡Deepsea Event iniciado en el {region} ({grid})! Vendedor de Casino detectado.`, { region, grid });
       rustplus.sendTeamMessage(msg);
       this.addIntel(steamId, ip, 'EVENT', msg, { grid, region });
     }
@@ -730,23 +775,21 @@ class RustPlusManager extends EventEmitter {
         
         const region = getRegionName(m.x, m.y, mapSize);
         if (m.type === 5) {
-          msg = `Un Barco de Carga (Cargo Ship) está activo en ${region} (${grid})`;
+          msg = this.formatMsg(steamId, ip, 'event_cargo_start', `Un Barco de Carga (Cargo Ship) está activo en {region} ({grid})`, { region, grid });
           eventName = "🚢 Cargo Ship";
         } else if (m.type === 4) {
-          msg = `Un Chinook CH-47 con caja fuerte está activo en ${region} (${grid})`;
+          msg = this.formatMsg(steamId, ip, 'event_chinook_start', `Un Chinook CH-47 con caja fuerte está activo en {region} ({grid})`, { region, grid });
           eventName = "🚁 Chinook (CH47)";
         } else if (m.type === 8) {
-          msg = `Un Helicóptero de Patrulla está activo en ${region} (${grid})`;
+          msg = this.formatMsg(steamId, ip, 'event_heli_start', `Un Helicóptero de Patrulla está activo en {region} ({grid})`, { region, grid });
           eventName = "🚁 Heli Patrulla";
         } else if (m.type === 6) {
-           // En coordenadas centradas (0=centro mapa), Oil Rigs están en los bordes (> mapSize/3 del centro)
-           // CORRECCIÓN: antes usaba m.x - mapSize/2 que estaba completamente invertido
            const isFar = Math.abs(m.x) > mapSize / 3 || Math.abs(m.y) > mapSize / 3;
            if (isFar) {
-              msg = `:exclamation: ¡Oil Rig (Petro) activo en ${grid}! Caja fuerte detectada.`;
+              msg = this.formatMsg(steamId, ip, 'event_oilrig_crate', `¡Oil Rig (Petro) activo en {grid}! Caja fuerte detectada.`, { grid });
               eventName = "📦 Oil Rig (Petro)";
            } else {
-              msg = `:exclamation: ¡Caja Fuerte (Locked Crate) detectada en ${grid}!`;
+              msg = this.formatMsg(steamId, ip, 'event_crate', `¡Caja Fuerte (Locked Crate) detectada en {grid}!`, { grid });
               eventName = "📦 Caja Fuerte (Locked Crate)";
            }
         }
@@ -777,7 +820,7 @@ class RustPlusManager extends EventEmitter {
         if (nearHarbor && !dockedSet.has(m.id)) {
           const grid = worldToGrid(m.x, m.y, mapSize);
           const monumentName = nearHarbor.token.toUpperCase().replace(/_/g, ' ');
-          const msg = `El Barco de Carga (Cargo Ship) ha atracado en ${grid} (${monumentName})`;
+          const msg = this.formatMsg(steamId, ip, 'event_cargo_dock', `El Barco de Carga (Cargo Ship) ha atracado en {grid} ({monumentName})`, { grid, monumentName });
           this.botSendTeamMessage(steamId, ip, msg);
           this.addIntel(steamId, ip, 'EVENT', msg, { grid });
           dockedSet.add(m.id);
@@ -799,7 +842,7 @@ class RustPlusManager extends EventEmitter {
         const name = m.name || "Tienda Desconocida";
         const totalItems = (m.sellOrders || []).reduce((acc: number, so: any) => acc + (so.amountInStock || 0), 0);
         
-        const msg = `¡Nueva máquina expendedora '${name}' con ${totalItems} artículos en stock en ${grid}!`;
+        const msg = this.formatMsg(steamId, ip, 'event_vending_new', `¡Nueva máquina expendedora '{name}' con {stock} artículos en stock en {grid}!`, { name, stock: totalItems, grid });
         this.botSendTeamMessage(steamId, ip, msg);
         this.addIntel(steamId, ip, 'EVENT', msg, { eventName: "Nueva Vending", grid, name, totalItems });
       }
