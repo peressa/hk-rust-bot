@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { Layers, Users, Zap, EyeOff, Map as MapIcon, ShoppingCart, Pencil, Trash2 } from "lucide-react";
-import { indexToLetter, worldToLeaflet, mapPixelToLeaflet, GRID_CELL_SIZE } from "@/lib/rustplus/coordUtils";
+import { indexToLetter, worldToLeaflet, GRID_CELL_SIZE } from "@/lib/rustplus/coordUtils";
 
 // Tipos de marcadores según el proto AppMarkerType (enteros)
 const MARKER_TYPES = {
@@ -83,7 +83,8 @@ export default function RustMap({
       name: m.name,
       rawX: m.x,
       rawY: m.y,
-      leaflet: mapPixelToLeaflet(m.x, m.y, totalSize)
+      leafletLng: ((m.x + margin) / totalSize) * 1000,
+      leafletLat: ((m.y + margin) / totalSize) * 1000
     }));
     console.log(`[HK Map Debug] Markers sample:`, JSON.stringify(sample));
     if (monuments?.length > 0) {
@@ -91,11 +92,12 @@ export default function RustMap({
         token: m.token,
         rawX: m.x,
         rawY: m.y,
-        leaflet: mapPixelToLeaflet(m.x, m.y, totalSize)
+        leafletLng: ((m.x + margin) / totalSize) * 1000,
+        leafletLat: ((m.y + margin) / totalSize) * 1000
       }));
       console.log(`[HK Map Debug] Monuments sample:`, JSON.stringify(monSample));
     }
-  }, [markers, monuments, totalSize]);
+  }, [markers, monuments, totalSize, margin]);
 
   // Sync Drawings from DB
   useEffect(() => {
@@ -115,13 +117,15 @@ export default function RustMap({
   }, [serverId]);
 
   /**
-   * Convierte coordenadas de píxel del proto (0..totalSize) a posición Leaflet.
-   * Usado para: monumentos, markers de API (vending, cargo, heli, etc.)
-   * El proto Rust+ devuelve coordenadas en el sistema de la imagen completa.
+   * Convierte coordenadas del API (0..mapSize) a posición Leaflet.
+   * Monumentos y markers del proto Rust+ vienen en rango 0..mapSize (solo tierra).
+   * La imagen JPG cubre 0..totalSize (tierra + océano), por lo que necesitamos
+   * sumar el oceanMargin para posicionarlos correctamente sobre la imagen.
    */
-  const pixelToPos = (x: number, y: number): [number, number] => {
-    const p = mapPixelToLeaflet(x, y, totalSize);
-    return [p.lat, p.lng];
+  const apiToPos = (x: number, y: number): [number, number] => {
+    const lng = ((x + margin) / totalSize) * 1000;
+    const lat = ((y + margin) / totalSize) * 1000;
+    return [lat, lng];
   };
 
   /**
@@ -334,8 +338,8 @@ export default function RustMap({
 
         if (!cleanName || cleanName === "OIL RIG") return; // Evitar etiquetas genéricas si ya hay específicas
 
-        // Monumentos del proto vienen en coordenadas de píxel (0..totalSize)
-        const pos = pixelToPos(mon.x, mon.y);
+        // Monumentos del API vienen en coordenadas 0..mapSize (solo tierra)
+        const pos = apiToPos(mon.x, mon.y);
 
         L.marker(pos, {
           icon: L.divIcon({
@@ -387,10 +391,10 @@ export default function RustMap({
       })
        .forEach(marker => {
          const popupHtml = `<div style="padding:0.5rem;color:white;"><strong style="color:var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
-         // Markers del API (vending, cargo, heli, etc.) vienen en coordenadas de píxel (0..totalSize)
+         // Markers del API (vending, cargo, heli, etc.) vienen en coordenadas 0..mapSize
          // Jugadores y muertes vienen centrados (-half..half)
          const isWorldCoord = marker.type === MARKER_TYPES.PLAYER || marker.type === 'Death';
-         const pos = isWorldCoord ? worldToPos(marker.x, marker.y) : pixelToPos(marker.x, marker.y);
+         const pos = isWorldCoord ? worldToPos(marker.x, marker.y) : apiToPos(marker.x, marker.y);
          L.marker(pos, {
            icon: getIcon(L, marker.type, marker.name)
          }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
