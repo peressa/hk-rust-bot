@@ -234,7 +234,9 @@ class RustPlusManager extends EventEmitter {
       msg = msg.replace(new RegExp(`{${k}}`, 'g'), String(v));
     });
 
-    return `${settings.prefix} ${msg}`;
+    // Asegurarse de que el prefijo sea dinámico y no haya emojis
+    const prefix = settings.prefix || ':exclamation:';
+    return `${prefix} ${msg}`.trim();
   }
 
   private async handleTeamCommand(steamId: string, ip: string, cmd: string) {
@@ -265,25 +267,26 @@ class RustPlusManager extends EventEmitter {
         if (t.time >= sunrise && t.time < sunset) {
             const inGameHours = sunset - t.time;
             const realMins = Math.round(inGameHours * (dayLength / 24));
-            remainingMsg = `Faltan ${realMins}m para la noche 🌙`;
+            remainingMsg = `Faltan ${realMins}m para la noche`;
         } else {
             const inGameHours = (t.time >= sunset) ? (24 - t.time) + sunrise : (sunrise - t.time);
             const realMins = Math.round(inGameHours * (dayLength / 24));
-            remainingMsg = `Faltan ${realMins}m para el día ☀️`;
+            remainingMsg = `Faltan ${realMins}m para el día`;
         }
         
         const msg = this.formatMsg(steamId, ip, 'cmd_time', `Hora: {time} ({remaining})`, { time: formattedTime, remaining: remainingMsg });
-        rustplus.sendTeamMessage(msg);
+        this.sendTeamMessage(steamId, ip, msg);
       } 
       else if (baseCommand === "!pop" || baseCommand === "!jugadores") {
         const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
         const i = infoResp.response.info;
-        const msg = this.formatMsg(steamId, ip, 'cmd_pop', `Población: {players}/{maxPlayers} online (Cola: {queued})`, { 
+        const queuedStr = i.queued > 0 ? ` (Cola: ${i.queued})` : "";
+        const msg = this.formatMsg(steamId, ip, 'cmd_pop', `Poblacion: {players}/{maxPlayers}{queued}`, { 
           players: i.players, 
           maxPlayers: i.maxPlayers, 
-          queued: i.queued || 0 
+          queued: queuedStr
         });
-        rustplus.sendTeamMessage(msg);
+        this.sendTeamMessage(steamId, ip, msg);
       }
       else if (baseCommand === "!wipe") {
         const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
@@ -302,11 +305,11 @@ class RustPlusManager extends EventEmitter {
         const activeEvents: string[] = [];
         
         markers.forEach((m: any) => {
-          if (m.type === 5) activeEvents.push("🚢 Cargo Ship");
-          else if (m.type === 8) activeEvents.push("🚁 Heli Patrulla");
-          else if (m.type === 4) activeEvents.push("🚁 Chinook (CH47)");
-          else if (m.type === 6) activeEvents.push("📦 Crate");
-          else if (m.type === 2) activeEvents.push("💥 Explosión");
+          if (m.type === 5) activeEvents.push("Cargo Ship");
+          else if (m.type === 8) activeEvents.push("Heli Patrulla");
+          else if (m.type === 4) activeEvents.push("Chinook (CH47)");
+          else if (m.type === 6) activeEvents.push("Crate");
+          else if (m.type === 2) activeEvents.push("Explosión");
         });
 
         if (activeEvents.length > 0) {
@@ -328,7 +331,7 @@ class RustPlusManager extends EventEmitter {
           if (m.isOnline) online++;
           if (!m.isAlive) dead++;
         });
-        const details = dead > 0 ? `({dead} Muertos 💀)` : `¡Todos Vivos!`;
+        const details = dead > 0 ? `({dead} Muertos)` : `¡Todos Vivos!`;
         const msg = this.formatMsg(steamId, ip, 'cmd_team', `Equipo: {online}/{total} Online. {details}`, { 
           online, 
           total: members.length, 
@@ -627,7 +630,8 @@ class RustPlusManager extends EventEmitter {
         if (last.isOnline && !m.isOnline) {
           const now = Date.now();
           if (!last.lastOfflineTime || (now - last.lastOfflineTime > 30000)) { // Solo si pasaron 30s del último aviso
-            this.botSendTeamMessage(steamId, ip, `:exclamation: ${m.name} se ha desconectado.`);
+            const msg = this.formatMsg(steamId, ip, 'alert_disconnect', `{name} se ha desconectado.`, { name: m.name });
+            this.botSendTeamMessage(steamId, ip, msg);
             this.addIntel(steamId, ip, 'SYS', `${m.name} se ha desconectado.`);
             m.lastOfflineTime = now;
           }
@@ -636,7 +640,8 @@ class RustPlusManager extends EventEmitter {
         else if (!last.isOnline && m.isOnline) {
           const now = Date.now();
           if (!last.lastOnlineTime || (now - last.lastOnlineTime > 30000)) {
-            this.botSendTeamMessage(steamId, ip, `:exclamation: ${m.name} ha vuelto.`);
+            const msg = this.formatMsg(steamId, ip, 'alert_reconnect', `{name} ha vuelto.`, { name: m.name });
+            this.botSendTeamMessage(steamId, ip, msg);
             this.addIntel(steamId, ip, 'SYS', `${m.name} ha vuelto.`);
             m.lastOnlineTime = now;
           }
@@ -649,7 +654,7 @@ class RustPlusManager extends EventEmitter {
           const timeStr = timeLived ? ` (Vida: ${Math.floor(timeLived / 60)}m)` : "";
 
           // Formato solicitado: Mensaje de muerte con persona y cuadrante claro
-          const deathMsg = this.formatMsg(steamId, ip, 'alert_death', `:skull: MUERTE: {name} ha muerto en {grid}{timeStr}`, {
+          const deathMsg = this.formatMsg(steamId, ip, 'alert_death', `MUERTE: {name} ha muerto en {grid}{timeStr}`, {
             name: m.name,
             status,
             grid,
@@ -707,13 +712,12 @@ class RustPlusManager extends EventEmitter {
   }
 
   // Wrapper para enviar mensajes y persistirlos automáticamente en el historial
-  private async botSendTeamMessage(steamId: string, ip: string, message: string) {
+  public async botSendTeamMessage(steamId: string, ip: string, message: string) {
     try {
       if (!this.isConnected(steamId, ip)) return;
       const rustplus = this.connections.get(`${steamId}-${ip}`);
       if (rustplus) {
-        const fullMessage = message.startsWith("[HK-BOT]") ? message : `[HK-BOT] ${message}`;
-        await rustplus.sendTeamMessage(fullMessage);
+        await rustplus.sendTeamMessage(message);
         const server = db.prepare("SELECT id FROM servers WHERE steamId = ? AND ip = ?").get(steamId, ip) as any;
         if (server) {
           saveTeamMessage(server.id, {
@@ -781,7 +785,7 @@ class RustPlusManager extends EventEmitter {
       const grid = worldToGrid(deepSeaVendor.x, deepSeaVendor.y, mapSize);
       const region = getRegionName(deepSeaVendor.x, deepSeaVendor.y, mapSize);
       const msg = this.formatMsg(steamId, ip, 'event_deepsea', `¡Deepsea Event iniciado en el {region} ({grid})! Vendedor de Casino detectado.`, { region, grid });
-      rustplus.sendTeamMessage(msg);
+      this.sendTeamMessage(steamId, ip, msg);
       this.addIntel(steamId, ip, 'EVENT', msg, { grid, region });
     }
 
@@ -796,21 +800,21 @@ class RustPlusManager extends EventEmitter {
         const region = getRegionName(m.x, m.y, mapSize);
         if (m.type === 5) {
           msg = this.formatMsg(steamId, ip, 'event_cargo_start', `Un Barco de Carga (Cargo Ship) está activo en {region} ({grid})`, { region, grid });
-          eventName = "🚢 Cargo Ship";
+          eventName = "Cargo Ship";
         } else if (m.type === 4) {
           msg = this.formatMsg(steamId, ip, 'event_chinook_start', `Un Chinook CH-47 con caja fuerte está activo en {region} ({grid})`, { region, grid });
-          eventName = "🚁 Chinook (CH47)";
+          eventName = "Chinook (CH47)";
         } else if (m.type === 8) {
           msg = this.formatMsg(steamId, ip, 'event_heli_start', `Un Helicóptero de Patrulla está activo en {region} ({grid})`, { region, grid });
-          eventName = "🚁 Heli Patrulla";
+          eventName = "Heli Patrulla";
         } else if (m.type === 6) {
            const isFar = Math.abs(m.x) > mapSize / 3 || Math.abs(m.y) > mapSize / 3;
            if (isFar) {
-              msg = this.formatMsg(steamId, ip, 'event_oilrig_crate', `¡Oil Rig (Petro) activo en {grid}! Caja fuerte detectada.`, { grid });
-              eventName = "📦 Oil Rig (Petro)";
+              msg = this.formatMsg(steamId, ip, 'event_oilrig_crate', `Oil Rig (Petro) activo en {grid}! Caja fuerte detectada.`, { grid });
+              eventName = "Oil Rig (Petro)";
            } else {
-              msg = this.formatMsg(steamId, ip, 'event_crate', `¡Caja Fuerte (Locked Crate) detectada en {grid}!`, { grid });
-              eventName = "📦 Caja Fuerte (Locked Crate)";
+              msg = this.formatMsg(steamId, ip, 'event_crate', `Caja Fuerte (Locked Crate) detectada en {grid}!`, { grid });
+              eventName = "Caja Fuerte (Locked Crate)";
            }
         }
         
