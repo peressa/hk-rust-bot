@@ -13,7 +13,8 @@ export function indexToLetter(index: number): string {
     return letter;
 }
 
-export const GRID_CELL_SIZE = 146.25;
+// Tamaño exacto de celda de grilla en Rust (fuente: TerrainTexturing.cs)
+export const GRID_CELL_SIZE = 146.28571428571428;
 
 /**
  * Normaliza una coordenada que puede venir en formato 0..mapSize (marcadores) 
@@ -25,46 +26,75 @@ export function normalizeToWorld(val: number, mapSize: number): number {
 
 /**
  * Convierte coordenadas de mundo Unity a formato de cuadrícula Rust (Ej: "M14")
+ * 
+ * En Rust, las coordenadas del mundo van de -mapSize/2 a mapSize/2.
+ * La grilla A0, B0... cubre exactamente el área de tierra (mapSize unidades).
+ * Las filas comienzan en 0, no en 1.
+ * 
+ * @param x Coordenada X (centrada en 0, rango -half..half)
+ * @param y Coordenada Y (centrada en 0, rango -half..half) 
+ * @param mapSize Tamaño del mundo (solo tierra, sin océano)
  */
 export function worldToGrid(x: number, y: number, mapSize: number): string {
-    const cellSize = 150; // Exact Rust cell size
+    const cellSize = GRID_CELL_SIZE;
     const half = mapSize / 2;
-    
-    const X_OFFSET = 0;
-    const Y_OFFSET = 0;
 
-    // Asumimos que x, y ya vienen normalizados a world space (-half..half)
-    // Si no lo están (vienen en 0..mapSize), los centramos aquí
+    // Si las coordenadas vienen en 0..mapSize, centrarlas
     const nx = (x > mapSize * 0.6) ? (x - half) : x;
     const ny = (y > mapSize * 0.6) ? (y - half) : y;
 
-    const colIndex = Math.floor((nx + half) / cellSize) - X_OFFSET;
-    const rowIndex = Math.floor((half - ny) / cellSize) - Y_OFFSET;
-    
-    // El juego usa 1-based (A1, A2...)
-    const displayRow = rowIndex + 1;
+    // Columna: desde -half (izquierda/oeste) hacia +half (derecha/este)
+    const colIndex = Math.floor((nx + half) / cellSize);
+    // Fila: desde +half (arriba/norte) hacia -half (abajo/sur)
+    const rowIndex = Math.floor((half - ny) / cellSize);
 
-    if (colIndex < 0 || displayRow < 1) return "Water";
+    if (colIndex < 0 || rowIndex < 0) return "Water";
     
-    return `${indexToLetter(colIndex)}${displayRow}`;
+    // Rust usa filas 0-indexed (A0, B0, C0...)
+    return `${indexToLetter(colIndex)}${rowIndex}`;
 }
 
 /**
- * Proyecta una coordenada de mundo a coordenadas de Leaflet (0-1000)
- * North = Top (0), South = Bottom (1000)
- * @param x Coordenada X (Este/Oeste)
- * @param y Coordenada Y (Norte/Sur)
- * @param mapSize Tamaño del mapa (unidades Unity)
- * @param oceanMargin Margen de océano en cada lado (unidades Unity). Por defecto 0.
+ * Proyecta coordenadas de píxel del mapa (0..totalSize) a coordenadas de Leaflet (0..1000).
+ * 
+ * La imagen JPG del mapa cubre toda el área: tierra + océano por ambos lados.
+ * totalSize = mapSize + 2 * oceanMargin (en píxeles/unidades Unity, 1:1).
+ * 
+ * Las coordenadas de monumentos y markers del proto Rust+ vienen en este
+ * sistema de píxeles (0..totalSize), con (0,0) en la esquina inferior-izquierda.
+ * 
+ * @param x Coordenada X en píxeles del mapa (0..totalSize)
+ * @param y Coordenada Y en píxeles del mapa (0..totalSize)
+ * @param totalSize Tamaño total del mapa en píxeles (width del proto = mapSize + 2*oceanMargin)
+ */
+export function mapPixelToLeaflet(x: number, y: number, totalSize: number) {
+    // Normalizar a 0..1 y luego a 0..1000
+    // En Leaflet CRS.Simple: lat crece hacia arriba (norte), lng crece hacia la derecha (este)
+    const lng = (x / totalSize) * 1000;
+    const lat = (y / totalSize) * 1000;
+    
+    return { lat, lng };
+}
+
+/**
+ * Proyecta una coordenada de mundo centrada (-half..half) a Leaflet (0..1000).
+ * Tiene en cuenta el oceanMargin para posicionar correctamente dentro de la imagen total.
+ * 
+ * @param x Coordenada X centrada (-half..half)
+ * @param y Coordenada Y centrada (-half..half)
+ * @param mapSize Tamaño del mundo (solo tierra)
+ * @param oceanMargin Margen de océano en cada lado
  */
 export function worldToLeaflet(x: number, y: number, mapSize: number, oceanMargin: number = 0) {
     const worldHalf = mapSize / 2;
     const totalSize = mapSize + (oceanMargin * 2);
 
-    // Normalizar a 0..1 y luego a 0..1000
-    // Asumimos que x, y vienen centrados (-half..half)
-    const lng = ((x + worldHalf + oceanMargin) / totalSize) * 1000;
-    const lat = ((y + worldHalf + oceanMargin) / totalSize) * 1000;
+    // Convertir de mundo centrado a píxeles del mapa, luego a Leaflet
+    const pixelX = x + worldHalf + oceanMargin;
+    const pixelY = y + worldHalf + oceanMargin;
+    
+    const lng = (pixelX / totalSize) * 1000;
+    const lat = (pixelY / totalSize) * 1000;
     
     return { lat, lng };
 }

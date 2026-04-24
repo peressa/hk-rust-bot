@@ -402,11 +402,10 @@ class RustPlusManager extends EventEmitter {
     // 1. Intentar cargar desde cache persistente si tenemos serverId
     if (serverId && !forceRefresh) {
       const cached: any = getMapCache(serverId);
-      // Rechazar caché con oceanMargin=0 (incorrecto) o con el viejo fallback mapSize/2
+      // Aceptar caché válida (oceanMargin >= 0 es válido, 0 = sin margen de océano)
       if (cached && cached.mapSize &&
           cached.oceanMargin !== undefined &&
           cached.oceanMargin !== null &&
-          cached.oceanMargin > 0 &&
           cached.oceanMargin !== Math.floor(cached.mapSize / 2)) {
         console.log(`${logPrefix} Usando caché de DB para ${serverId} (Size: ${cached.mapSize}, Ocean: ${cached.oceanMargin})`);
         return {
@@ -445,25 +444,32 @@ class RustPlusManager extends EventEmitter {
       if (map.jpgImage) {
           const base64 = Buffer.from(map.jpgImage).toString('base64');
 
-          // CORRECCIÓN CRÍTICA DE COORDENADAS:
-          // map.width = totalWidth (mundo Unity, incluye océano).
-          // El estándar es que totalWidth = mapSize + 2000.
+          // COORDENADAS: 
+          // - info.mapSize = tamaño del mundo/tierra en unidades Unity
+          // - map.width = ancho total de la imagen JPG en píxeles (= mapSize + 2*oceanMargin, escala 1:1)
+          // - map.oceanMargin = margen de océano del proto (en píxeles, puede ser 0)
           const reportedMapSize = info?.mapSize || 4000;
           const reportedMapWidth = map.width || 0;
+          const protoOceanMargin = map.oceanMargin; // Del proto directamente
 
-          // Margen estándar de Rust+ es 1000 unidades de océano por cada lado.
-          let oceanMargin = 1000; 
           let mapSize = reportedMapSize;
+          let oceanMargin: number;
 
-          if (reportedMapWidth > reportedMapSize + 100) {
-              // Si el ancho reportado es coherente, calculamos el margen exacto
+          // Priorizar el oceanMargin del proto si existe
+          if (protoOceanMargin !== undefined && protoOceanMargin !== null && protoOceanMargin >= 0) {
+              oceanMargin = protoOceanMargin;
+          } else if (reportedMapWidth > reportedMapSize + 100) {
+              // Calcular margen desde la diferencia entre ancho de imagen y tamaño de mundo
               oceanMargin = Math.round((reportedMapWidth - reportedMapSize) / 2);
           } else if (reportedMapWidth > 0 && reportedMapWidth <= reportedMapSize) {
-              // Caso donde el mapa viene recortado a la isla exacta
+              // Mapa viene sin margen de océano
               oceanMargin = 0;
+          } else {
+              // Fallback: margen estándar de Rust
+              oceanMargin = 1000;
           }
 
-          console.log(`${logPrefix} [COORD FIX] MapSize=${mapSize}, Ocean=${oceanMargin}, Total=${mapSize + 2*oceanMargin}`);
+          console.log(`${logPrefix} [COORD FIX] MapSize=${mapSize}, Ocean=${oceanMargin}, Width=${reportedMapWidth}, Total=${mapSize + 2*oceanMargin}`);
 
           if (serverId) {
               saveMapCache(serverId, {

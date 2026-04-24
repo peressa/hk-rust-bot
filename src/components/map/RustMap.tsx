@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import { Layers, Users, Zap, EyeOff, Map as MapIcon, ShoppingCart, Pencil, Trash2 } from "lucide-react";
-import { indexToLetter, worldToLeaflet } from "@/lib/rustplus/coordUtils";
+import { indexToLetter, worldToLeaflet, mapPixelToLeaflet, GRID_CELL_SIZE } from "@/lib/rustplus/coordUtils";
 
 // Tipos de marcadores según el proto AppMarkerType (enteros)
 const MARKER_TYPES = {
@@ -41,14 +41,12 @@ export default function RustMap({
   serverId,
   allowDrawing = true
 }: RustMapProps) {
-  // Usar el margen de océano real. El valor 1000 era un fallback que causaba desplazamientos.
-  // Siempre usamos el mapSize nominal para la grilla para que coincida con A-W del juego
-  const gridMapSize = mapSize;
-  const effectiveMapSize = (width && width > 0) ? width : mapSize;
-  const scaleFactor = effectiveMapSize / mapSize;
-  
-  // Respetar margin 0 si viene del servidor, no forzar 500. El servidor de Rust no siempre incluye márgenes.
-  const effectiveOceanMargin = oceanMargin !== undefined ? oceanMargin : 0;
+  // oceanMargin real del servidor (puede ser 0 si el servidor no lo reporta)
+  const margin = oceanMargin || 0;
+  // Tamaño total de la imagen en unidades = mapSize + 2 * oceanMargin
+  const totalSize = mapSize + (margin * 2);
+  // Cantidad de celdas de grilla (solo tierra, no océano)
+  const numGridCells = Math.ceil(mapSize / GRID_CELL_SIZE);
   const mapRef = useRef<HTMLDivElement>(null);
   const [L, setL] = useState<any>(null);
   const leafletMap = useRef<any>(null);
@@ -74,23 +72,30 @@ export default function RustMap({
   }, []);
 
   useEffect(() => {
-    if (mapSize && oceanMargin !== undefined) {
-      console.log(`[HK Map Debug] mapSize: ${mapSize}, oceanMargin: ${oceanMargin}, dimensions: ${width}x${height}`);
-    }
-  }, [mapSize, oceanMargin, width, height]);
+    console.log(`[HK Map Debug] mapSize: ${mapSize}, oceanMargin: ${margin}, totalSize: ${totalSize}, numGridCells: ${numGridCells}, img: ${width}x${height}`);
+  }, [mapSize, margin, totalSize, numGridCells, width, height]);
 
   // Log primeros marcadores para diagnóstico de coordenadas
   useEffect(() => {
     if (!markers || markers.length === 0) return;
-    const sample = markers.slice(0, 5).map(m => ({
+    const sample = markers.slice(0, 3).map(m => ({
       type: m.type,
       name: m.name,
       rawX: m.x,
       rawY: m.y,
-      projected: worldToLeaflet(m.x, m.y, mapSize, oceanMargin)
+      leaflet: mapPixelToLeaflet(m.x, m.y, totalSize)
     }));
-    console.log(`[HK Map Debug] Markers sample (mapSize=${mapSize}, ocean=${oceanMargin}):`, JSON.stringify(sample));
-  }, [markers, mapSize, oceanMargin]);
+    console.log(`[HK Map Debug] Markers sample:`, JSON.stringify(sample));
+    if (monuments?.length > 0) {
+      const monSample = monuments.slice(0, 3).map(m => ({
+        token: m.token,
+        rawX: m.x,
+        rawY: m.y,
+        leaflet: mapPixelToLeaflet(m.x, m.y, totalSize)
+      }));
+      console.log(`[HK Map Debug] Monuments sample:`, JSON.stringify(monSample));
+    }
+  }, [markers, monuments, totalSize]);
 
   // Sync Drawings from DB
   useEffect(() => {
@@ -109,19 +114,23 @@ export default function RustMap({
     return () => clearInterval(interval);
   }, [serverId]);
 
-  const getPosition = (x: number, y: number, currentMapSize: number, isAPIOrigin: boolean = false): [number, number] => {
-    let nx = x;
-    let ny = y;
-    
-    // Rust+ API: Markers y Monumentos suelen venir en 0..mapSize (nominal).
-    if (isAPIOrigin && nx >= 0 && nx <= mapSize && ny >= 0 && ny <= mapSize) {
-      nx = nx - (mapSize / 2);
-      ny = ny - (mapSize / 2);
-    }
+  /**
+   * Convierte coordenadas de píxel del proto (0..totalSize) a posición Leaflet.
+   * Usado para: monumentos, markers de API (vending, cargo, heli, etc.)
+   * El proto Rust+ devuelve coordenadas en el sistema de la imagen completa.
+   */
+  const pixelToPos = (x: number, y: number): [number, number] => {
+    const p = mapPixelToLeaflet(x, y, totalSize);
+    return [p.lat, p.lng];
+  };
 
-    // Usamos el mapSize nominal para la proyección final para que coincida con la grilla A-W
-    const projection = worldToLeaflet(nx, ny, mapSize, effectiveOceanMargin);
-    return [projection.lat, projection.lng];
+  /**
+   * Convierte coordenadas de mundo centradas (-half..half) a posición Leaflet.
+   * Usado para: miembros del equipo (getTeamInfo) y muertes.
+   */
+  const worldToPos = (x: number, y: number): [number, number] => {
+    const p = worldToLeaflet(x, y, mapSize, margin);
+    return [p.lat, p.lng];
   };
 
   const getIcon = (leaflet: any, type: any, name: string) => {
@@ -205,28 +214,21 @@ export default function RustMap({
       layersRef.current['gridGroup'] = gridGroup;
 
       const lineOpts = { color: 'rgba(255,255,255,0.08)', weight: 1, interactive: false };
-      const cellSizeGrid = 150; // Exact Rust cell size
-      const numCells = Math.ceil(gridMapSize / cellSizeGrid);
-      const worldHalf = gridMapSize / 2;
-      const margin = effectiveOceanMargin;
-
-      const X_OFFSET = 0;
-      const Y_OFFSET = 0;
+      const cellSize = GRID_CELL_SIZE; // 146.28 - exacto de Rust
+      const worldHalf = mapSize / 2;
 
       // Líneas Verticales + etiquetas de columna (letras: A, B, C...)
-      for (let i = 0; i <= numCells; i++) {
-        const x = -worldHalf + (i * cellSizeGrid);
-        // Evitaremos estirar excesivamente fuera del mundo si es la última línea
-        const clampedX = Math.min(x, worldHalf);
-        const pTop    = worldToLeaflet(clampedX, worldHalf, gridMapSize, margin);
-        const pBottom = worldToLeaflet(clampedX, -worldHalf, gridMapSize, margin);
+      for (let i = 0; i <= numGridCells; i++) {
+        const worldX = -worldHalf + (i * cellSize);
+        const clampedX = Math.min(worldX, worldHalf);
+        const pTop    = worldToLeaflet(clampedX, worldHalf, mapSize, margin);
+        const pBottom = worldToLeaflet(clampedX, -worldHalf, mapSize, margin);
 
         L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
 
-        const colLabelIndex = i - X_OFFSET;
-        if (i < numCells && colLabelIndex >= 0) {
-          const char = indexToLetter(colLabelIndex);
-          const pLabel = worldToLeaflet(clampedX + cellSizeGrid / 2, worldHalf, gridMapSize, margin);
+        if (i < numGridCells) {
+          const char = indexToLetter(i);
+          const pLabel = worldToLeaflet(clampedX + cellSize / 2, worldHalf, mapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
@@ -239,19 +241,19 @@ export default function RustMap({
         }
       }
 
-      // Líneas Horizontales + etiquetas de fila (números: 1, 2, 3...)
-      for (let j = 0; j <= numCells; j++) {
-        const y = worldHalf - (j * cellSizeGrid);
-        const clampedY = Math.max(y, -worldHalf);
-        const pLeft  = worldToLeaflet(-worldHalf, clampedY, gridMapSize, margin);
-        const pRight = worldToLeaflet(worldHalf, clampedY, gridMapSize, margin);
+      // Líneas Horizontales + etiquetas de fila (números: 0, 1, 2, 3...)
+      for (let j = 0; j <= numGridCells; j++) {
+        const worldY = worldHalf - (j * cellSize);
+        const clampedY = Math.max(worldY, -worldHalf);
+        const pLeft  = worldToLeaflet(-worldHalf, clampedY, mapSize, margin);
+        const pRight = worldToLeaflet(worldHalf, clampedY, mapSize, margin);
 
         L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
 
-        const rowLabelIndex = j - Y_OFFSET;
-        if (j < numCells && rowLabelIndex >= 0) {
-          const displayRow = rowLabelIndex + 1;
-          const pLabel = worldToLeaflet(-worldHalf, clampedY - cellSizeGrid / 2, gridMapSize, margin);
+        // Filas empiezan en 0, igual que el juego real
+        if (j < numGridCells) {
+          const displayRow = j; // 0-indexed como Rust
+          const pLabel = worldToLeaflet(-worldHalf, clampedY - cellSize / 2, mapSize, margin);
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
@@ -264,7 +266,7 @@ export default function RustMap({
         }
       }
     }
-  }, [L, mapSize, oceanMargin, showGrid]);
+  }, [L, mapSize, margin, showGrid, numGridCells]);
 
   // Imagen Base64
   useEffect(() => {
@@ -332,8 +334,8 @@ export default function RustMap({
 
         if (!cleanName || cleanName === "OIL RIG") return; // Evitar etiquetas genéricas si ya hay específicas
 
-        // Importante: los monumentos y markers del API suelen venir en 0..mapSize
-        const pos = getPosition(mon.x, mon.y, gridMapSize, true);
+        // Monumentos del proto vienen en coordenadas de píxel (0..totalSize)
+        const pos = pixelToPos(mon.x, mon.y);
 
         L.marker(pos, {
           icon: L.divIcon({
@@ -357,7 +359,7 @@ export default function RustMap({
       });
     }
   }
-}, [L, monuments, showMonuments, mapSize, oceanMargin, gridMapSize, effectiveOceanMargin]);
+}, [L, monuments, showMonuments, mapSize, margin, totalSize]);
 
   // Renderizar Marcadores (Jugadores, Equipos, Eventos)
   useEffect(() => {
@@ -383,22 +385,22 @@ export default function RustMap({
         if (m.type === MARKER_TYPES.VENDING) return showVending;
         return showEvents; // EXPLOSION, CH47, CARGO, CRATE, HELI
       })
-      .forEach(marker => {
-        const popupHtml = `<div style="padding:0.5rem;color:white;"><strong style="color:var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
-        // Los markers genéricos de Rust+ (vending, etc) suelen venir en 0..mapSize
-        // Los jugadores y muertes SIEMPRE vienen centrados.
-        const isAPI = marker.type !== MARKER_TYPES.PLAYER && marker.type !== 'Death';
-        const pos = getPosition(marker.x, marker.y, gridMapSize, isAPI);
-        L.marker(pos, {
-          icon: getIcon(L, marker.type, marker.name)
-        }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
-      });
+       .forEach(marker => {
+         const popupHtml = `<div style="padding:0.5rem;color:white;"><strong style="color:var(--primary)">${marker.name || 'Marcador'}</strong></div>`;
+         // Markers del API (vending, cargo, heli, etc.) vienen en coordenadas de píxel (0..totalSize)
+         // Jugadores y muertes vienen centrados (-half..half)
+         const isWorldCoord = marker.type === MARKER_TYPES.PLAYER || marker.type === 'Death';
+         const pos = isWorldCoord ? worldToPos(marker.x, marker.y) : pixelToPos(marker.x, marker.y);
+         L.marker(pos, {
+           icon: getIcon(L, marker.type, marker.name)
+         }).addTo(markersGroup).bindPopup(popupHtml, { className: 'custom-popup-rust' });
+       });
     }
 
     // Renderizar Team Members (Vienen en data.team separadamente)
     if (showPlayers && team && Array.isArray(team)) {
       team.filter(tm => tm.isAlive && tm.x !== undefined).forEach(tm => {
-        const pos = getPosition(tm.x, tm.y, gridMapSize);
+        const pos = worldToPos(tm.x, tm.y);
         const color = tm.isOnline ? "#22c55e" : "#555";
         const iconHtml = `
           <div style="position: relative; width: 16px; height: 16px;">
@@ -419,7 +421,7 @@ export default function RustMap({
         }).addTo(markersGroup).bindPopup(`<div style="padding:0.5rem;color:white;"><strong>${tm.name}</strong><br/>${tm.isOnline ? 'EN LÍNEA' : 'DESCONECTADO'}</div>`, { className: 'custom-popup-rust' });
       });
     }
-  }, [L, markers, team, showEvents, showPlayers, showVending, mapSize, oceanMargin]);
+  }, [L, markers, team, showEvents, showPlayers, showVending, mapSize, margin, totalSize]);
 
   // Manejador de Dibujo y Desactivación de Arrastre
   useEffect(() => {
@@ -492,7 +494,7 @@ export default function RustMap({
 
       {/* DEBUG BADGE — eliminar después de confirmar que el mapa está correcto */}
       <div style={{ position: 'absolute', top: '0.5rem', right: '0.5rem', zIndex: 2000, background: 'rgba(0,0,0,0.85)', border: '1px solid #ce422b', padding: '0.25rem 0.5rem', fontSize: '10px', fontFamily: 'monospace', color: '#ce422b', pointerEvents: 'none' }}>
-        map={mapSize} ocean={effectiveOceanMargin} img={width}x{height}
+        map={mapSize} ocean={margin} total={totalSize} cells={numGridCells} img={width}x{height}
       </div>
 
       <div ref={mapRef} style={{ height: "100%", width: "100%", cursor: isDrawingMode ? 'crosshair' : 'grab' }} />

@@ -142,13 +142,13 @@ try {
   db.exec("ALTER TABLE servers ADD COLUMN botTemplates TEXT;"); // JSON string
 } catch(e) {}
 
-// MIGRACIÓN CRÍTICA: Borrar caché de mapas con oceanMargin=0 (datos incorrectos).
-// Con el fix de RustPlusManager, los mapas ahora calculan oceanMargin desde map.width - mapSize.
-// Los registros viejos con oceanMargin=0 se borran para forzar re-descarga correcta.
+// MIGRACIÓN: Borrar TODA la caché de mapas para forzar re-descarga con coordenadas correctas.
+// El cálculo anterior de oceanMargin era incorrecto (forzaba 1000 o rechazaba 0).
+// Esta migración asegura que todos los mapas se recalculen con la lógica corregida.
 try {
-  const deleted = db.prepare("DELETE FROM map_cache WHERE oceanMargin = 0 OR oceanMargin IS NULL").run();
+  const deleted = db.prepare("DELETE FROM map_cache").run();
   if (deleted.changes > 0) {
-    console.log(`[DB Migration] Eliminados ${deleted.changes} caché(s) de mapa con oceanMargin incorrecto (0). Se re-descargarán correctamente.`);
+    console.log(`[DB Migration] Eliminados ${deleted.changes} caché(s) de mapa. Se re-descargarán con coordenadas correctas.`);
   }
 } catch(e) {}
 
@@ -201,13 +201,12 @@ export function saveMapCache(serverId: string, data: { jpgImage: string, width: 
 export function getMapCache(serverId: string) {
   const row = db.prepare("SELECT * FROM map_cache WHERE serverId = ?").get(serverId) as any;
   if (!row) return null;
-  // NO defaultear oceanMargin a 0 — si es 0. es un dato incorrecto y el caller lo rechazará
   return {
     jpgImage: row.jpgImage,
     width: row.width,
     height: row.height,
     mapSize: row.mapSize,
-    oceanMargin: row.oceanMargin,
+    oceanMargin: row.oceanMargin !== undefined ? row.oceanMargin : 0,
     monuments: row.monuments ? JSON.parse(row.monuments) : [],
     updatedAt: row.updatedAt
   };
