@@ -26,8 +26,8 @@ export function normalizeToWorld(val: number, mapSize: number): number {
 /**
  * Convierte coordenadas de mundo Unity a formato de cuadrícula Rust (Ej: "M14")
  */
-export function worldToGrid(x: number, y: number, mapSize: number, oceanMargin: number = 500): string {
-    const cellSize = 146.25;
+export function worldToGrid(x: number, y: number, mapSize: number): string {
+    const cellSize = 150; // Exact Rust cell size
     const half = mapSize / 2;
     
     const X_OFFSET = 0;
@@ -38,12 +38,8 @@ export function worldToGrid(x: number, y: number, mapSize: number, oceanMargin: 
     const nx = (x > mapSize * 0.6) ? (x - half) : x;
     const ny = (y > mapSize * 0.6) ? (y - half) : y;
 
-    // El punto de inicio de la grilla A1 es en la esquina superior izquierda del mapa total (incluyendo océano)
-    const startX = -half - oceanMargin;
-    const startY = half + oceanMargin;
-
-    const colIndex = Math.floor((nx - startX) / cellSize) - X_OFFSET;
-    const rowIndex = Math.floor((startY - ny) / cellSize) - Y_OFFSET;
+    const colIndex = Math.floor((nx + half) / cellSize) - X_OFFSET;
+    const rowIndex = Math.floor((half - ny) / cellSize) - Y_OFFSET;
     
     // El juego usa 1-based (A1, A2...)
     const displayRow = rowIndex + 1;
