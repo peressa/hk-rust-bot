@@ -269,8 +269,8 @@ export class FcmManager {
                const grid = worldToGrid(x, y, mapSize);
                
                const { rustPlusManager } = await import("../rustplus/RustPlusManager");
-               rustPlusManager.sendTeamMessage(steamId, ip, 
-                 `[HK-BOT] :skull: ¡HAS MUERTO! ${killer} te ha eliminado en ${grid}`
+               rustPlusManager.botSendTeamMessage(steamId, ip, 
+                 `MUERTE: HAS MUERTO! ${killer} te ha eliminado en ${grid}`
                ).catch(e => console.warn("[FCM] No se pudo enviar el chat de muerte", e));
 
                // Alerta en Discord
