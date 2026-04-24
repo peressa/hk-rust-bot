@@ -26,11 +26,10 @@ export function normalizeToWorld(val: number, mapSize: number): number {
 /**
  * Convierte coordenadas de mundo Unity a formato de cuadrícula Rust (Ej: "M14")
  */
-export function worldToGrid(x: number, y: number, mapSize: number): string {
+export function worldToGrid(x: number, y: number, mapSize: number, oceanMargin: number = 500): string {
     const cellSize = 146.25;
     const half = mapSize / 2;
     
-    // Desfase reportado E3 -> C1 era debido a la falta de oceanMargin (500) en el mapa base, causando una expansión de la grilla. Ahora usando margin real, el offset es 0.
     const X_OFFSET = 0;
     const Y_OFFSET = 0;
 
@@ -39,8 +38,12 @@ export function worldToGrid(x: number, y: number, mapSize: number): string {
     const nx = (x > mapSize * 0.6) ? (x - half) : x;
     const ny = (y > mapSize * 0.6) ? (y - half) : y;
 
-    const colIndex = Math.floor((nx + half) / cellSize) - X_OFFSET;
-    const rowIndex = Math.floor((half - ny) / cellSize) - Y_OFFSET;
+    // El punto de inicio de la grilla A1 es en la esquina superior izquierda del mapa total (incluyendo océano)
+    const startX = -half - oceanMargin;
+    const startY = half + oceanMargin;
+
+    const colIndex = Math.floor((nx - startX) / cellSize) - X_OFFSET;
+    const rowIndex = Math.floor((startY - ny) / cellSize) - Y_OFFSET;
     
     // El juego usa 1-based (A1, A2...)
     const displayRow = rowIndex + 1;
