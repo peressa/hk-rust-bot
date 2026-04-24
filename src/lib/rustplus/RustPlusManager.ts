@@ -623,24 +623,33 @@ class RustPlusManager extends EventEmitter {
       const grid = worldToGrid(m.x, m.y, mapSize);
 
       if (last) {
-        // 1. Detección de Desconexión
+        // 1. Detección de Desconexión (Evitar spam por micro-cortes)
         if (last.isOnline && !m.isOnline) {
-          this.sendTeamMessage(steamId, ip, `:exclamation: ${m.name} se ha desconectado.`);
-          this.addIntel(steamId, ip, 'SYS', `${m.name} se ha desconectado.`);
+          const now = Date.now();
+          if (!last.lastOfflineTime || (now - last.lastOfflineTime > 30000)) { // Solo si pasaron 30s del último aviso
+            this.botSendTeamMessage(steamId, ip, `:exclamation: ${m.name} se ha desconectado.`);
+            this.addIntel(steamId, ip, 'SYS', `${m.name} se ha desconectado.`);
+            m.lastOfflineTime = now;
+          }
         }
         // 2. Detección de Re-conexión
         else if (!last.isOnline && m.isOnline) {
-          this.sendTeamMessage(steamId, ip, `:exclamation: ${m.name} ha vuelto.`);
-          this.addIntel(steamId, ip, 'SYS', `${m.name} ha vuelto.`);
+          const now = Date.now();
+          if (!last.lastOnlineTime || (now - last.lastOnlineTime > 30000)) {
+            this.botSendTeamMessage(steamId, ip, `:exclamation: ${m.name} ha vuelto.`);
+            this.addIntel(steamId, ip, 'SYS', `${m.name} ha vuelto.`);
+            m.lastOnlineTime = now;
+          }
         }
 
         // 3. Detección de Muerte (Solo si estaba vivo)
         if (last.isAlive && !m.isAlive) {
           const status = m.isOnline ? "online" : "offline";
           const timeLived = m.spawnTime ? Math.round((Date.now() / 1000) - m.spawnTime) : null;
-          const timeStr = timeLived ? ` | Vida: ${Math.floor(timeLived / 60)}m ${timeLived % 60}s` : "";
+          const timeStr = timeLived ? ` (Vida: ${Math.floor(timeLived / 60)}m)` : "";
 
-          const deathMsg = this.formatMsg(steamId, ip, 'alert_death', `El miembro del equipo '{name}' ha muerto mientras estaba {status} @ {grid} (Coord: {x}, {y}{timeStr})`, {
+          // Formato solicitado: Mensaje de muerte con persona y cuadrante claro
+          const deathMsg = this.formatMsg(steamId, ip, 'alert_death', `:skull: MUERTE: {name} ha muerto en {grid}{timeStr}`, {
             name: m.name,
             status,
             grid,
@@ -649,7 +658,7 @@ class RustPlusManager extends EventEmitter {
             timeStr
           });
           
-          console.log(`[Monitor] Muerte detectada para miembro del equipo: ${m.name} en ${grid} (${Math.round(m.x)}, ${Math.round(m.y)})`);
+          console.log(`[Monitor] Muerte detectada: ${m.name} en ${grid}`);
           this.addIntel(steamId, ip, 'DEATH', deathMsg, { name: m.name, grid, x: m.x, y: m.y, status, timeLived });
           
           this.botSendTeamMessage(steamId, ip, deathMsg)
@@ -667,16 +676,19 @@ class RustPlusManager extends EventEmitter {
         }
 
         // 4. Lógica de AFK (Notificar cada minuto a partir de los 5 min)
-        const hasMoved = Math.abs(last.x - m.x) > 0.1 || Math.abs(last.y - m.y) > 0.1;
+        const hasMoved = Math.abs(last.x - m.x) > 0.5 || Math.abs(last.y - m.y) > 0.5; // Umbral un poco más alto
         if (m.isOnline && !hasMoved) {
           if (!last.afkSince) m.afkSince = Date.now();
           else {
             m.afkSince = last.afkSince;
+            m.lastAfkAlertMin = last.lastAfkAlertMin || 0;
             const afkMins = Math.floor((Date.now() - m.afkSince) / 60000);
-            const prevAfkMins = Math.floor((Date.now() - 15100 - m.afkSince) / 60000);
-            if (afkMins >= 5 && afkMins > prevAfkMins) {
+            
+            // Solo alertar si han pasado al menos 5 min y no hemos alertado este minuto
+            if (afkMins >= 5 && afkMins > m.lastAfkAlertMin) {
               const msg = this.formatMsg(steamId, ip, 'alert_afk_start', `El miembro del equipo '{name}' lleva AFK {mins} minutos en {grid}`, { name: m.name, mins: afkMins, grid });
               this.botSendTeamMessage(steamId, ip, msg);
+              m.lastAfkAlertMin = afkMins;
             }
           }
         } else if (m.isOnline && hasMoved && last.afkSince) {
@@ -686,6 +698,7 @@ class RustPlusManager extends EventEmitter {
             this.botSendTeamMessage(steamId, ip, msg);
           }
           m.afkSince = null;
+          m.lastAfkAlertMin = 0;
         }
       }
 
