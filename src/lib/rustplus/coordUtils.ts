@@ -85,17 +85,16 @@ export function mapPixelToLeaflet(x: number, y: number, totalSize: number) {
  * @param mapSize Tamaño del mundo (solo tierra)
  * @param oceanMargin Margen de océano en cada lado
  */
-export function worldToLeaflet(x: number, y: number, mapSize: number, oceanMargin: number = 0) {
+export function worldToLeaflet(x: number, y: number, mapSize: number, oceanMarginPx: number = 0, imageWidthPx: number = 1000) {
     const worldHalf = mapSize / 2;
-    const totalSize = mapSize + (oceanMargin * 2);
-
-    // Convertir de mundo centrado a píxeles del mapa, luego a Leaflet
-    const pixelX = x + worldHalf + oceanMargin;
-    const pixelY = y + worldHalf + oceanMargin;
-    
-    const lng = (pixelX / totalSize) * 1000;
-    const lat = (pixelY / totalSize) * 1000;
-    
+    const landWidthPx = imageWidthPx - (2 * oceanMarginPx);
+    const pixelsPerMeter = landWidthPx / mapSize;
+    const landPixelX = (x + worldHalf) * pixelsPerMeter;
+    const landPixelY = (y + worldHalf) * pixelsPerMeter;
+    const finalPixelX = landPixelX + oceanMarginPx;
+    const finalPixelY = landPixelY + oceanMarginPx;
+    const lng = (finalPixelX / imageWidthPx) * 1000;
+    const lat = (finalPixelY / imageWidthPx) * 1000;
     return { lat, lng };
 }
 
