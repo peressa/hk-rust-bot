@@ -45,7 +45,13 @@ class RustPlusManager extends EventEmitter {
 
   constructor() {
     super();
-    // Prevenir que errores asíncronos de sockets o protobufs maten el proceso Next.js
+
+    // 1. Evitar que this.emit("error") explote si nadie está escuchando (ERR_UNHANDLED_ERROR)
+    this.on('error', (err) => {
+      console.error(`[RustPlus Manager] Error emitido (no capturado):`, err.message || err);
+    });
+
+    // 2. Prevenir que errores asíncronos de sockets o protobufs maten el proceso Next.js
     if (typeof process !== 'undefined') {
       const isRegistered = process.listeners('uncaughtException').some(l => l.name === 'rustplusUncaught');
       if (!isRegistered) {
@@ -53,6 +59,10 @@ class RustPlusManager extends EventEmitter {
           if (error.message?.includes('ProtocolError') || error.message?.includes('required')) {
             console.warn(`[RustPlus Manager] Ignorando Uncaught ProtocolError: ${error.message}`);
             return;
+          }
+          // Ignorar el error de evento no manejado que nosotros mismos disparamos arriba
+          if (error.code === 'ERR_UNHANDLED_ERROR') {
+             return;
           }
           console.error('[RustPlus Manager] Global UncaughtException detectada:', error);
         });
@@ -196,9 +206,14 @@ class RustPlusManager extends EventEmitter {
         this.connecting.delete(key);
         this.emit("error", { steamId, ip: connection.ip, error });
 
-        // Fallback a Proxy en caso de errores de socket o rechazo
-        if (!connection.useProxy && !isRetry && (errMsg.includes('socket') || errMsg.includes('ECONNREFUSED') || errMsg.includes('hang up'))) {
-          console.log(`[RustPlus] Error de red en ${connection.ip}. Reintentando vía Proxy...`);
+        // Fallback a Proxy en caso de errores de socket, rechazo o el famoso 418 (Teapot/Block)
+        if (!connection.useProxy && !isRetry && (
+          errMsg.includes('socket') || 
+          errMsg.includes('ECONNREFUSED') || 
+          errMsg.includes('hang up') || 
+          errMsg.includes('418')
+        )) {
+          console.log(`[RustPlus] Error en conexión (${errMsg}). Reintentando vía Proxy...`);
           this.internalConnect(steamId, { ...connection, useProxy: true }, true).then(resolve).catch(reject);
         } else {
           reject(error);
@@ -224,6 +239,11 @@ class RustPlusManager extends EventEmitter {
     } catch (e) {
       return { prefix: ':exclamation:', templates: {} };
     }
+  }
+
+  public clearSettingsCache(steamId: string, ip: string) {
+    this.botSettings.delete(`${steamId}-${ip}`);
+    console.log(`[RustPlus Manager] Cache de configuración limpiada para ${ip}`);
   }
 
   private formatMsg(steamId: string, ip: string, templateKey: string, defaultText: string, vars: Record<string, any> = {}) {

@@ -51,6 +51,14 @@ export async function POST(request: Request) {
     
     dbModule.saveServer(server);
     
+    // Limpiar caché de configuración en el manager para que los cambios se apliquen YA
+    try {
+      const { rustPlusManager } = await import("@/lib/rustplus/RustPlusManager");
+      rustPlusManager.clearSettingsCache(session.user.steamId, server.ip);
+    } catch (e) {
+      // Ignorar si el manager no está listo
+    }
+    
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[API Servers POST] Error:", error);

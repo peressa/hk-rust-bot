@@ -347,6 +347,14 @@ export class FcmManager {
       if (onNotification) onNotification(data);
     });
 
+    client.on("error", (err: any) => {
+      console.error(`[FCM Client] Error for ${steamId}:`, err.message || err);
+    });
+
+    client.on("disconnected", () => {
+      console.warn(`[FCM Client] Disconnected for ${steamId}.`);
+    });
+
     await client.connect();
     
     // Register in global registry
