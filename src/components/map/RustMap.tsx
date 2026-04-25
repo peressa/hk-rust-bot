@@ -217,60 +217,66 @@ export default function RustMap({
       const gridGroup = L.layerGroup().addTo(leafletMap.current);
       layersRef.current['gridGroup'] = gridGroup;
 
-      const lineOpts = { color: 'rgba(255,255,255,0.08)', weight: 1, interactive: false };
-      const cellSize = GRID_CELL_SIZE; // 146.28 - exacto de Rust
-      const worldHalf = mapSize / 2;
+      const lineOpts = { color: 'rgba(255,255,255,0.12)', weight: 1, interactive: false };
+      const cellSize = GRID_CELL_SIZE; 
+      
+      // La grilla en Rust se basa en el totalSize (incluyendo océano)
+      const numCells = Math.ceil(totalSize / cellSize);
+      const gridStart = -totalSize / 2;
 
-      // Líneas Verticales + etiquetas de columna (letras: A, B, C...)
-      for (let i = 0; i <= numGridCells; i++) {
-        const worldX = -worldHalf + (i * cellSize);
-        const clampedX = Math.min(worldX, worldHalf);
-        const pTop    = worldToLeaflet(clampedX, worldHalf, mapSize, margin);
-        const pBottom = worldToLeaflet(clampedX, -worldHalf, mapSize, margin);
+      // Líneas Verticales + etiquetas de columna (A, B, C...)
+      for (let i = 0; i <= numCells; i++) {
+        const x = gridStart + (i * cellSize);
+        if (x > totalSize / 2 + 1) continue; // Evitar líneas fantasmas al borde
+
+        const pTop    = worldToLeaflet(x, totalSize / 2, mapSize, margin);
+        const pBottom = worldToLeaflet(x, -totalSize / 2, mapSize, margin);
 
         L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
 
-        if (i < numGridCells) {
+        if (i < numCells) {
           const char = indexToLetter(i);
-          const pLabel = worldToLeaflet(clampedX + cellSize / 2, worldHalf, mapSize, margin);
+          const pLabel = worldToLeaflet(x + cellSize / 2, totalSize / 2, mapSize, margin);
+          
+          // Etiqueta superior
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
-              html: `<div style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:800;line-height:1;transform:translateX(-50%);pointer-events:none;">${char}</div>`,
-              iconSize: [0, 0],
-              iconAnchor: [0, 0]
+              html: `<div style="color:rgba(255,255,255,0.4);font-size:12px;font-weight:900;transform:translateX(-50%);text-shadow:1px 1px 2px black;">${char}</div>`,
+              iconSize: [0, 0]
             }),
             interactive: false
           }).addTo(gridGroup);
         }
       }
 
-      // Líneas Horizontales + etiquetas de fila (números: 0, 1, 2, 3...)
-      for (let j = 0; j <= numGridCells; j++) {
-        const worldY = worldHalf - (j * cellSize);
-        const clampedY = Math.max(worldY, -worldHalf);
-        const pLeft  = worldToLeaflet(-worldHalf, clampedY, mapSize, margin);
-        const pRight = worldToLeaflet(worldHalf, clampedY, mapSize, margin);
+      // Líneas Horizontales + etiquetas de fila (1, 2, 3...)
+      for (let j = 0; j <= numCells; j++) {
+        const y = totalSize / 2 - (j * cellSize);
+        if (y < -totalSize / 2 - 1) continue;
+
+        const pLeft  = worldToLeaflet(-totalSize / 2, y, mapSize, margin);
+        const pRight = worldToLeaflet(totalSize / 2, y, mapSize, margin);
 
         L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
 
-        // Filas empiezan en 0, igual que el juego real
-        if (j < numGridCells) {
-          const displayRow = j; // 0-indexed como Rust
-          const pLabel = worldToLeaflet(-worldHalf, clampedY - cellSize / 2, mapSize, margin);
+        if (j < numCells) {
+          const displayRow = j + 1; // 1-indexed como Rust Real
+          const pLabel = worldToLeaflet(-totalSize / 2, y - cellSize / 2, mapSize, margin);
+          
+          // Etiqueta lateral
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
-              html: `<div style="color:rgba(255,255,255,0.35);font-size:11px;font-weight:800;line-height:1;transform:translateY(-50%);pointer-events:none;">${displayRow}</div>`,
-              iconSize: [0, 0],
-              iconAnchor: [0, 0]
+              html: `<div style="color:rgba(255,255,255,0.4);font-size:12px;font-weight:900;transform:translateY(-50%);text-shadow:1px 1px 2px black;">${displayRow}</div>`,
+              iconSize: [0, 0]
             }),
             interactive: false
           }).addTo(gridGroup);
         }
       }
     }
-  }, [L, mapSize, margin, showGrid, numGridCells]);
+  }, [L, mapSize, margin, showGrid, totalSize]);
 
   // Imagen Base64
   useEffect(() => {
