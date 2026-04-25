@@ -484,42 +484,32 @@ class RustPlusManager extends EventEmitter {
       if (map.jpgImage) {
           const imageBuffer = Buffer.isBuffer(map.jpgImage) ? map.jpgImage : Buffer.from(map.jpgImage);
           const base64 = imageBuffer.toString('base64');
-          const realSize = getJpgSize(imageBuffer);
 
-          const reportedMapSize = info?.mapSize || 4000;
-          const mapSize = reportedMapSize;
-          
-          let oceanMargin: number;
-          let imageWidth: number;
-          let imageHeight: number;
+          // IMPORTANTE: Distinguir entre Unidades de Mundo (Unity) y Píxeles de Imagen.
+          // info.mapSize: Tamaño del mundo (tierra). Ej: 4000.
+          // map.width/height: Tamaño TOTAL que cubre la imagen en unidades de mundo. Ej: 6000.
+          const mapSize = info?.mapSize || 4000;
+          const reportedWidth = map.width || mapSize;
+          const reportedHeight = map.height || reportedWidth;
 
-          if (realSize) {
-              imageWidth = realSize.width;
-              imageHeight = realSize.height;
-              
-              // Solo aplicar margen si la imagen es significativamente más grande que el mapa (ej: > 10% de diferencia)
-              // De lo contrario, es probable que sea una imagen escalada o con márgenes mínimos.
-              const diff = imageWidth - mapSize;
-              if (diff > mapSize * 0.1) {
-                  oceanMargin = Math.round(diff / 2);
-              } else {
-                  oceanMargin = 0;
-              }
-              
-              console.log(`${logPrefix} [DIMENSIONES REALES] Image=${imageWidth}x${imageHeight}, WorldSize=${mapSize} -> OceanMargin=${oceanMargin}`);
-          } else {
-              const reportedMapWidth = map.width || 0;
-              imageWidth = reportedMapWidth || (mapSize + 2000);
-              imageHeight = map.height || imageWidth;
-              oceanMargin = Math.round((imageWidth - mapSize) / 2);
-              console.log(`${logPrefix} [FALLBACK] No se pudo leer JPG, usando reportedMapWidth=${reportedMapWidth} -> OceanMargin=${oceanMargin}`);
+          // El margen de océano en UNIDADES DE MUNDO
+          let oceanMargin = 0;
+          if (reportedWidth > mapSize) {
+              oceanMargin = Math.round((reportedWidth - mapSize) / 2);
           }
+
+          // Dimensiones de la imagen para el frontend (opcional, para aspecto ratio)
+          const realSize = getJpgSize(imageBuffer);
+          const imgW = realSize?.width || reportedWidth;
+          const imgH = realSize?.height || reportedHeight;
+
+          console.log(`${logPrefix} [COORDINATES] MapSize=${mapSize}, WorldWidth=${reportedWidth}, OceanMargin=${oceanMargin}, ImagePixels=${imgW}x${imgH}`);
 
           if (serverId) {
               saveMapCache(serverId, {
                 jpgImage: base64,
-                width: imageWidth,
-                height: imageHeight,
+                width: reportedWidth,
+                height: reportedHeight,
                 monuments: map.monuments || [],
                 mapSize: mapSize,
                 oceanMargin: oceanMargin
@@ -528,8 +518,8 @@ class RustPlusManager extends EventEmitter {
 
           // Inyectamos metadatos corregidos en la respuesta para el frontend
           map.jpgImage = base64;
-          map.width = imageWidth;
-          map.height = imageHeight;
+          map.width = reportedWidth;
+          map.height = reportedHeight;
           map.mapSize = mapSize;
           map.oceanMargin = oceanMargin;
       }
