@@ -496,8 +496,17 @@ class RustPlusManager extends EventEmitter {
           if (realSize) {
               imageWidth = realSize.width;
               imageHeight = realSize.height;
-              oceanMargin = Math.max(0, Math.round((imageWidth - mapSize) / 2));
-              console.log(`${logPrefix} [DIMENSIONES REALES] Width=${imageWidth}, Height=${imageHeight}, MapSize=${mapSize} -> OceanMargin=${oceanMargin}`);
+              
+              // Solo aplicar margen si la imagen es significativamente más grande que el mapa (ej: > 10% de diferencia)
+              // De lo contrario, es probable que sea una imagen escalada o con márgenes mínimos.
+              const diff = imageWidth - mapSize;
+              if (diff > mapSize * 0.1) {
+                  oceanMargin = Math.round(diff / 2);
+              } else {
+                  oceanMargin = 0;
+              }
+              
+              console.log(`${logPrefix} [DIMENSIONES REALES] Image=${imageWidth}x${imageHeight}, WorldSize=${mapSize} -> OceanMargin=${oceanMargin}`);
           } else {
               const reportedMapWidth = map.width || 0;
               imageWidth = reportedMapWidth || (mapSize + 2000);
