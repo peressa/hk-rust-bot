@@ -216,8 +216,12 @@ export default function RustMap({
       const cellSize = GRID_CELL_SIZE; 
       
       const numCells = Math.ceil(totalUnits / cellSize);
+      // El inicio de la grilla en la imagen
       const gridStart = -totalUnits / 2;
+      // El inicio de la tierra en la grilla (para el offset de letras/números)
+      const worldHalf = mapSize / 2;
 
+      // Líneas Verticales + etiquetas de columna (A, B, C...)
       for (let i = 0; i <= numCells; i++) {
         const x = gridStart + (i * cellSize);
         const pTop    = worldToLeaflet(x, totalUnits / 2, mapSize, margin, width);
@@ -226,20 +230,28 @@ export default function RustMap({
         L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
 
         if (i < numCells) {
-          const char = indexToLetter(i);
-          const pLabel = worldToLeaflet(x + cellSize / 2, totalUnits / 2, mapSize, margin, width);
+          // Calculamos la letra basada en la distancia al borde de la TIERRA
+          // Así la columna A siempre será la misma en el juego y el bot
+          const cellXInWorld = x + worldHalf;
+          const letterIndex = Math.floor(cellXInWorld / cellSize);
           
-          L.marker([pLabel.lat, pLabel.lng], {
-            icon: L.divIcon({
-              className: '',
-              html: `<div style="color:rgba(255,255,255,0.4);font-size:12px;font-weight:900;transform:translateX(-50%);text-shadow:1px 1px 2px black;">${char}</div>`,
-              iconSize: [0, 0]
-            }),
-            interactive: false
-          }).addTo(gridGroup);
+          if (letterIndex >= 0) {
+            const char = indexToLetter(letterIndex);
+            const pLabel = worldToLeaflet(x + cellSize / 2, totalUnits / 2, mapSize, margin, width);
+            
+            L.marker([pLabel.lat, pLabel.lng], {
+              icon: L.divIcon({
+                className: '',
+                html: `<div style="color:rgba(255,255,255,0.4);font-size:12px;font-weight:900;transform:translateX(-50%);text-shadow:1px 1px 2px black;">${char}</div>`,
+                iconSize: [0, 0]
+              }),
+              interactive: false
+            }).addTo(gridGroup);
+          }
         }
       }
 
+      // Líneas Horizontales + etiquetas de fila (0, 1, 2...)
       for (let j = 0; j <= numCells; j++) {
         const y = totalUnits / 2 - (j * cellSize);
         const pLeft  = worldToLeaflet(-totalUnits / 2, y, mapSize, margin, width);
@@ -248,17 +260,23 @@ export default function RustMap({
         L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
 
         if (j < numCells) {
-          const displayRow = j + 1;
-          const pLabel = worldToLeaflet(-totalUnits / 2, y - cellSize / 2, mapSize, margin, width);
+          // Calculamos el número basado en la distancia al tope de la TIERRA
+          const cellYInWorld = worldHalf - y;
+          const rowIndex = Math.floor(cellYInWorld / cellSize);
           
-          L.marker([pLabel.lat, pLabel.lng], {
-            icon: L.divIcon({
-              className: '',
-              html: `<div style="color:rgba(255,255,255,0.4);font-size:12px;font-weight:900;transform:translateY(-50%);text-shadow:1px 1px 2px black;">${displayRow}</div>`,
-              iconSize: [0, 0]
-            }),
-            interactive: false
-          }).addTo(gridGroup);
+          if (rowIndex >= 0) {
+            const displayRow = rowIndex; // Empezar en 0 según lo solicitado
+            const pLabel = worldToLeaflet(-totalUnits / 2, y - cellSize / 2, mapSize, margin, width);
+            
+            L.marker([pLabel.lat, pLabel.lng], {
+              icon: L.divIcon({
+                className: '',
+                html: `<div style="color:rgba(255,255,255,0.4);font-size:12px;font-weight:900;transform:translateY(-50%);text-shadow:1px 1px 2px black;">${displayRow}</div>`,
+                iconSize: [0, 0]
+              }),
+              interactive: false
+            }).addTo(gridGroup);
+          }
         }
       }
     }
