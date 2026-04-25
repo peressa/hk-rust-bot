@@ -485,43 +485,36 @@ class RustPlusManager extends EventEmitter {
           const imageBuffer = Buffer.isBuffer(map.jpgImage) ? map.jpgImage : Buffer.from(map.jpgImage);
           const base64 = imageBuffer.toString('base64');
 
-          // IMPORTANTE: Distinguir entre Unidades de Mundo (Unity) y Píxeles de Imagen.
-          // info.mapSize: Tamaño del mundo (tierra). Ej: 4000.
-          // map.width/height: Tamaño TOTAL que cubre la imagen en unidades de mundo. Ej: 6000.
-          const mapSize = info?.mapSize || 4000;
-          const reportedWidth = map.width || mapSize;
-          const reportedHeight = map.height || reportedWidth;
-
-          // El margen de océano en UNIDADES DE MUNDO
-          let oceanMargin = 0;
-          if (reportedWidth > mapSize) {
-              oceanMargin = Math.round((reportedWidth - mapSize) / 2);
-          }
-
-          // Dimensiones de la imagen para el frontend (opcional, para aspecto ratio)
+          // METADATOS DEL PROTO (En Píxeles)
+          // map.width/height: Píxeles totales de la imagen.
+          // map.oceanMargin: Píxeles de océano alrededor de la tierra.
           const realSize = getJpgSize(imageBuffer);
-          const imgW = realSize?.width || reportedWidth;
-          const imgH = realSize?.height || reportedHeight;
+          const pixelWidth = map.width || realSize?.width || 1000;
+          const pixelHeight = map.height || realSize?.height || pixelWidth;
+          const oceanMarginPx = map.oceanMargin || 0;
 
-          console.log(`${logPrefix} [COORDINATES] MapSize=${mapSize}, WorldWidth=${reportedWidth}, OceanMargin=${oceanMargin}, ImagePixels=${imgW}x${imgH}`);
+          // METADATOS DEL MUNDO (En Metros/Unity)
+          const mapSize = info?.mapSize || 4000;
+
+          console.log(`${logPrefix} [MAP PROTO] Pixels=${pixelWidth}x${pixelHeight}, MarginPx=${oceanMarginPx}, WorldUnits=${mapSize}`);
 
           if (serverId) {
               saveMapCache(serverId, {
                 jpgImage: base64,
-                width: reportedWidth,
-                height: reportedHeight,
+                width: pixelWidth,
+                height: pixelHeight,
                 monuments: map.monuments || [],
                 mapSize: mapSize,
-                oceanMargin: oceanMargin
+                oceanMargin: oceanMarginPx
               });
           }
 
-          // Inyectamos metadatos corregidos en la respuesta para el frontend
+          // Inyectamos metadatos originales en la respuesta
           map.jpgImage = base64;
-          map.width = reportedWidth;
-          map.height = reportedHeight;
+          map.width = pixelWidth;
+          map.height = pixelHeight;
           map.mapSize = mapSize;
-          map.oceanMargin = oceanMargin;
+          map.oceanMargin = oceanMarginPx;
       }
 
       return mapResp;
