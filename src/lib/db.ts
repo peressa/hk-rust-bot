@@ -142,10 +142,10 @@ try {
   db.exec("ALTER TABLE servers ADD COLUMN botTemplates TEXT;"); // JSON string
 } catch(e) {}
 
-// MIGRACIÓN: Purgar caché para aplicar lógica de oceanMargin conservadora (evita saltos al agua)
+// MIGRACIÓN: Purgar caché para aplicar lógica de Unidades de Mundo vs Píxeles.
 try {
   db.prepare("DELETE FROM map_cache").run();
-  console.log("[DB Migration] Purgando caché para aplicar nueva lógica de proyección conservadora.");
+  console.log("[DB Migration] Purgando caché para corregir escala de cuadrícula y marcadores.");
 } catch(e) {}
 
 
