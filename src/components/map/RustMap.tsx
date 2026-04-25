@@ -116,24 +116,19 @@ export default function RustMap({
     return () => clearInterval(interval);
   }, [serverId]);
 
-  /**
-   * Convierte coordenadas del API (0..mapSize) a posición Leaflet.
-   * Monumentos y markers del proto Rust+ vienen en rango 0..mapSize (solo tierra).
-   * La imagen JPG cubre 0..totalSize (tierra + océano), por lo que necesitamos
-   * sumar el oceanMargin para posicionarlos correctamente sobre la imagen.
-   */
+  // Cálculo de unidades totales que cubre la imagen JPG basada en el ratio de píxeles/metros
+  const landWidthPx = width - (2 * margin);
+  const pixelsPerMeter = mapSize > 0 ? landWidthPx / mapSize : 1;
+  const totalUnits = width / pixelsPerMeter;
+
   const apiToPos = (x: number, y: number): [number, number] => {
-    const lng = ((x + margin) / totalSize) * 1000;
-    const lat = ((y + margin) / totalSize) * 1000;
-    return [lat, lng];
+    const worldHalf = mapSize / 2;
+    const p = worldToLeaflet(x - worldHalf, y - worldHalf, mapSize, margin, width);
+    return [p.lat, p.lng];
   };
 
-  /**
-   * Convierte coordenadas de mundo centradas (-half..half) a posición Leaflet.
-   * Usado para: miembros del equipo (getTeamInfo) y muertes.
-   */
   const worldToPos = (x: number, y: number): [number, number] => {
-    const p = worldToLeaflet(x, y, mapSize, margin);
+    const p = worldToLeaflet(x, y, mapSize, margin, width);
     return [p.lat, p.lng];
   };
 
@@ -220,25 +215,20 @@ export default function RustMap({
       const lineOpts = { color: 'rgba(255,255,255,0.12)', weight: 1, interactive: false };
       const cellSize = GRID_CELL_SIZE; 
       
-      // La grilla en Rust se basa en el totalSize (incluyendo océano)
-      const numCells = Math.ceil(totalSize / cellSize);
-      const gridStart = -totalSize / 2;
+      const numCells = Math.ceil(totalUnits / cellSize);
+      const gridStart = -totalUnits / 2;
 
-      // Líneas Verticales + etiquetas de columna (A, B, C...)
       for (let i = 0; i <= numCells; i++) {
         const x = gridStart + (i * cellSize);
-        if (x > totalSize / 2 + 1) continue; // Evitar líneas fantasmas al borde
-
-        const pTop    = worldToLeaflet(x, totalSize / 2, mapSize, margin);
-        const pBottom = worldToLeaflet(x, -totalSize / 2, mapSize, margin);
+        const pTop    = worldToLeaflet(x, totalUnits / 2, mapSize, margin, width);
+        const pBottom = worldToLeaflet(x, -totalUnits / 2, mapSize, margin, width);
 
         L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
 
         if (i < numCells) {
           const char = indexToLetter(i);
-          const pLabel = worldToLeaflet(x + cellSize / 2, totalSize / 2, mapSize, margin);
+          const pLabel = worldToLeaflet(x + cellSize / 2, totalUnits / 2, mapSize, margin, width);
           
-          // Etiqueta superior
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
@@ -250,21 +240,17 @@ export default function RustMap({
         }
       }
 
-      // Líneas Horizontales + etiquetas de fila (1, 2, 3...)
       for (let j = 0; j <= numCells; j++) {
-        const y = totalSize / 2 - (j * cellSize);
-        if (y < -totalSize / 2 - 1) continue;
-
-        const pLeft  = worldToLeaflet(-totalSize / 2, y, mapSize, margin);
-        const pRight = worldToLeaflet(totalSize / 2, y, mapSize, margin);
+        const y = totalUnits / 2 - (j * cellSize);
+        const pLeft  = worldToLeaflet(-totalUnits / 2, y, mapSize, margin, width);
+        const pRight = worldToLeaflet(totalUnits / 2, y, mapSize, margin, width);
 
         L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
 
         if (j < numCells) {
-          const displayRow = j + 1; // 1-indexed como Rust Real
-          const pLabel = worldToLeaflet(-totalSize / 2, y - cellSize / 2, mapSize, margin);
+          const displayRow = j + 1;
+          const pLabel = worldToLeaflet(-totalUnits / 2, y - cellSize / 2, mapSize, margin, width);
           
-          // Etiqueta lateral
           L.marker([pLabel.lat, pLabel.lng], {
             icon: L.divIcon({
               className: '',
@@ -276,7 +262,7 @@ export default function RustMap({
         }
       }
     }
-  }, [L, mapSize, margin, showGrid, totalSize]);
+  }, [L, mapSize, margin, showGrid, totalUnits, width]);
 
   // Imagen Base64
   useEffect(() => {
