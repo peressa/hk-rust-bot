@@ -23,12 +23,29 @@ export class FcmManager {
   public static debugLogs: any[] = [];
 
   static async register(steamId: string, authToken: string) {
-    console.log(`[FCM] Registering for ${steamId}`);
+    console.log(`[FCM] Verificando registro persistente para ${steamId}...`);
     
-    // Intentar recuperar el DeviceId existente de la DB para evitar rotaciones innecesarias
-    const existingRow = db.prepare("SELECT deviceId FROM fcm_keys WHERE steamId = ?").get(steamId) as any;
+    // 1. Recuperar datos de la base de datos
+    const existingRow = db.prepare("SELECT keys, deviceId FROM fcm_keys WHERE steamId = ?").get(steamId) as any;
+    
+    if (existingRow?.keys) {
+      try {
+        const savedData = JSON.parse(existingRow.keys);
+        // Si el token de Rust+ coincide y tenemos credenciales de FCM, REUTILIZAR
+        if (savedData.rustplus_auth_token === authToken && savedData.fcm_credentials) {
+           console.log(`[FCM] Reutilizando credenciales militares persistentes para ${steamId}. Device: ${existingRow.deviceId}`);
+           return { 
+             fcmCredentials: savedData.fcm_credentials, 
+             deviceId: existingRow.deviceId 
+           };
+        }
+      } catch (e) {
+        console.warn("[FCM] Error al parsear credenciales guardadas, procediendo a nuevo registro.");
+      }
+    }
+
     const deviceId = existingRow?.deviceId || require('crypto').randomBytes(8).toString('hex');
-    console.log(`[FCM] Usando DeviceId: ${deviceId} ${existingRow ? '(Recuperado de DB)' : '(Nuevo)'}`);
+    console.log(`[FCM] Iniciando nuevo registro táctico. DeviceId: ${deviceId}`);
     
     let fcmCredentials;
     try {
@@ -43,26 +60,12 @@ export class FcmManager {
     } catch (err: any) {
       console.error(`[FCM] FATAL: Error registrando dispositivo con Google: ${err.message}`);
       if (err.message?.includes("PHONE_REGISTRATION_ERROR")) {
-        throw new Error("ERROR DE REGISTRO (Google/Facepunch): El servicio de notificaciones ha bloqueado temporalmente el registro. Esto ocurre por intentar registrarse demasiadas veces seguidas. Por favor, ESPERA 10-15 MINUTOS antes de intentar de nuevo.");
+        throw new Error("ERROR DE REGISTRO (Google/Facepunch): El servicio de notificaciones ha bloqueado temporalmente el registro. Por favor, ESPERA 15 MINUTOS.");
       }
       throw new Error(`No se pudo registrar el bot con Google: ${err.message}`);
     }
 
-    // Validar expiración localmente para dar feedback claro
-    try {
-      const parts = authToken.split('.');
-      if (parts.length >= 1) {
-        const payload = JSON.parse(Buffer.from(parts[0], 'base64').toString());
-        if (payload.exp && payload.exp < Date.now() / 1000) {
-          throw new Error("EL TOKEN DE RUST+ HA EXPIRADO. Por favor, obtén uno nuevo en https://companion-rust.facepunch.com/");
-        }
-      }
-    } catch (e: any) {
-      if (e.message.includes("EXPIRADO")) throw e;
-      // Otros errores de parseo se ignoran para dejar que la API decida
-    }
-
-    // PushKind 1 is for native Android (FCM/GCM)
+    // Registro con Facepunch
     try {
       await axios.post("https://companion-rust.facepunch.com/api/push/register", {
         AuthToken: authToken,
@@ -82,15 +85,14 @@ export class FcmManager {
       });
     } catch (err: any) {
       if (err.response?.status === 403) {
-        console.error("[FCM] Error 403: Acceso denegado por Facepunch. Posible token inválido o rate-limit (10 intentos/5min).");
-        throw new Error("Error 403: Facepunch rechazó el token. Asegúrate de que sea RECIÉN generado y no hayas intentado muchas veces (espera 5 min).");
+        throw new Error("Error 403: Facepunch rechazó el token. Genera uno nuevo.");
       }
       throw err;
     }
 
-    console.log(`[FCM] Successfully registered native FCM with Facepunch for ${steamId}. Device: ${deviceId}`);
+    console.log(`[FCM] Registro exitoso con Facepunch para ${steamId}. Device: ${deviceId}`);
 
-    // Save credentials to DB
+    // Guardar credenciales en DB para REUTILIZACIÓN FUTURA
     const stmt = db.prepare("INSERT OR REPLACE INTO fcm_keys (steamId, keys, deviceId) VALUES (?, ?, ?)");
     stmt.run(steamId, JSON.stringify({
       fcm_credentials: fcmCredentials,

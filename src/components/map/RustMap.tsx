@@ -25,6 +25,7 @@ interface RustMapProps {
   monuments?: any[];
   markers?: any[];
   team?: any[];
+  playerHistory?: { [steamId: string]: { x: number, y: number, time: number }[] };
   serverId?: string;
   allowDrawing?: boolean;
 }
@@ -38,6 +39,7 @@ export default function RustMap({
   monuments = [],
   markers = [],
   team = [],
+  playerHistory = {},
   serverId,
   allowDrawing = true
 }: RustMapProps) {
@@ -57,7 +59,9 @@ export default function RustMap({
   const [showMonuments, setShowMonuments] = useState(true);
   const [showEvents, setShowEvents] = useState(true);
   const [showPlayers, setShowPlayers] = useState(true);
-  const [showVending, setShowVending] = useState(false);
+  const [showPaths, setShowPaths] = useState(true);
+  const [showVending, setShowVending] = useState(true);
+  const [vendingFilter, setVendingFilter] = useState("");
   const [isDrawingMode, setIsDrawingMode] = useState(false);
 
   const [drawings, setDrawings] = useState<any[]>([]);
@@ -72,7 +76,7 @@ export default function RustMap({
   }, []);
 
   useEffect(() => {
-    console.log(`[HK Map Debug] mapSize: ${mapSize}, oceanMargin: ${margin}, totalSize: ${totalSize}, numGridCells: ${numGridCells}, img: ${width}x${height}`);
+    console.log(`[Rust Ops Map Debug] mapSize: ${mapSize}, oceanMargin: ${margin}, totalSize: ${totalSize}, numGridCells: ${numGridCells}, img: ${width}x${height}`);
   }, [mapSize, margin, totalSize, numGridCells, width, height]);
 
   // Log primeros marcadores para diagnóstico de coordenadas
@@ -86,7 +90,7 @@ export default function RustMap({
       leafletLng: ((m.x + margin) / totalSize) * 1000,
       leafletLat: ((m.y + margin) / totalSize) * 1000
     }));
-    console.log(`[HK Map Debug] Markers sample:`, JSON.stringify(sample));
+    console.log(`[Rust Ops Map Debug] Markers sample:`, JSON.stringify(sample));
     if (monuments?.length > 0) {
       const monSample = monuments.slice(0, 3).map(m => ({
         token: m.token,
@@ -95,7 +99,7 @@ export default function RustMap({
         leafletLng: ((m.x + margin) / totalSize) * 1000,
         leafletLat: ((m.y + margin) / totalSize) * 1000
       }));
-      console.log(`[HK Map Debug] Monuments sample:`, JSON.stringify(monSample));
+      console.log(`[Rust Ops Map Debug] Monuments sample:`, JSON.stringify(monSample));
     }
   }, [markers, monuments, totalSize, margin]);
 
@@ -289,7 +293,7 @@ export default function RustMap({
           L.polyline(points, { color: d.color || '#ce422b', weight: 4, opacity: 0.8 }).addTo(drawingsGroup);
         }
       } catch (e) {
-        console.warn("[HK Map] Error al parsear dibujo táctico:", e);
+        console.warn("[Rust Ops Map] Error al parsear dibujo táctico:", e);
       }
     });
   }, [L, drawings]);
@@ -356,6 +360,28 @@ export default function RustMap({
     }
   }
 }, [L, monuments, showMonuments, mapSize, margin, totalSize]);
+
+  // Renderizar Rutas de Movimiento
+  useEffect(() => {
+    if (!L || !leafletMap.current) return;
+    if (layersRef.current['pathsGroup']) leafletMap.current.removeLayer(layersRef.current['pathsGroup']);
+    
+    if (showPaths) {
+      const pathsGroup = L.layerGroup().addTo(leafletMap.current);
+      layersRef.current['pathsGroup'] = pathsGroup;
+
+      Object.entries(playerHistory).forEach(([sid, path]: [string, any]) => {
+        if (!Array.isArray(path) || path.length < 2) return;
+        const points = path.map(p => worldToPos(p.x, p.y));
+        L.polyline(points, { 
+          color: "#22c55e", 
+          weight: 2, 
+          opacity: 0.4, 
+          dashArray: "5, 10" 
+        }).addTo(pathsGroup);
+      });
+    }
+  }, [L, playerHistory, showPaths, mapSize, margin, totalSize]);
 
   // Renderizar Marcadores (Jugadores, Equipos, Eventos)
   useEffect(() => {
@@ -479,6 +505,58 @@ export default function RustMap({
       {/* Estilos de Leaflet cargados de forma segura */}
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossOrigin="" />
 
+      {/* Map Top UI: Tactical Filters */}
+      <div style={{
+        position: 'absolute',
+        top: '1rem',
+        right: '1rem',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem',
+        alignItems: 'flex-end'
+      }}>
+        {/* Vending Filter */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          background: 'rgba(0,0,0,0.85)',
+          padding: '0.4rem 0.8rem',
+          borderRadius: '4px',
+          border: '1px solid var(--border)',
+          backdropFilter: 'blur(5px)',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
+        }}>
+          <ShoppingCart size={14} color="var(--primary)" />
+          <input 
+            type="text" 
+            placeholder="Buscar item (Azufre, AK, etc)..." 
+            value={vendingFilter}
+            onChange={(e) => setVendingFilter(e.target.value)}
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              color: 'white', 
+              fontSize: '0.7rem', 
+              outline: 'none', 
+              width: '180px',
+              fontWeight: 700,
+              fontFamily: 'var(--font-barlow)'
+            }}
+          />
+          {vendingFilter && <button onClick={() => setVendingFilter("")} style={{ background: 'none', border: 'none', color: '#666', cursor: 'pointer' }}><Trash2 size={12} /></button>}
+        </div>
+
+        {/* Layer Toggles */}
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+           <LayerToggle icon={<MapIcon size={14} />} active={showGrid} onClick={() => setShowGrid(!showGrid)} label="Grilla" />
+           <LayerToggle icon={<Users size={14} />} active={showPlayers} onClick={() => setShowPlayers(!showPlayers)} label="Team" />
+           <LayerToggle icon={<Zap size={14} />} active={showPaths} onClick={() => setShowPaths(!showPaths)} label="Rutas" />
+           <LayerToggle icon={<ShoppingCart size={14} />} active={showVending} onClick={() => setShowVending(!showVending)} label="Shops" />
+        </div>
+      </div>
+
       <div style={{ position: 'absolute', bottom: '2rem', left: '2rem', zIndex: 1000, display: 'flex', gap: '0.5rem', background: 'rgba(5, 5, 5, 0.9)', padding: '0.5rem', border: '1px solid var(--border)' }}>
         <MapControlButton active={showGrid} icon={<Layers size={18} />} onClick={() => setShowGrid(!showGrid)} title="Grilla Táctica" />
         <MapControlButton active={showPlayers} icon={<Users size={18} />} onClick={() => setShowPlayers(!showPlayers)} title="Equipo" />
@@ -534,6 +612,34 @@ export default function RustMap({
            }
         `}</style>
     </div>
+  );
+}
+
+function LayerToggle({ icon, active, onClick, label }: { icon: any, active: boolean, onClick: () => void, label: string }) {
+  return (
+    <button 
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.4rem',
+        background: active ? 'var(--primary)' : 'rgba(0,0,0,0.85)',
+        border: `1px solid ${active ? 'var(--primary)' : 'var(--border)'}`,
+        padding: '0.4rem 0.8rem',
+        color: active ? 'white' : '#666',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontSize: '0.65rem',
+        fontWeight: 800,
+        textTransform: 'uppercase',
+        transition: 'var(--transition)',
+        fontFamily: 'var(--font-barlow)',
+        backdropFilter: 'blur(5px)'
+      }}
+    >
+      {icon}
+      {label}
+    </button>
   );
 }
 

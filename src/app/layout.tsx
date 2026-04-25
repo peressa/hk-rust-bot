@@ -16,8 +16,8 @@ const barlow = Barlow({
 });
 
 export const metadata: Metadata = {
-  title: "Rust Plus Web | Tactically Superior Dashboard",
-  description: "Accede al mapa, chat y cámaras de tus servidores de Rust desde la web.",
+  title: "Rust Ops | Tactical War Room",
+  description: "Dashboard táctico avanzado para servidores de Rust+. Mapa en tiempo real, alertas de raid y gestión de equipo.",
 };
 
 export default function RootLayout({

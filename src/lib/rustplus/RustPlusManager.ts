@@ -59,6 +59,13 @@ class RustPlusManager extends EventEmitter {
   private intelLogs: Map<string, any[]> = new Map(); // key -> intel items[]
   private lastDockedStates: Map<string, Set<number>> = new Map(); // key -> markerIds docked
   private botSettings: Map<string, { prefix: string, templates: any }> = new Map(); // key -> settings
+  private lastActivity: Map<string, number> = new Map(); // key -> timestamp
+  private reconnectAttempts: Map<string, number> = new Map(); // key -> count
+  private reconnectTimer: Map<string, NodeJS.Timeout> = new Map(); // key -> timer
+  private lastExplosions: Map<string, { grid: string, timestamp: number }[]> = new Map(); // key -> explosions
+  private lastBaseAlerts: Map<string, number> = new Map(); // key -> last alert timestamp
+  private lastEntityStates: Map<string, Map<string, boolean>> = new Map(); // key -> entityId -> isActive
+  private playerHistory: Map<string, Map<string, { x: number, y: number, time: number }[]>> = new Map(); // key -> steamId -> path
 
   constructor() {
     super();
@@ -158,44 +165,17 @@ class RustPlusManager extends EventEmitter {
         this.ready.set(key, true);
         this.connections.set(key, rustplus);
         this.connecting.delete(key);
+        this.reconnectAttempts.set(key, 0); // Reset backoff al éxito
+        this.lastActivity.set(key, Date.now());
         this.startMonitoring(steamId, connection.ip);
         this.emit("connected", { steamId, ip: connection.ip, useProxy: !!connection.useProxy });
         resolve(rustplus);
       });
 
       rustplus.on("message", (message: any) => {
-        if (message.broadcast?.teamMessage) {
-          const teamKey = `${steamId}-${connection.ip}`;
-          const chatMsg = message.broadcast.teamMessage.message;
-          
-          const fullMsg = {
-            steamId: String(chatMsg.steamId),
-            name: chatMsg.name,
-            message: chatMsg.message,
-            color: chatMsg.color,
-            time: Date.now()
-          };
-
-          const history = this.chatHistory.get(teamKey) || [];
-          history.push(fullMsg);
-          if (history.length > 100) history.shift();
-          this.chatHistory.set(teamKey, history);
-
-          // Guardar en DB para persistencia
-          try {
-            const server = getServers(steamId).find((s: any) => s.ip === connection.ip) as any;
-            if (server) {
-              saveTeamMessage(server.id || `${steamId}-${connection.ip}`, fullMsg);
-            }
-          } catch (e) {
-            console.error("[RustPlus] Error al persistir mensaje de chat:", e);
-          }
-
-          if (chatMsg.message.startsWith("!")) {
-            this.handleTeamCommand(steamId, connection.ip, chatMsg.message);
-          }
-        }
-        this.emit("message", { steamId, ip: connection.ip, message });
+        this.lastActivity.set(key, Date.now());
+        // Despachador asíncrono no bloqueante (Fase 1.3)
+        setImmediate(() => this.processMessage(steamId, connection, message));
       });
 
       rustplus.on("disconnected", () => {
@@ -206,11 +186,8 @@ class RustPlusManager extends EventEmitter {
         this.connecting.delete(key);
         this.emit("disconnected", { steamId, ip: connection.ip });
 
-        // Si se desconectó inmediatamente después de conectar, intentar Proxy como fallback
-        if (wasReady && !connection.useProxy && !isRetry) {
-           console.log(`[RustPlus] Inestabilidad detectada en ${connection.ip}. Reintentado vía Proxy...`);
-           this.connect(steamId, { ...connection, useProxy: true }, true).catch(() => {});
-        }
+        // Auto-Reconexión Inteligente (Fase 1.4)
+        this.handleReconnect(steamId, connection);
       });
 
       rustplus.on("error", (error: any) => {
@@ -223,8 +200,8 @@ class RustPlusManager extends EventEmitter {
         this.connecting.delete(key);
         this.emit("error", { steamId, ip: connection.ip, error });
 
-        // Fallback a Proxy en caso de errores de socket, rechazo o el famoso 418 (Teapot/Block)
-        if (!connection.useProxy && !isRetry && (
+        this.handleReconnect(steamId, connection);
+      });
           errMsg.includes('socket') || 
           errMsg.includes('ECONNREFUSED') || 
           errMsg.includes('hang up') || 
@@ -286,7 +263,7 @@ class RustPlusManager extends EventEmitter {
     const baseCommand = splitCmd[0];
     const args = rawCommand.split(" ").slice(1).join(" ");
     
-    console.log(`[HK Bot] Procesando comando de equipo: "${baseCommand}" (Args: "${args}") desde ${steamId} en ${ip}`);
+    console.log(`[Rust Ops] Procesando comando de equipo: "${baseCommand}" (Args: "${args}") desde ${steamId} en ${ip}`);
     
     try {
       if (baseCommand === "!time" || baseCommand === "!hora") {
@@ -394,7 +371,7 @@ class RustPlusManager extends EventEmitter {
           rustplus.sendTeamMessage(`:exclamation: Uso: !lider <nombre del jugador>`);
           return;
         }
-        console.log(`[HK Bot] Ejecutando !lider para ${args}...`);
+        console.log(`[Rust Ops] Ejecutando !lider para ${args}...`);
         const teamResp = await this.sendRequest(steamId, ip, { getTeamInfo: {} });
         const members = teamResp.response.teamInfo.members || [];
         const target = members.find((m: any) => m.name && m.name.toLowerCase().includes(args.toLowerCase()));
@@ -618,22 +595,113 @@ class RustPlusManager extends EventEmitter {
     const interval = setInterval(async () => {
       if (!this.ready.get(key)) return;
 
+      const last = this.lastActivity.get(key) || 0;
+      const inactiveTime = Date.now() - last;
+
       try {
-        const [teamResp, markersResp, infoResp] = await Promise.all([
+        const promises: Promise<any>[] = [
           this.getTeamInfo(steamId, ip).catch(() => null),
-          this.getMapMarkers(steamId, ip).catch(() => null),
-          this.sendRequest(steamId, ip, { getInfo: {} }).catch(() => null)
-        ]);
+          this.getMapMarkers(steamId, ip).catch(() => null)
+        ];
+
+        // Fase 1.1: Heartbeat Pasivo (Solo ping si no hay eventos por 5 min)
+        if (inactiveTime > 300000) {
+           console.log(`[Heartbeat] Silencio en ${ip}. Verificando conexión...`);
+           promises.push(this.sendRequest(steamId, ip, { getInfo: {} }).catch(() => null));
+           this.lastActivity.set(key, Date.now());
+        }
+
+        const [teamResp, markersResp, infoResp] = await Promise.all(promises);
 
         if (teamResp) this.processTeamMonitor(steamId, ip, teamResp.response.teamInfo, infoResp?.response?.info);
         if (markersResp) this.processMarkersMonitor(steamId, ip, markersResp.response.mapMarkers.markers, infoResp?.response?.info);
+        
+        // Fase 2.3: Monitoreo de Entidades Inteligentes (Smart Alarms / Switches)
+        this.monitorEntities(steamId, ip).catch(() => {});
+
+        // Fase 2.2: Monitoreo de Vida de Base (Decay)
+        if (infoResp?.response?.info) {
+          const info = infoResp.response.info;
+          const expiry = info.protectionExpiry || 0;
+          if (expiry > 0) {
+            const nowSeconds = Date.now() / 1000;
+            const remainingHours = (expiry - nowSeconds) / 3600;
+            if (remainingHours < 12) {
+              const decayKey = `${key}-decay`;
+              const lastDecayAlert = this.lastBaseAlerts.get(decayKey) || 0;
+              if (Date.now() - lastDecayAlert > 14400000) { // Cada 4 horas
+                const msg = this.formatMsg(steamId, ip, 'decay_alert', `¡ALERTA DE MANTENIMIENTO! Quedan menos de {hours} horas de protección en el armario (TC).`, { hours: Math.round(remainingHours) });
+                this.botSendTeamMessage(steamId, ip, msg);
+                this.addIntel(steamId, ip, 'SYS', msg, { hours: Math.round(remainingHours) });
+                this.lastBaseAlerts.set(decayKey, Date.now());
+              }
+            }
+          }
+        }
 
       } catch (err) {
-        // Silencioso para no ensuciar logs de monitoreo cada 15s
+        // Silencioso
       }
-    }, 15000); // Revisar cada 15 seg
+    }, 15000); // Revisar cada 15 seg para inteligencia táctica
 
     this.monitorIntervals.set(key, interval);
+  }
+
+  /**
+   * Fase 2.3: Monitorea el estado de interruptores y alarmas inteligentes.
+   */
+  private async monitorEntities(steamId: string, ip: string) {
+    const key = `${steamId}-${ip}`;
+    // Buscamos el servidor en la DB para obtener su ID y webhook
+    const servers = getServers(steamId);
+    const serverObj = servers.find((s: any) => s.ip === ip) as any;
+    if (!serverObj) return;
+
+    const entities = getEntities(steamId, serverObj.id);
+    if (!entities || entities.length === 0) return;
+
+    if (!this.lastEntityStates.has(key)) this.lastEntityStates.set(key, new Map());
+    const states = this.lastEntityStates.get(key)!;
+
+    for (const ent of entities) {
+      try {
+        const resp = await this.sendRequest(steamId, ip, {
+          entityId: parseInt(ent.entityId),
+          getEntityInfo: {}
+        });
+        
+        if (resp?.response?.entityInfo) {
+          const isActive = resp.response.entityInfo.payload.value === true;
+          const prevStatus = states.get(ent.entityId);
+          
+          if (prevStatus !== undefined && prevStatus !== isActive) {
+            let msg = "";
+            if (ent.entityType === 1) { // Interruptor
+               msg = this.formatMsg(steamId, ip, 'sys_switch_change', `Interruptor '{name}' cambiado a {status}`, { name: ent.name, status: isActive ? 'ENCENDIDO' : 'APAGADO' });
+            } else if (ent.entityType === 3) { // Alarma
+               if (isActive) {
+                 msg = this.formatMsg(steamId, ip, 'sys_alarm_active', `¡ALERTA! La Alarma Inteligente '{name}' se ha ACTIVADO.`, { name: ent.name });
+               }
+            }
+
+            if (msg) {
+              this.botSendTeamMessage(steamId, ip, msg);
+              this.addIntel(steamId, ip, 'SYS', msg, { entityId: ent.entityId, name: ent.name, status: isActive });
+              
+              if (serverObj.discordWebhook || serverObj.discordChannelId) {
+                try {
+                  const { DiscordManager } = require('../discord/DiscordManager');
+                  DiscordManager.sendGenericAlert(serverObj, "Alerta de Dispositivo", msg);
+                } catch (e) {}
+              }
+            }
+          }
+          states.set(ent.entityId, isActive);
+        }
+      } catch (e) {
+        // Error consultando entidad (posiblemente fuera de rango o destruida)
+      }
+    }
   }
 
   private processTeamMonitor(steamId: string, ip: string, teamInfo: any, serverInfo: any) {
@@ -651,6 +719,20 @@ class RustPlusManager extends EventEmitter {
     members.forEach((m: any) => {
       const last = states.get(m.steamId);
       const grid = worldToGrid(m.x, m.y, mapSize);
+
+      // Fase 3.1: Registro de Rutas de Movimiento
+      if (m.isAlive && m.isOnline) {
+        if (!this.playerHistory.has(key)) this.playerHistory.set(key, new Map());
+        const historyMap = this.playerHistory.get(key)!;
+        if (!historyMap.has(m.steamId)) historyMap.set(m.steamId, []);
+        const path = historyMap.get(m.steamId)!;
+        const lastPos = path[path.length - 1];
+        const dist = lastPos ? Math.sqrt(Math.pow(m.x - lastPos.x, 2) + Math.pow(m.y - lastPos.y, 2)) : 100;
+        if (dist > 10) { // Registrar cada 10 metros para una ruta suave
+          path.push({ x: m.x, y: m.y, time: Date.now() });
+          if (path.length > 20) path.shift();
+        }
+      }
 
       if (last) {
         // 1. Detección de Desconexión (Evitar spam por micro-cortes)
@@ -699,11 +781,11 @@ class RustPlusManager extends EventEmitter {
           // Alerta en Discord
           const server = getServers(steamId).find((s: any) => s.ip === ip) as any;
           if (server && (server.discordWebhook || server.discordChannelId)) {
-            const { DiscordManager } = require('@/lib/discord/DiscordManager');
+            const { DiscordManager } = require('../discord/DiscordManager');
             DiscordManager.sendDeath({
               webhookUrl: server.discordWebhook,
               channelId: server.discordChannelId
-            }, m.name || "Miembro del equipo", m.x, m.y, server.name);
+            }, m.name || "Miembro del equipo", m.x, m.y, server.name, undefined);
           }
         }
 
@@ -749,7 +831,7 @@ class RustPlusManager extends EventEmitter {
         if (server) {
           saveTeamMessage(server.id, {
             steamId: "BOT",
-            name: "HK Bot",
+            name: "Rust Ops",
             message: message,
             time: Date.now()
           });
@@ -887,6 +969,50 @@ class RustPlusManager extends EventEmitter {
         }
       }
 
+      // 5. Detección Inteligente de Raids (Explosiones tipo 7)
+      if (m.type === 7) {
+        const grid = worldToGrid(m.x, m.y, mapSize);
+        const now = Date.now();
+        
+        // Registrar explosión
+        if (!this.lastExplosions.has(key)) this.lastExplosions.set(key, []);
+        const explosions = this.lastExplosions.get(key)!;
+        explosions.push({ grid, timestamp: now });
+        
+        // Limpiar explosiones viejas (> 5 min)
+        const activeExplosions = explosions.filter(e => now - e.timestamp < 300000);
+        this.lastExplosions.set(key, activeExplosions);
+        
+        // Contar explosiones en el mismo cuadrante
+        const countInGrid = activeExplosions.filter(e => e.grid === grid).length;
+        
+        // Si hay más de 3 explosiones en 5 min en el mismo cuadrante, es un Raid probable
+        if (countInGrid >= 3) {
+           const alertKey = `${key}-${grid}-raid`;
+           const lastRaidAlert = this.lastBaseAlerts.get(alertKey) || 0;
+           if (now - lastRaidAlert > 600000) { // Alerta cada 10 min máximo por cuadrante
+              const msg = this.formatMsg(steamId, ip, 'raid_alert', `¡ALERTA DE RAID POSIBLE en {grid}! Múltiples explosiones detectadas ({count}).`, { grid, count: countInGrid });
+              this.botSendTeamMessage(steamId, ip, msg);
+              this.addIntel(steamId, ip, 'RAID', msg, { grid, count: countInGrid });
+              this.lastBaseAlerts.set(alertKey, now);
+              
+              // Notificar Discord
+              const serverObj = getServers(steamId).find((s: any) => s.ip === ip) as any;
+              if (serverObj && (serverObj.discordWebhook || serverObj.discordChannelId)) {
+                try {
+                  const { DiscordManager } = require('../discord/DiscordManager');
+                  DiscordManager.sendRaidAlert({
+                    webhookUrl: serverObj.discordWebhook,
+                    channelId: serverObj.discordChannelId
+                  }, grid, serverObj.name);
+                } catch (e) {
+                  console.error("[RustPlus] Error enviando alerta de raid a Discord:", e);
+                }
+              }
+           }
+        }
+      }
+
       // Detección de nuevas Vending Machines (Tipo 3)
       if (m.type === 3 && hasPreviousState && !lastEventIds.includes(m.id)) {
         const grid = worldToGrid(m.x, m.y, mapSize);
@@ -909,6 +1035,32 @@ class RustPlusManager extends EventEmitter {
     this.lastMarkerStates.set(key, markers);
   }
 
+
+  getPlayerHistory(steamId: string, ip: string) {
+    const key = `${steamId}-${ip}`;
+    const historyMap = this.playerHistory.get(key);
+    if (!historyMap) return {};
+    
+    // Convertir Map a objeto plano para JSON
+    const result: any = {};
+    historyMap.forEach((path, sid) => {
+      result[sid] = path;
+    });
+    return result;
+  }
+
+  getGlobalStats() {
+    const activeServers = Array.from(this.connections.keys());
+    return {
+      activeConnections: activeServers.length,
+      servers: activeServers.map(k => ({
+        key: k,
+        ready: this.ready.get(k),
+        lastActivity: this.lastActivity.get(k),
+        reconnectAttempts: this.reconnectAttempts.get(k) || 0
+      }))
+    };
+  }
 
   getChatHistory(steamId: string, ip: string) {
     return this.chatHistory.get(`${steamId}-${ip}`) || [];
@@ -1032,3 +1184,57 @@ export async function bootstrap() {
     console.error("[RustPlus] Error durante el arranque táctico:", err);
   }
 }
+  private async handleReconnect(steamId: string, connection: ServerConnection) {
+    const key = `${steamId}-${connection.ip}`;
+    if (this.reconnectTimer.has(key)) return;
+
+    const attempts = this.reconnectAttempts.get(key) || 0;
+    const delay = Math.min(Math.pow(2, attempts) * 2000, 300000); // 2s, 4s, 8s... max 5min
+
+    console.log(`[RustPlus] Reconexión automática en ${delay / 1000}s para ${connection.ip} (Intento ${attempts + 1})`);
+    
+    const timer = setTimeout(async () => {
+      this.reconnectTimer.delete(key);
+      this.reconnectAttempts.set(key, attempts + 1);
+      try {
+        await this.connect(steamId, connection);
+      } catch (e) {
+        // Silencioso, el evento disconnected volverá a disparar si falla
+      }
+    }, delay);
+
+    this.reconnectTimer.set(key, timer);
+  }
+
+  private async processMessage(steamId: string, connection: ServerConnection, message: any) {
+    // Traslado de la lógica pesada a este método asíncrono
+    if (message.broadcast?.teamMessage) {
+      const teamKey = `${steamId}-${connection.ip}`;
+      const chatMsg = message.broadcast.teamMessage.message;
+      
+      const fullMsg = {
+        steamId: String(chatMsg.steamId),
+        name: chatMsg.name,
+        message: chatMsg.message,
+        color: chatMsg.color,
+        time: Date.now()
+      };
+
+      const history = this.chatHistory.get(teamKey) || [];
+      history.push(fullMsg);
+      if (history.length > 100) history.shift();
+      this.chatHistory.set(teamKey, history);
+
+      try {
+        const server = getServers(steamId).find((s: any) => s.ip === connection.ip) as any;
+        if (server) {
+          saveTeamMessage(server.id || `${steamId}-${connection.ip}`, fullMsg);
+        }
+      } catch (e) {}
+
+      if (chatMsg.message.startsWith("!")) {
+        this.handleTeamCommand(steamId, connection.ip, chatMsg.message);
+      }
+    }
+    this.emit("message", { steamId, ip: connection.ip, message });
+  }

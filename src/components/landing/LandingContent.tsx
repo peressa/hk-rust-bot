@@ -22,7 +22,7 @@ export default function LandingContent() {
 
   // Intentar detectar idioma o cargar de localStorage (opcional)
   useEffect(() => {
-    const savedLang = localStorage.getItem('hk-ops-lang') as Language;
+    const savedLang = localStorage.getItem('rust-ops-lang') as Language;
     if (savedLang && ['en', 'es', 'pt'].includes(savedLang)) {
       setLang(savedLang);
     }
@@ -30,7 +30,7 @@ export default function LandingContent() {
 
   const changeLang = (l: Language) => {
     setLang(l);
-    localStorage.setItem('hk-ops-lang', l);
+    localStorage.setItem('rust-ops-lang', l);
     // Establecer cookie para que sea legible en el servidor (login, etc)
     document.cookie = `NEXT_LOCALE=${l}; path=/; max-age=31536000; SameSite=Lax`;
   };

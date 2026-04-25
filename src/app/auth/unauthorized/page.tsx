@@ -14,7 +14,7 @@ function UnauthorizedPageContent() {
   const tp = dictionaries[lang].pricing;
 
   useEffect(() => {
-    const savedLang = localStorage.getItem('hk-ops-lang') as Language;
+    const savedLang = localStorage.getItem('rust-ops-lang') as Language;
     if (savedLang && ['en', 'es', 'pt'].includes(savedLang)) {
       setLang(savedLang);
     }
@@ -22,8 +22,8 @@ function UnauthorizedPageContent() {
 
   const handleBuy = (mode: string) => {
     const checkoutUrls: any = {
-      monthly: "https://hkbot.lemonsqueezy.com/checkout/buy/tu-id-producto-mensual",
-      annual: "https://hkbot.lemonsqueezy.com/checkout/buy/tu-id-producto-anual"
+      monthly: "https://rustops.lemonsqueezy.com/checkout/buy/tu-id-producto-mensual",
+      annual: "https://rustops.lemonsqueezy.com/checkout/buy/tu-id-producto-anual"
     };
 
     let url = checkoutUrls[mode];

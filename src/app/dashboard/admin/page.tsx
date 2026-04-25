@@ -3,37 +3,25 @@
 import React, { useEffect, useState } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import { 
-  Shield, 
-  UserPlus, 
-  Trash2, 
+  ShieldAlert, 
+  Activity, 
+  Server, 
+  Globe, 
   Clock, 
-  Search, 
   RefreshCw,
-  UserCheck,
-  Calendar
+  Terminal,
+  Database
 } from "lucide-react";
 
-export default function AdminPage() {
-  const [users, setUsers] = useState<any[]>([]);
+export default function AdminDashboardPage() {
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  
-  // Form state
-  const [newSteamId, setNewSteamId] = useState("");
-  const [newName, setNewName] = useState("");
-  const [newDays, setNewDays] = useState(30);
-  const [isAdding, setIsAdding] = useState(false);
 
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    setLoading(true);
+  const fetchStats = async () => {
     try {
-      const res = await fetch("/api/admin/whitelist");
+      const res = await fetch("/api/admin/stats");
       const data = await res.json();
-      setUsers(data);
+      setStats(data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -41,199 +29,124 @@ export default function AdminPage() {
     }
   };
 
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsAdding(true);
-    try {
-      const res = await fetch("/api/admin/whitelist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          steamId: newSteamId,
-          name: newName,
-          days: newDays,
-          role: "user"
-        })
-      });
-      if (res.ok) {
-        setNewSteamId("");
-        setNewName("");
-        fetchUsers();
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsAdding(false);
-    }
-  };
+  useEffect(() => {
+    fetchStats();
+    const interval = setInterval(fetchStats, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
-  const handleDelete = async (steamId: string) => {
-    if (!confirm("¿Estás seguro de eliminar a este usuario de la whitelist?")) return;
-    try {
-      await fetch(`/api/admin/whitelist?steamId=${steamId}`, { method: "DELETE" });
-      fetchUsers();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  const filteredUsers = users.filter(u => 
-    u.steamId.includes(searchTerm) || 
-    (u.name && u.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  if (loading) return (
+    <DashboardLayout>
+       <div style={{ display: 'grid', placeItems: 'center', height: '100%' }}>
+          <RefreshCw className="animate-spin" size={48} color="var(--primary)" />
+       </div>
+    </DashboardLayout>
   );
 
   return (
     <DashboardLayout>
-      <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <div style={{ padding: '2rem', maxWidth: '1200px', margin: '0 auto' }}>
         
-        {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'white', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <Shield size={32} color="var(--primary)" /> Gestión de Whitelist
-            </h1>
-            <p style={{ color: 'var(--text-muted)' }}>Administra el acceso manual de tus clientes y licencias.</p>
-          </div>
-          <button onClick={fetchUsers} className="btn-secondary" style={{ padding: '0.5rem' }}>
-            <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
-          </button>
+        <header style={{ marginBottom: '3rem', borderLeft: '4px solid var(--primary)', paddingLeft: '1.5rem' }}>
+           <h1 style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', margin: 0 }}>
+             CENTRO DE MANDO GLOBAL
+           </h1>
+           <p style={{ color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.8rem', letterSpacing: '0.1em' }}>
+             SaaS Administration & Infrastructure Monitor
+           </p>
+        </header>
+
+        {/* Stats Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '3rem' }}>
+           <StatCard 
+             icon={<Activity color="var(--primary)" />} 
+             label="CONEXIONES ACTIVAS" 
+             value={stats?.activeConnections || 0} 
+           />
+           <StatCard 
+             icon={<Server color="#22c55e" />} 
+             label="SERVIDORES VINCULADOS" 
+             value={stats?.totalServers || 0} 
+           />
+           <StatCard 
+             icon={<Globe color="#3b82f6" />} 
+             label="USUARIOS REGISTRADOS" 
+             value={stats?.totalUsers || 0} 
+           />
+           <StatCard 
+             icon={<ShieldAlert color="#f97316" />} 
+             label="ALERTAS (ÚLT. 24H)" 
+             value={stats?.alertsToday || 0} 
+           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2rem', alignItems: 'start' }}>
-          
-          {/* Main List */}
-          <div className="premium-card">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.75rem', borderRadius: '8px' }}>
-              <Search size={20} color="var(--text-muted)" />
-              <input 
-                type="text" 
-                placeholder="Buscar por SteamID o Nombre..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                style={{ background: 'transparent', border: 'none', outline: 'none', color: 'white', width: '100%' }}
-              />
-            </div>
-
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        {/* Servers Table */}
+        <section className="premium-card" style={{ padding: '2rem' }}>
+           <h3 style={{ fontFamily: 'var(--font-barlow)', fontSize: '1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+             <Terminal size={20} color="var(--primary)" /> Servidores Activos en Tiempo Real
+           </h3>
+           
+           <div style={{ overflowX: 'auto' }}>
+             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
                 <thead>
-                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                    <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>USUARIO</th>
-                    <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>ROL</th>
-                    <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem' }}>EXPIRACIÓN</th>
-                    <th style={{ padding: '1rem', color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'right' }}>ACCIONES</th>
-                  </tr>
+                   <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                      <th style={{ padding: '1rem' }}>SERVIDOR / KEY</th>
+                      <th style={{ padding: '1rem' }}>ESTADO</th>
+                      <th style={{ padding: '1rem' }}>REINTENTOS</th>
+                      <th style={{ padding: '1rem' }}>ÚLT. ACTIVIDAD</th>
+                   </tr>
                 </thead>
                 <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr key={user.steamId} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                      <td style={{ padding: '1rem' }}>
-                        <div style={{ fontWeight: 600 }}>{user.name || "Sin nombre"}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{user.steamId}</div>
-                      </td>
-                      <td style={{ padding: '1rem' }}>
-                        <span style={{ 
-                          fontSize: '0.7rem', 
-                          padding: '0.2rem 0.6rem', 
-                          borderRadius: '10px', 
-                          background: user.role === 'admin' ? 'rgba(205,65,43,0.2)' : 'rgba(255,255,255,0.05)',
-                          color: user.role === 'admin' ? 'var(--primary)' : 'white',
-                          fontWeight: 700
-                        }}>
-                          {user.role.toUpperCase()}
-                        </span>
-                      </td>
-                      <td style={{ padding: '1rem', fontSize: '0.85rem' }}>
-                        {user.expiresAt ? (
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: new Date(user.expiresAt) < new Date() ? '#ef4444' : 'inherit' }}>
-                            <Clock size={14} /> {new Date(user.expiresAt).toLocaleDateString()}
-                          </div>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)' }}>Permanente</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '1rem', textAlign: 'right' }}>
-                        {user.role !== 'admin' && (
-                          <button 
-                            onClick={() => handleDelete(user.steamId)}
-                            className="btn-secondary" 
-                            style={{ color: '#ef4444', padding: '0.5rem' }}
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {filteredUsers.length === 0 && !loading && (
-                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
-                  No se encontraron usuarios.
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Sidebar: Add User */}
-          <div className="premium-card">
-            <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <UserPlus size={20} color="var(--primary)" /> Añadir Usuario
-            </h3>
-            <form onSubmit={handleAdd} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>SteamID 64</label>
-                <input 
-                  type="text" 
-                  required
-                  value={newSteamId}
-                  onChange={(e) => setNewSteamId(e.target.value)}
-                  placeholder="7656119..." 
-                  style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '6px', color: 'white' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>Nombre / Notas</label>
-                <input 
-                  type="text" 
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="Ej: Cliente PayPal" 
-                  style={{ width: '100%', padding: '0.75rem', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border)', borderRadius: '6px', color: 'white' }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.5rem' }}>Días de Licencia</label>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                   {[30, 90, 365, 0].map(d => (
-                     <button 
-                      key={d} 
-                      type="button"
-                      onClick={() => setNewDays(d)}
-                      style={{ 
-                        flex: 1, 
-                        padding: '0.5rem', 
-                        fontSize: '0.7rem', 
-                        borderRadius: '4px',
-                        background: newDays === d ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
-                        color: newDays === d ? 'white' : 'var(--text-muted)',
-                        border: 'none',
-                        cursor: 'pointer'
-                      }}
-                     >
-                       {d === 0 ? "LIFE" : d + "d"}
-                     </button>
+                   {stats?.servers?.map((server: any) => (
+                      <tr key={server.key} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                         <td style={{ padding: '1rem', fontWeight: 700 }}>
+                            {server.key}
+                         </td>
+                         <td style={{ padding: '1rem' }}>
+                            <span style={{ 
+                              background: server.ready ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              color: server.ready ? '#22c55e' : '#ef4444',
+                              padding: '0.2rem 0.6rem',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 800,
+                              textTransform: 'uppercase'
+                            }}>
+                               {server.ready ? 'ONLINE' : 'OFFLINE'}
+                            </span>
+                         </td>
+                         <td style={{ padding: '1rem', color: server.reconnectAttempts > 0 ? '#f97316' : 'inherit' }}>
+                            {server.reconnectAttempts}
+                         </td>
+                         <td style={{ padding: '1rem', color: 'var(--text-muted)' }}>
+                            {server.lastActivity ? new Date(server.lastActivity).toLocaleTimeString() : 'Nunca'}
+                         </td>
+                      </tr>
                    ))}
-                </div>
-              </div>
-              <button disabled={isAdding} className="btn-primary" style={{ width: '100%', padding: '1rem', marginTop: '1rem' }}>
-                {isAdding ? <RefreshCw className="animate-spin" /> : "Activar Licencia"}
-              </button>
-            </form>
-          </div>
+                </tbody>
+             </table>
+           </div>
+        </section>
 
-        </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function StatCard({ icon, label, value }: { icon: any, label: string, value: any }) {
+  return (
+    <div className="premium-card" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+       <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px' }}>
+          {icon}
+       </div>
+       <div>
+          <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '0.1em', marginBottom: '0.25rem' }}>
+             {label}
+          </div>
+          <div style={{ fontSize: '1.75rem', fontWeight: 900, fontFamily: 'var(--font-barlow)' }}>
+             {value}
+          </div>
+       </div>
+    </div>
   );
 }

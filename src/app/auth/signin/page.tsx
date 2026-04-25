@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
@@ -16,7 +16,7 @@ export default function SignInPage() {
       if (parts.length === 2) return parts.pop()?.split(';').shift();
     };
     
-    const savedLang = (getCookie('NEXT_LOCALE') || localStorage.getItem('hk-ops-lang')) as Language;
+    const savedLang = (getCookie('NEXT_LOCALE') || localStorage.getItem('rust-ops-lang')) as Language;
     if (savedLang && ['en', 'es', 'pt'].includes(savedLang)) {
       setLang(savedLang);
     }

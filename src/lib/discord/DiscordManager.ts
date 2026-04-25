@@ -24,7 +24,7 @@ export class DiscordManager {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            username: "HK TACTICAL",
+            username: "Rust Ops Tactical",
             avatar_url: this.AVATAR_URL,
             ...payload
           })
@@ -41,26 +41,42 @@ export class DiscordManager {
   static async sendAlarm(config: DiscordConfig, title: string, message: string, serverName: string) {
     await this.sendNotify(config, {
       embeds: [{
-        title: `🚨 Alarma: ${title}`,
-        description: message,
+        title: `🚨 DISPOSITIVO ACTIVADO`,
+        description: `**Alarma:** ${title}\n**Estado:** ${message}`,
         color: 0xeab308, // Amarillo
-        footer: { text: `Servidor: ${serverName}` },
+        author: { name: "RUST OPS TACTICAL", icon_url: this.AVATAR_URL },
+        footer: { text: `📡 Enlace Directo: ${serverName}` },
         timestamp: new Date().toISOString()
       }]
     });
   }
 
   static async sendDeath(config: DiscordConfig, playerName: string, x: number, y: number, serverName: string, killer?: string) {
-    const description = killer 
-      ? `**${playerName}** fue eliminado por **${killer}**.\nCoordenadas: \`X: ${Math.round(x)}, Y: ${Math.round(y)}\``
-      : `**${playerName}** ha muerto.\nCoordenadas: \`X: ${Math.round(x)}, Y: ${Math.round(y)}\``;
-
     await this.sendNotify(config, {
       embeds: [{
-        title: `💀 Jugador Caído: ${playerName}`,
-        description: description,
+        title: `💀 JUGADOR CAÍDO`,
+        fields: [
+          { name: "Víctima", value: `\`${playerName}\``, inline: true },
+          { name: "Eliminado por", value: `\`${killer || "Desconocido"}\``, inline: true },
+          { name: "Ubicación", value: `\`X: ${Math.round(x)}, Y: ${Math.round(y)}\``, inline: false }
+        ],
         color: 0xef4444, // Rojo
-        footer: { text: `Servidor: ${serverName}` },
+        author: { name: "RUST OPS TACTICAL", icon_url: this.AVATAR_URL },
+        footer: { text: `📡 Enlace Directo: ${serverName}` },
+        timestamp: new Date().toISOString()
+      }]
+    });
+  }
+
+  static async sendRaidAlert(config: DiscordConfig, grid: string, serverName: string) {
+    await this.sendNotify(config, {
+      embeds: [{
+        title: `🧨 ¡ALERTA DE RAID POSIBLE!`,
+        description: `Se han detectado múltiples explosiones en el cuadrante **${grid}**.\n*Respuesta inmediata recomendada.*`,
+        color: 0xce422b, // Rojo Rust
+        author: { name: "SISTEMA DE DEFENSA ACTIVA", icon_url: this.AVATAR_URL },
+        thumbnail: { url: "https://files.facepunch.com/lewis/1b2911b1/rust-header.jpg" },
+        footer: { text: `📡 Enlace Directo: ${serverName}` },
         timestamp: new Date().toISOString()
       }]
     });
@@ -69,10 +85,11 @@ export class DiscordManager {
   static async sendEvent(config: DiscordConfig, eventName: string, grid: string, serverName: string) {
     await this.sendNotify(config, {
       embeds: [{
-        title: `🌍 Evento Detectado: ${eventName}`,
-        description: `Se ha detectado actividad en **${grid}**.`,
+        title: `🌍 EVENTO GLOBAL DETECTADO`,
+        description: `**Objeto:** ${eventName}\n**Cuadrante:** ${grid}`,
         color: 0x3b82f6, // Azul
-        footer: { text: `Servidor: ${serverName}` },
+        author: { name: "INTELIGENCIA ESTRATÉGICA", icon_url: this.AVATAR_URL },
+        footer: { text: `📡 Enlace Directo: ${serverName}` },
         timestamp: new Date().toISOString()
       }]
     });
@@ -81,10 +98,11 @@ export class DiscordManager {
   static async sendPairing(config: DiscordConfig, serverName: string, ip: string, port: string) {
     await this.sendNotify(config, {
       embeds: [{
-        title: `🔗 Enlace Satelital Establecido`,
-        description: `RUST OPS se ha emparejado exitosamente con el servidor.\nIP: \`${ip}:${port}\``,
+        title: `🔗 ENLACE SATELITAL ESTABLECIDO`,
+        description: `Rust Ops se ha sincronizado con el terminal remoto.\nIP: \`${ip}:${port}\``,
         color: 0x22c55e, // Verde
-        footer: { text: `Servidor: ${serverName}` },
+        author: { name: "RUST OPS TACTICAL", icon_url: this.AVATAR_URL },
+        footer: { text: `📡 Enlace Directo: ${serverName}` },
         timestamp: new Date().toISOString()
       }]
     });

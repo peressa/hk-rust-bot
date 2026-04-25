@@ -18,15 +18,17 @@ import TeamRoster from "@/components/dashboard/TeamRoster";
 import IntelFeed from "@/components/dashboard/IntelFeed";
 import RustMap from "@/components/map/RustMap";
 import ServerHero from "@/components/dashboard/ServerHero";
+import BotConfigModal from "@/components/dashboard/BotConfigModal";
 
 export default function WarRoomPage({ params }: { params: Promise<{ serverId: string }> }) {
   const { serverId } = use(params);
-  const [intel, setIntel] = useState<any>({ team: [], markers: [], intelLog: [] });
+  const [intel, setIntel] = useState<any>({ team: [], markers: [], intelLog: [], history: {} });
   const [serverInfo, setServerInfo] = useState<any>(null);
   const [entities, setEntities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [serverData, setServerData] = useState<any>(null);
   const [mapData, setMapData] = useState<any>(null);
+  const [showConfig, setShowConfig] = useState(false);
 
   useEffect(() => {
     fetchInitialData();
@@ -130,16 +132,44 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
           <div style={{ display: 'flex', gap: '2rem', alignItems: 'center' }}>
              <StatusItem label="POBLACIÓN" value={serverInfo ? `${serverInfo.players} / ${serverInfo.maxPlayers}` : "---"} />
              <StatusItem label="OPERATIVOS" value={`${intel.team.filter((m: any) => m.isOnline).length} / ${intel.team.length}`} />
-             <Link href="/dashboard/settings" style={{ color: 'var(--text-muted)' }}><Settings size={18} /></Link>
+             <button 
+               onClick={() => setShowConfig(true)}
+               style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+             >
+               <Settings size={18} />
+             </button>
           </div>
         </header>
+
+        {showConfig && (
+          <BotConfigModal 
+            serverId={serverId} 
+            initialPrefix={serverData?.prefix} 
+            onClose={() => setShowConfig(false)} 
+            onSave={() => fetchInitialData()}
+          />
+        )}
 
         {/* Main 3-Column Tactical Area */}
         <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr 340px', gap: '1rem', flex: 1, minHeight: 0 }}>
           
           {/* Col 1: Team Roster */}
-          <aside style={{ height: '100%', minHeight: 0 }}>
+          <aside style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
              <TeamRoster members={intel.team} />
+             
+             {/* Fase 3.3: Sistema de Logs en Tiempo Real */}
+             <div className="premium-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '1rem' }}>
+                <h4 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Radio size={14} className="animate-pulse" color="var(--primary)" /> TERMINAL TÁCTICO
+                </h4>
+                <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.7rem', fontFamily: 'monospace', color: '#22c55e', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                   {intel.intelLog.map((l: any) => (
+                     <div key={l.id} style={{ opacity: 0.8 }}>
+                        <span style={{ color: '#444' }}>[{new Date(l.timestamp).toLocaleTimeString([], { hour12: false })}]</span> {l.message}
+                     </div>
+                   ))}
+                </div>
+             </div>
           </aside>
 
           {/* Col 2: Tactical Map */}
@@ -151,6 +181,7 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
                  ...intel.team.map((m: any) => ({ ...m, type: 'PLAYER' })),
                  ...(intel.intelLog.filter((l: any) => l.type === 'DEATH').map((l: any) => ({ ...l.data, type: 'DEATH' })))
                ]} 
+               playerHistory={intel.history || {}}
                mapJpg={mapData?.jpgImage}
                mapSize={mapData?.mapSize}
                oceanMargin={mapData?.margin ?? mapData?.oceanMargin ?? 0}

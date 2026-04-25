@@ -40,9 +40,14 @@ export async function GET(request: Request) {
        }
     });
 
-    return NextResponse.json(teamInfo);
+    const history = rustPlusManager.getPlayerHistory(session.user.steamId, server.ip);
+
+    return NextResponse.json({
+      ...teamInfo,
+      history
+    });
   } catch (error: any) {
     console.warn("[API Team] Silent Fallback");
-    return NextResponse.json({ members: [] }, { status: 200 });
+    return NextResponse.json({ members: [], history: {} }, { status: 200 });
   }
 }
