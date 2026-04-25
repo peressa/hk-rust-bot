@@ -212,75 +212,57 @@ export default function RustMap({
       const gridGroup = L.layerGroup().addTo(leafletMap.current);
       layersRef.current['gridGroup'] = gridGroup;
 
-      const lineOpts = { color: 'rgba(255,255,255,0.12)', weight: 1, interactive: false };
+      const lineOpts = { color: 'rgba(255,255,255,0.08)', weight: 1, interactive: false };
       const cellSize = GRID_CELL_SIZE; 
       
-      const numCells = Math.ceil(totalUnits / cellSize);
-      // El inicio de la grilla en la imagen
-      const gridStart = -totalUnits / 2;
-      // El inicio de la tierra en la grilla (para el offset de letras/números)
       const worldHalf = mapSize / 2;
+      const numLandCells = Math.ceil(mapSize / cellSize);
 
-      // Líneas Verticales + etiquetas de columna (A, B, C...)
-      for (let i = 0; i <= numCells; i++) {
-        const x = gridStart + (i * cellSize);
-        const pTop    = worldToLeaflet(x, totalUnits / 2, mapSize, margin, width);
-        const pBottom = worldToLeaflet(x, -totalUnits / 2, mapSize, margin, width);
+      // Dibujamos la grilla centrada en la TIERRA (A0 a Z25)
+      for (let i = 0; i < numLandCells; i++) {
+        for (let j = 0; j < numLandCells; j++) {
+          const worldX = -worldHalf + (i * cellSize);
+          const worldY = worldHalf - (j * cellSize);
 
-        L.polyline([[pTop.lat, pTop.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
+          // Puntos de la celda
+          const pTopLeft = worldToLeaflet(worldX, worldY, mapSize, margin, width);
+          const pBottomRight = worldToLeaflet(worldX + cellSize, worldY - cellSize, mapSize, margin, width);
 
-        if (i < numCells) {
-          // Calculamos la letra basada en la distancia al borde de la TIERRA
-          // Así la columna A siempre será la misma en el juego y el bot
-          const cellXInWorld = x + worldHalf;
-          const letterIndex = Math.floor(cellXInWorld / cellSize);
-          
-          if (letterIndex >= 0) {
-            const char = indexToLetter(letterIndex);
-            const pLabel = worldToLeaflet(x + cellSize / 2, totalUnits / 2, mapSize, margin, width);
-            
-            L.marker([pLabel.lat, pLabel.lng], {
-              icon: L.divIcon({
-                className: '',
-                html: `<div style="color:rgba(255,255,255,0.4);font-size:12px;font-weight:900;transform:translateX(-50%);text-shadow:1px 1px 2px black;">${char}</div>`,
-                iconSize: [0, 0]
-              }),
-              interactive: false
-            }).addTo(gridGroup);
+          // Dibujar el cuadrado (o solo las líneas externas una vez)
+          if (j === 0) { // Línea vertical superior
+             const pBottom = worldToLeaflet(worldX, -worldHalf, mapSize, margin, width);
+             L.polyline([[pTopLeft.lat, pTopLeft.lng], [pBottom.lat, pBottom.lng]], lineOpts).addTo(gridGroup);
           }
+          if (i === 0) { // Línea horizontal izquierda
+             const pRight = worldToLeaflet(worldHalf, worldY, mapSize, margin, width);
+             L.polyline([[pTopLeft.lat, pTopLeft.lng], [pTopLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
+          }
+
+          // ETIQUETA EN CADA CUADRANTE (Ej: A0, B1)
+          const char = indexToLetter(i);
+          const row = j;
+          const pCenter = worldToLeaflet(worldX + cellSize / 2, worldY - cellSize / 2, mapSize, margin, width);
+
+          L.marker([pCenter.lat, pCenter.lng], {
+            icon: L.divIcon({
+              className: '',
+              html: `<div style="color:rgba(255,255,255,0.15);font-size:10px;font-weight:700;transform:translate(-50%, -50%);pointer-events:none;text-align:center;">${char}${row}</div>`,
+              iconSize: [0, 0]
+            }),
+            interactive: false
+          }).addTo(gridGroup);
         }
       }
 
-      // Líneas Horizontales + etiquetas de fila (0, 1, 2...)
-      for (let j = 0; j <= numCells; j++) {
-        const y = totalUnits / 2 - (j * cellSize);
-        const pLeft  = worldToLeaflet(-totalUnits / 2, y, mapSize, margin, width);
-        const pRight = worldToLeaflet(totalUnits / 2, y, mapSize, margin, width);
-
-        L.polyline([[pLeft.lat, pLeft.lng], [pLeft.lat, pRight.lng]], lineOpts).addTo(gridGroup);
-
-        if (j < numCells) {
-          // Calculamos el número basado en la distancia al tope de la TIERRA
-          const cellYInWorld = worldHalf - y;
-          const rowIndex = Math.floor(cellYInWorld / cellSize);
-          
-          if (rowIndex >= 0) {
-            const displayRow = rowIndex; // Empezar en 0 según lo solicitado
-            const pLabel = worldToLeaflet(-totalUnits / 2, y - cellSize / 2, mapSize, margin, width);
-            
-            L.marker([pLabel.lat, pLabel.lng], {
-              icon: L.divIcon({
-                className: '',
-                html: `<div style="color:rgba(255,255,255,0.4);font-size:12px;font-weight:900;transform:translateY(-50%);text-shadow:1px 1px 2px black;">${displayRow}</div>`,
-                iconSize: [0, 0]
-              }),
-              interactive: false
-            }).addTo(gridGroup);
-          }
-        }
-      }
+      // Cerrar la grilla con las líneas finales (derecha y abajo)
+      const pTopRight = worldToLeaflet(worldHalf, worldHalf, mapSize, margin, width);
+      const pBottomLeft = worldToLeaflet(-worldHalf, -worldHalf, mapSize, margin, width);
+      const pBottomRight = worldToLeaflet(worldHalf, -worldHalf, mapSize, margin, width);
+      
+      L.polyline([[pTopRight.lat, pTopRight.lng], [pBottomRight.lat, pBottomRight.lng]], lineOpts).addTo(gridGroup);
+      L.polyline([[pBottomLeft.lat, pBottomLeft.lng], [pBottomRight.lat, pBottomRight.lng]], lineOpts).addTo(gridGroup);
     }
-  }, [L, mapSize, margin, showGrid, totalUnits, width]);
+  }, [L, mapSize, margin, showGrid, width]);
 
   // Imagen Base64
   useEffect(() => {
