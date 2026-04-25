@@ -142,10 +142,10 @@ try {
   db.exec("ALTER TABLE servers ADD COLUMN botTemplates TEXT;"); // JSON string
 } catch(e) {}
 
-// MIGRACIÓN: Purgar caché para aplicar lógica de Unidades de Mundo vs Píxeles.
+// MIGRACIÓN: Purgar caché para aplicar lógica PROFESIONAL de Píxeles vs Metros (como RustPlusBot)
 try {
   db.prepare("DELETE FROM map_cache").run();
-  console.log("[DB Migration] Purgando caché para corregir escala de cuadrícula y marcadores.");
+  console.log("[DB Migration] Purgando caché para aplicar proyección exacta píxel/metro.");
 } catch(e) {}
 
 
