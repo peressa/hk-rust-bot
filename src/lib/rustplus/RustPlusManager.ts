@@ -23,6 +23,23 @@ protobuf.Type.prototype.add = function (obj: any) {
 };
 // =====================================================================
 
+function getJpgSize(buffer: Buffer): { width: number; height: number } | null {
+  if (buffer[0] !== 0xFF || buffer[1] !== 0xD8) return null;
+  let offset = 2;
+  while (offset < buffer.length) {
+    const marker = buffer.readUInt16BE(offset);
+    const length = buffer.readUInt16BE(offset + 2);
+    if (marker === 0xFFC0 || marker === 0xFFC2) {
+      return {
+        height: buffer.readUInt16BE(offset + 5),
+        width: buffer.readUInt16BE(offset + 7)
+      };
+    }
+    offset += 2 + length;
+  }
+  return null;
+}
+
 export interface ServerConnection {
   ip: string;
   port: string;
@@ -465,40 +482,35 @@ class RustPlusManager extends EventEmitter {
       }
 
       if (map.jpgImage) {
-          const base64 = Buffer.from(map.jpgImage).toString('base64');
+          const imageBuffer = Buffer.isBuffer(map.jpgImage) ? map.jpgImage : Buffer.from(map.jpgImage);
+          const base64 = imageBuffer.toString('base64');
+          const realSize = getJpgSize(imageBuffer);
 
-          // COORDENADAS: 
-          // - info.mapSize = tamaño del mundo/tierra en unidades Unity
-          // - map.width = ancho total de la imagen JPG en píxeles (= mapSize + 2*oceanMargin, escala 1:1)
-          // - map.oceanMargin = margen de océano del proto (en píxeles, puede ser 0)
           const reportedMapSize = info?.mapSize || 4000;
-          const reportedMapWidth = map.width || 0;
-          const protoOceanMargin = map.oceanMargin; // Del proto directamente
-
-          let mapSize = reportedMapSize;
+          const mapSize = reportedMapSize;
+          
           let oceanMargin: number;
+          let imageWidth: number;
+          let imageHeight: number;
 
-          // Priorizar el oceanMargin del proto si existe
-          if (protoOceanMargin !== undefined && protoOceanMargin !== null && protoOceanMargin >= 0) {
-              oceanMargin = protoOceanMargin;
-          } else if (reportedMapWidth > reportedMapSize + 100) {
-              // Calcular margen desde la diferencia entre ancho de imagen y tamaño de mundo
-              oceanMargin = Math.round((reportedMapWidth - reportedMapSize) / 2);
-          } else if (reportedMapWidth > 0 && reportedMapWidth <= reportedMapSize) {
-              // Mapa viene sin margen de océano
-              oceanMargin = 0;
+          if (realSize) {
+              imageWidth = realSize.width;
+              imageHeight = realSize.height;
+              oceanMargin = Math.max(0, Math.round((imageWidth - mapSize) / 2));
+              console.log(`${logPrefix} [DIMENSIONES REALES] Width=${imageWidth}, Height=${imageHeight}, MapSize=${mapSize} -> OceanMargin=${oceanMargin}`);
           } else {
-              // Fallback: margen estándar de Rust
-              oceanMargin = 1000;
+              const reportedMapWidth = map.width || 0;
+              imageWidth = reportedMapWidth || (mapSize + 2000);
+              imageHeight = map.height || imageWidth;
+              oceanMargin = Math.round((imageWidth - mapSize) / 2);
+              console.log(`${logPrefix} [FALLBACK] No se pudo leer JPG, usando reportedMapWidth=${reportedMapWidth} -> OceanMargin=${oceanMargin}`);
           }
-
-          console.log(`${logPrefix} [COORD FIX] MapSize=${mapSize}, Ocean=${oceanMargin}, Width=${reportedMapWidth}, Total=${mapSize + 2*oceanMargin}`);
 
           if (serverId) {
               saveMapCache(serverId, {
                 jpgImage: base64,
-                width: reportedMapWidth,
-                height: map.height,
+                width: imageWidth,
+                height: imageHeight,
                 monuments: map.monuments || [],
                 mapSize: mapSize,
                 oceanMargin: oceanMargin
@@ -506,6 +518,9 @@ class RustPlusManager extends EventEmitter {
           }
 
           // Inyectamos metadatos corregidos en la respuesta para el frontend
+          map.jpgImage = base64;
+          map.width = imageWidth;
+          map.height = imageHeight;
           map.mapSize = mapSize;
           map.oceanMargin = oceanMargin;
       }
