@@ -142,10 +142,10 @@ try {
   db.exec("ALTER TABLE servers ADD COLUMN botTemplates TEXT;"); // JSON string
 } catch(e) {}
 
-// MIGRACIÓN: Purgar caché de mapas para aplicar nueva detección REAL de dimensiones JPG.
+// MIGRACIÓN: Purgar caché para aplicar lógica de oceanMargin conservadora (evita saltos al agua)
 try {
   db.prepare("DELETE FROM map_cache").run();
-  console.log("[DB Migration] Purgando caché de mapas para aplicar detección de dimensiones por encabezado JPG.");
+  console.log("[DB Migration] Purgando caché para aplicar nueva lógica de proyección conservadora.");
 } catch(e) {}
 
 
