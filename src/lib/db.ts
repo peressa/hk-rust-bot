@@ -142,14 +142,10 @@ try {
   db.exec("ALTER TABLE servers ADD COLUMN botTemplates TEXT;"); // JSON string
 } catch(e) {}
 
-// MIGRACIÓN: Borrar TODA la caché de mapas para forzar re-descarga con coordenadas correctas.
-// El cálculo anterior de oceanMargin era incorrecto (forzaba 1000 o rechazaba 0).
-// Esta migración asegura que todos los mapas se recalculen con la lógica corregida.
+// MIGRACIÓN: Purgar caché de mapas para aplicar nueva detección REAL de dimensiones JPG.
 try {
-  const deleted = db.prepare("DELETE FROM map_cache").run();
-  if (deleted.changes > 0) {
-    console.log(`[DB Migration] Eliminados ${deleted.changes} caché(s) de mapa. Se re-descargarán con coordenadas correctas.`);
-  }
+  db.prepare("DELETE FROM map_cache").run();
+  console.log("[DB Migration] Purgando caché de mapas para aplicar detección de dimensiones por encabezado JPG.");
 } catch(e) {}
 
 
