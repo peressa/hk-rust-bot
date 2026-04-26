@@ -9,10 +9,11 @@ export class ListenerRegistry {
   private constructor() {}
 
   static getInstance(): ListenerRegistry {
-    if (!ListenerRegistry.instance) {
-      ListenerRegistry.instance = new ListenerRegistry();
+    const globalStore = global as any;
+    if (!globalStore._listenerRegistry) {
+      globalStore._listenerRegistry = new ListenerRegistry();
     }
-    return ListenerRegistry.instance;
+    return globalStore._listenerRegistry;
   }
 
   isListening(steamId: string): boolean {
