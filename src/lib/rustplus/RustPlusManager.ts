@@ -200,8 +200,7 @@ class RustPlusManager extends EventEmitter {
         this.connecting.delete(key);
         this.emit("error", { steamId, ip: connection.ip, error });
 
-        this.handleReconnect(steamId, connection);
-      });
+        if (!connection.useProxy && (
           errMsg.includes('socket') || 
           errMsg.includes('ECONNREFUSED') || 
           errMsg.includes('hang up') || 
@@ -210,6 +209,7 @@ class RustPlusManager extends EventEmitter {
           console.log(`[RustPlus] Error en conexión (${errMsg}). Reintentando vía Proxy...`);
           this.internalConnect(steamId, { ...connection, useProxy: true }, true).then(resolve).catch(reject);
         } else {
+          this.handleReconnect(steamId, connection);
           reject(error);
         }
       });
