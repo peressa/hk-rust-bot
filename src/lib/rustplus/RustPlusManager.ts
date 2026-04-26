@@ -378,7 +378,7 @@ class RustPlusManager extends EventEmitter {
 
         if (target) {
           await this.sendRequest(steamId, ip, { promoteToLeader: { steamId: target.steamId } });
-          rustplus.sendTeamMessage(`:exclamation: 👑 ${target.name} ha sido promovido a líder del equipo.`);
+          rustplus.sendTeamMessage(`:exclamation: ${target.name} ha sido promovido a líder del equipo.`);
         } else {
           rustplus.sendTeamMessage(`:exclamation: No se encontró a nadie llamado "${args}" en el equipo.`);
         }
@@ -1153,6 +1153,36 @@ class RustPlusManager extends EventEmitter {
     return results;
   }
 
+  /**
+   * Intenta reconectar todos los servidores guardados en la base de datos.
+   */
+  async reconnectAllServers() {
+    console.log("[RustPlus Manager] Iniciando reconexión masiva de servidores...");
+    try {
+      const servers = db.prepare("SELECT * FROM servers").all() as any[];
+      console.log(`[RustPlus Manager] Se encontraron ${servers.length} servidores configurados.`);
+      
+      for (const server of servers) {
+        try {
+          console.log(`[RustPlus Manager] Auto-reconectando a ${server.ip}...`);
+          // Conectamos de forma asíncrona para no bloquear el arranque
+          this.connect(server.steamId, {
+            ip: server.ip,
+            port: server.port,
+            playerId: server.playerId,
+            playerToken: server.playerToken
+          }).catch(err => {
+            console.error(`[RustPlus Manager] Error en auto-conexión a ${server.ip}:`, err.message);
+          });
+        } catch (serverErr) {
+          console.error(`[RustPlus Manager] Fallo al procesar servidor ${server.ip}:`, serverErr);
+        }
+      }
+    } catch (err) {
+      console.error("[RustPlus Manager] Error crítico en reconnectAllServers:", err);
+    }
+  }
+
   private async handleReconnect(steamId: string, connection: ServerConnection) {
     const key = `${steamId}-${connection.ip}`;
     if (this.reconnectTimer.has(key)) return;
@@ -1225,6 +1255,9 @@ export async function bootstrap() {
   
   try {
     await rustPlusManager.checkProtos();
+    
+    // Reconectar servidores activos de la DB
+    await rustPlusManager.reconnectAllServers();
     
     // Importación dinámica para evitar ciclos en el arranque
     const { FcmManager } = await import("../fcm/FcmManager");
