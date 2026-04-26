@@ -1152,38 +1152,7 @@ class RustPlusManager extends EventEmitter {
     console.log("[RustPlus Diagnostic Final]:", JSON.stringify(results, null, 2));
     return results;
   }
-}
 
-// Singleton for the whole app (persists across requests in Next.js)
-const globalStore = global as any;
-
-export const rustPlusManager: RustPlusManager = globalStore._rustPlusManager || (globalStore._rustPlusManager = new RustPlusManager());
-
-/**
- * Función de arranque seguro (Bootstrapping).
- * Se debe llamar desde instrumentation.ts para evitar ejecuciones durante el build.
- */
-export async function bootstrap() {
-  if (typeof window !== 'undefined') return;
-
-  console.log("[RustPlus] Ejecutando Bootstrapping Operativo...");
-  
-  try {
-    await rustPlusManager.checkProtos();
-    
-    // Importación dinámica para evitar ciclos en el arranque
-    const { FcmManager } = await import("../fcm/FcmManager");
-    await FcmManager.initAllListeners();
-
-    // Inicializar el Bot de Discord en segundo plano
-    const { discordBotManager } = await import("../discord/DiscordBotManager");
-    discordBotManager.init().catch(e => console.error("[Discord] Fallo al iniciar el bot:", e));
-    
-    console.log("[RustPlus] Bootstrapping completado con éxito.");
-  } catch (err) {
-    console.error("[RustPlus] Error durante el arranque táctico:", err);
-  }
-}
   private async handleReconnect(steamId: string, connection: ServerConnection) {
     const key = `${steamId}-${connection.ip}`;
     if (this.reconnectTimer.has(key)) return;
@@ -1238,3 +1207,35 @@ export async function bootstrap() {
     }
     this.emit("message", { steamId, ip: connection.ip, message });
   }
+}
+
+// Singleton for the whole app (persists across requests in Next.js)
+const globalStore = global as any;
+
+export const rustPlusManager: RustPlusManager = globalStore._rustPlusManager || (globalStore._rustPlusManager = new RustPlusManager());
+
+/**
+ * Función de arranque seguro (Bootstrapping).
+ * Se debe llamar desde instrumentation.ts para evitar ejecuciones durante el build.
+ */
+export async function bootstrap() {
+  if (typeof window !== 'undefined') return;
+
+  console.log("[RustPlus] Ejecutando Bootstrapping Operativo...");
+  
+  try {
+    await rustPlusManager.checkProtos();
+    
+    // Importación dinámica para evitar ciclos en el arranque
+    const { FcmManager } = await import("../fcm/FcmManager");
+    await FcmManager.initAllListeners();
+
+    // Inicializar el Bot de Discord en segundo plano
+    const { discordBotManager } = await import("../discord/DiscordBotManager");
+    discordBotManager.init().catch(e => console.error("[Discord] Fallo al iniciar el bot:", e));
+    
+    console.log("[RustPlus] Bootstrapping completado con éxito.");
+  } catch (err) {
+    console.error("[RustPlus] Error durante el arranque táctico:", err);
+  }
+}
