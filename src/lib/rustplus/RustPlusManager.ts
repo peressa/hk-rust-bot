@@ -2,6 +2,7 @@ import db, { saveTeamMessage, getMapCache, saveMapCache, getServers, getEntities
 import { worldToGrid, worldToLeaflet, getRegionName } from "./coordUtils";
 import { FcmManager } from "../fcm/FcmManager";
 import protobuf from "protobufjs";
+import { EventEmitter } from "events";
 import { 
   RustPlusMember, 
   RustPlusMarker, 
