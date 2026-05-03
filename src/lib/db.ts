@@ -1,4 +1,6 @@
 import fs from "fs";
+import path from "path";
+import Database from "better-sqlite3";
 import { DbServer, DbEntity, DbMapCache, DbWhitelist } from "../types/db";
 
 const dataDir = path.resolve(process.cwd(), "data");
