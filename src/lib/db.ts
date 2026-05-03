@@ -145,9 +145,10 @@ try {
 export function ensureAdminExists() {
   try {
     const envAdminId = process.env.ADMIN_STEAM_ID?.trim();
-    if (!envAdminId) return;
+    // Fallback explícito para el usuario si la variable de entorno falla
+    const adminId = envAdminId || "76561198037219800"; 
 
-    console.log(`[DB] Asegurando Admin Principal: ${envAdminId}`);
+    console.log(`[DB] Asegurando Admin Principal: ${adminId} ${envAdminId ? '(desde ENV)' : '(FALLBACK)'}`);
     
     // Usamos INSERT OR REPLACE para asegurar que si el ID cambia en el ENV, se actualice el rol a admin
     const stmt = db.prepare("INSERT OR REPLACE INTO whitelist (steamId, name, role, expiresAt, createdAt) VALUES (?, ?, ?, ?, ?)");
