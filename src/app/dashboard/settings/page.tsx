@@ -113,7 +113,7 @@ export default function SettingsPage() {
                             </button>
                         </div>
                         <a 
-                            href="https://companion-rust.facepunch.com/" 
+                            href="https://companion-rust.facepunch.com/login" 
                             target="_blank" 
                             style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 900, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}
                         >
