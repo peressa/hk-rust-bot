@@ -143,10 +143,18 @@ try {
 
 // === Whitelist Admin Inicial ===
 try {
-  const adminId = process.env.ADMIN_STEAM_ID || "76561197960580123";
-  const stmt = db.prepare("INSERT OR IGNORE INTO whitelist (steamId, name, role, createdAt) VALUES (?, ?, ?, ?)");
-  stmt.run(adminId, "Admin Principal", "admin", new Date().toISOString());
-} catch(e) {}
+  const envAdminId = process.env.ADMIN_STEAM_ID?.trim();
+  const adminId = envAdminId || "76561197960580123";
+  
+  console.log(`[DB] Configurando Admin Principal. ID: ${adminId} ${envAdminId ? '(desde ENV)' : '(default)'}`);
+  
+  // Usamos INSERT OR REPLACE para asegurar que si el ID cambia en el ENV, se actualice el rol a admin
+  const stmt = db.prepare("INSERT OR REPLACE INTO whitelist (steamId, name, role, expiresAt, createdAt) VALUES (?, ?, ?, ?, ?)");
+  stmt.run(adminId, "Admin Principal", "admin", null, new Date().toISOString());
+} catch(e) {
+  console.error("[DB] Error inicializando admin:", e);
+}
+
 
 
 export function saveServer(server: Partial<DbServer> & { ip: string, port: string, playerId: string, playerToken: string }) {
@@ -277,8 +285,9 @@ export function deleteCamera(cameraId: string) {
 // === Whitelist Functions ===
 export function isWhitelisted(steamId: string): DbWhitelist | null {
   if (!steamId) return null;
+  const cleanId = String(steamId).trim();
   const stmt = db.prepare("SELECT * FROM whitelist WHERE steamId = ?");
-  const row = stmt.get(steamId) as DbWhitelist | undefined;
+  const row = stmt.get(cleanId) as DbWhitelist | undefined;
   
   if (!row) return null;
 

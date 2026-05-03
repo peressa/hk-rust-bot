@@ -19,13 +19,16 @@ export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
       async signIn({ user, account, profile }) {
         if (account?.provider === "steam") {
           const steamId = (profile as any)?.steamid;
-          const whitelistEntry = steamId ? isWhitelisted(steamId) : null;
+          console.log(`[Auth] Intento de login Steam: ${steamId}`);
+          
+          const whitelistEntry = steamId ? isWhitelisted(String(steamId).trim()) : null;
           
           if (whitelistEntry) {
+            console.log(`[Auth] Acceso concedido para ${steamId} (Rol: ${whitelistEntry.role})`);
             (user as any).role = whitelistEntry.role;
             return true;
           }
-          console.warn(`[Auth] Bloqueado SteamID: ${steamId}`);
+          console.warn(`[Auth] Bloqueado SteamID: ${steamId} - No está en whitelist o expiró.`);
           return `/auth/unauthorized?steamId=${steamId}`;
         }
 
