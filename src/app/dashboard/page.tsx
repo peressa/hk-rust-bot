@@ -197,46 +197,70 @@ export default function DashboardPage() {
                       ))}
                     </div>
                  </div>
-                 
-                 <div style={{ flex: 1, padding: '4rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', overflowY: 'auto' }}>
+                            <div style={{ flex: 1, padding: '4rem', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', overflowY: 'auto' }}>
                     <div style={{ maxWidth: '600px', width: '100%' }}>
                         <div style={{ background: 'rgba(88, 101, 242, 0.1)', padding: '2rem', borderRadius: '50%', width: 'fit-content', margin: '0 auto 2rem' }}>
-                            <Plus size={64} color="#5865F2" />
+                            <MessageSquare size={64} color="#5865F2" />
                         </div>
-                        <h2 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1rem' }}>Integración con Discord</h2>
-                        <p style={{ color: '#888', fontSize: '1.2rem', marginBottom: '3rem' }}>Conecta RUST OPS con tu servidor de Discord para recibir alertas en tiempo real.</p>
+                        <h2 style={{ fontSize: '3rem', fontWeight: 800, marginBottom: '1rem' }}>Sincronización Total</h2>
+                        <p style={{ color: '#888', fontSize: '1.2rem', marginBottom: '3rem' }}>Controla tu servidor de Rust directamente desde los comandos de Discord.</p>
                         
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', textAlign: 'left', marginBottom: '3rem' }}>
+                           <div style={{ background: 'rgba(255,255,255,0.03)', padding: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1rem', color: 'var(--primary)' }}>1. INVITA AL BOT</h3>
+                              <p style={{ fontSize: '0.9rem', color: '#888', marginBottom: '1.5rem' }}>El bot debe estar en tu servidor para poder enviar alertas y responder comandos.</p>
+                              <a 
+                                href={`https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&permissions=8&scope=bot%20applications.commands`}
+                                target="_blank"
+                                className="btn-primary"
+                                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', width: '100%', justifyContent: 'center' }}
+                              >
+                                 INVITAR AHORA <ExternalLink size={16} />
+                              </a>
+                           </div>
+
+                           <div style={{ background: 'rgba(255,255,255,0.03)', padding: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1rem', color: '#22c55e' }}>2. VINCULA TU CUENTA</h3>
+                              <p style={{ fontSize: '0.9rem', color: '#888', marginBottom: '1.5rem' }}>Para que el bot sepa qué servidores controlas, debes vincular tu identidad de Discord.</p>
+                              <button 
+                                onClick={() => {
+                                  const discordId = prompt("Introduce tu Discord ID (Activa el modo desarrollador en Discord y haz clic derecho en tu perfil -> Copiar ID):");
+                                  if (discordId) {
+                                    fetch("/api/user/link", {
+                                      method: "POST",
+                                      body: JSON.stringify({ discordId })
+                                    }).then(() => alert("✅ Discord vinculado con éxito."));
+                                  }
+                                }}
+                                className="btn-secondary"
+                                style={{ width: '100%', justifyContent: 'center', background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.2)' }}
+                              >
+                                 VINCULAR DISCORD ID
+                              </button>
+                           </div>
+                        </div>
+
                         <div style={{ textAlign: 'left', background: 'rgba(255,255,255,0.03)', padding: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', marginBottom: '2rem' }}>
-                           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>Webhook URL o ID del Canal</label>
-                           <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '1rem' }}>Introduce el ID del canal de texto de Discord donde quieres recibir las alertas de raideos, muertes y eventos para el servidor seleccionado. (El bot oficial debe estar invitado).</p>
+                           <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 800, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', marginBottom: '0.5rem' }}>CANAL DE ALERTAS TÁCTICAS</label>
+                           <p style={{ fontSize: '0.8rem', color: '#888', marginBottom: '1rem' }}>ID del canal donde se enviarán las notificaciones de Raids y Muertes para <strong>{servers.find(s => s.id === selectedBotServer)?.name}</strong>.</p>
                            
                            <div style={{ display: 'flex', gap: '0.5rem' }}>
                               <input 
                                 type="text" 
-                                placeholder="ID del Canal (ej. 123456789012345678) o Webhook URL"
-                                defaultValue={servers.find(s => s.id === selectedBotServer)?.discordChannelId || servers.find(s => s.id === selectedBotServer)?.discordWebhook || ""}
+                                placeholder="ID del Canal (ej. 123456789012345678)"
+                                defaultValue={servers.find(s => s.id === selectedBotServer)?.discordChannelId || ""}
                                 style={{ flex: 1, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '0.8rem 1rem', color: '#fff' }}
                                 onBlur={async (e) => {
                                   const val = e.target.value;
-                                  const isWebhook = val.includes("discord.com/api/webhooks");
-                                  const body = { serverId: selectedBotServer, [isWebhook ? "discordWebhook" : "discordChannelId"]: val, [isWebhook ? "discordChannelId" : "discordWebhook"]: null };
+                                  const body = { serverId: selectedBotServer, discordChannelId: val };
                                   await fetch("/api/servers", { method: "POST", body: JSON.stringify(body) });
-                                  // Minimal feedback...
                                 }}
                               />
                            </div>
                         </div>
-
-                        <a 
-                          href="https://discord.com/oauth2/authorize?client_id=1130541740924764261&permissions=8&scope=bot%20applications.commands" 
-                          target="_blank"
-                          className="premium-btn-action"
-                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.8rem', background: '#5865F2', color: 'white', padding: '1.2rem 2.5rem', borderRadius: '8px', fontSize: '1.1rem', fontWeight: 700, textDecoration: 'none', transition: '0.2s', width: 'fit-content', margin: '0 auto' }}
-                        >
-                            Invitar Bot al Servidor <ExternalLink size={20} />
-                        </a>
                     </div>
                  </div>
+ </div>
                </div>
             )}
           </div>

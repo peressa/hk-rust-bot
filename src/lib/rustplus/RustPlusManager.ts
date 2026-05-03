@@ -1,9 +1,16 @@
-import RustPlus from "@liamcottle/rustplus.js";
-import * as protobuf from "protobufjs";
-import { EventEmitter } from "events";
-import db, { saveTeamMessage, getMapCache, saveMapCache, getServers } from "../db";
+import db, { saveTeamMessage, getMapCache, saveMapCache, getServers, getEntities } from "../db";
 import { worldToGrid, worldToLeaflet, getRegionName } from "./coordUtils";
 import { FcmManager } from "../fcm/FcmManager";
+import { 
+  RustPlusMember, 
+  RustPlusMarker, 
+  RustPlusInfo, 
+  RustPlusTeamInfo, 
+  RustPlusResponse, 
+  RustPlusMessage,
+  RustPlusMap
+} from "../../types/rustplus";
+import { DbServer, DbEntity } from "../../types/db";
 
 // =====================================================================
 // MONKEY PATCH: Forzar campos Opcionales en Protobufjs
@@ -50,22 +57,22 @@ export interface ServerConnection {
 
 class RustPlusManager extends EventEmitter {
   private connections: Map<string, any> = new Map();
-  private connecting: Map<string, Promise<any>> = new Map(); // Prevent double-connect
-  private chatHistory: Map<string, any[]> = new Map(); // steamId-ip -> messages[]
-  private ready: Map<string, boolean> = new Map(); // Track if connection is ready
+  private connecting: Map<string, Promise<any>> = new Map(); 
+  private chatHistory: Map<string, any[]> = new Map(); 
+  private ready: Map<string, boolean> = new Map(); 
   private monitorIntervals: Map<string, NodeJS.Timeout> = new Map();
-  private lastMemberStates: Map<string, Map<string, any>> = new Map(); // key -> steamId -> state
-  private lastMarkerStates: Map<string, any[]> = new Map(); // key -> markerIds[]
-  private intelLogs: Map<string, any[]> = new Map(); // key -> intel items[]
-  private lastDockedStates: Map<string, Set<number>> = new Map(); // key -> markerIds docked
-  private botSettings: Map<string, { prefix: string, templates: any }> = new Map(); // key -> settings
-  private lastActivity: Map<string, number> = new Map(); // key -> timestamp
-  private reconnectAttempts: Map<string, number> = new Map(); // key -> count
-  private reconnectTimer: Map<string, NodeJS.Timeout> = new Map(); // key -> timer
-  private lastExplosions: Map<string, { grid: string, timestamp: number }[]> = new Map(); // key -> explosions
-  private lastBaseAlerts: Map<string, number> = new Map(); // key -> last alert timestamp
-  private lastEntityStates: Map<string, Map<string, boolean>> = new Map(); // key -> entityId -> isActive
-  private playerHistory: Map<string, Map<string, { x: number, y: number, time: number }[]>> = new Map(); // key -> steamId -> path
+  private lastMemberStates: Map<string, Map<string, RustPlusMember>> = new Map(); 
+  private lastMarkerStates: Map<string, RustPlusMarker[]> = new Map(); 
+  private intelLogs: Map<string, any[]> = new Map(); 
+  private lastDockedStates: Map<string, Set<number>> = new Map(); 
+  private botSettings: Map<string, { prefix: string, templates: any }> = new Map(); 
+  private lastActivity: Map<string, number> = new Map(); 
+  private reconnectAttempts: Map<string, number> = new Map(); 
+  private reconnectTimer: Map<string, NodeJS.Timeout> = new Map(); 
+  private lastExplosions: Map<string, { grid: string, timestamp: number }[]> = new Map(); 
+  private lastBaseAlerts: Map<string, number> = new Map(); 
+  private lastEntityStates: Map<string, Map<string, boolean>> = new Map(); 
+  private playerHistory: Map<string, Map<string, { x: number, y: number, time: number }[]>> = new Map(); 
 
   constructor() {
     super();
@@ -240,7 +247,7 @@ class RustPlusManager extends EventEmitter {
     console.log(`[RustPlus Manager] Cache de configuración limpiada para ${ip}`);
   }
 
-  private formatMsg(steamId: string, ip: string, templateKey: string, defaultText: string, vars: Record<string, any> = {}) {
+  public formatMsg(steamId: string, ip: string, templateKey: string, defaultText: string, vars: Record<string, any> = {}) {
     const settings = this.getBotSettings(steamId, ip);
     let msg = settings.templates[templateKey] || defaultText;
     
@@ -254,142 +261,8 @@ class RustPlusManager extends EventEmitter {
   }
 
   private async handleTeamCommand(steamId: string, ip: string, cmd: string) {
-    const key = `${steamId}-${ip}`;
-    const rustplus = this.connections.get(key);
-    if (!rustplus) return;
-
-    const rawCommand = cmd.trim();
-    const splitCmd = rawCommand.toLowerCase().split(" ");
-    const baseCommand = splitCmd[0];
-    const args = rawCommand.split(" ").slice(1).join(" ");
-    
-    console.log(`[Rust Ops] Procesando comando de equipo: "${baseCommand}" (Args: "${args}") desde ${steamId} en ${ip}`);
-    
-    try {
-      if (baseCommand === "!time" || baseCommand === "!hora") {
-        const timeResp = await this.sendRequest(steamId, ip, { getTime: {} });
-        const t = timeResp.response.time;
-        const hours = Math.floor(t.time);
-        const mins = Math.floor((t.time - hours) * 60);
-        const formattedTime = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-        
-        let remainingMsg = "";
-        const sunrise = t.sunrise || 8.0;
-        const sunset = t.sunset || 20.0;
-        const dayLength = t.dayLengthMinutes || 60;
-        
-        if (t.time >= sunrise && t.time < sunset) {
-            const inGameHours = sunset - t.time;
-            const realMins = Math.round(inGameHours * (dayLength / 24));
-            remainingMsg = `Faltan ${realMins}m para la noche`;
-        } else {
-            const inGameHours = (t.time >= sunset) ? (24 - t.time) + sunrise : (sunrise - t.time);
-            const realMins = Math.round(inGameHours * (dayLength / 24));
-            remainingMsg = `Faltan ${realMins}m para el día`;
-        }
-        
-        const msg = this.formatMsg(steamId, ip, 'cmd_time', `Hora: {time} ({remaining})`, { time: formattedTime, remaining: remainingMsg });
-        this.sendTeamMessage(steamId, ip, msg);
-      } 
-      else if (baseCommand === "!pop" || baseCommand === "!jugadores") {
-        const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
-        const i = infoResp.response.info;
-        const queuedStr = i.queued > 0 ? ` (Cola: ${i.queued})` : "";
-        const msg = this.formatMsg(steamId, ip, 'cmd_pop', `Poblacion: {players}/{maxPlayers}{queued}`, { 
-          players: i.players, 
-          maxPlayers: i.maxPlayers, 
-          queued: queuedStr
-        });
-        this.sendTeamMessage(steamId, ip, msg);
-      }
-      else if (baseCommand === "!wipe") {
-        const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
-        const wipeTime = infoResp.response.info.wipeTime;
-        if (wipeTime) {
-          const wipeDate = new Date(wipeTime * 1000).toLocaleString('es-AR');
-          const msg = this.formatMsg(steamId, ip, 'cmd_wipe', `Último Wipe: {date}`, { date: wipeDate });
-          rustplus.sendTeamMessage(msg);
-        } else {
-          rustplus.sendTeamMessage(this.formatMsg(steamId, ip, 'cmd_wipe_none', `No hay datos del Wipe.`));
-        }
-      }
-      else if (baseCommand === "!eventos" || baseCommand === "!events" || baseCommand === "!evento") {
-        const markersResp = await this.sendRequest(steamId, ip, { getMapMarkers: {} });
-        const markers = markersResp.response.mapMarkers.markers || [];
-        const activeEvents: string[] = [];
-        
-        markers.forEach((m: any) => {
-          if (m.type === 5) activeEvents.push("Cargo Ship");
-          else if (m.type === 8) activeEvents.push("Heli Patrulla");
-          else if (m.type === 4) activeEvents.push("Chinook (CH47)");
-          else if (m.type === 6) activeEvents.push("Crate");
-          else if (m.type === 2) activeEvents.push("Explosión");
-        });
-
-        if (activeEvents.length > 0) {
-          const counts: any = {};
-          activeEvents.forEach((e: string) => counts[e] = (counts[e] || 0) + 1);
-          const eventList = Object.entries(counts).map(([k, v]) => v === 1 ? k : `${v}x ${k}`).join(", ");
-          const msg = this.formatMsg(steamId, ip, 'cmd_events', `Eventos Activos: {list}`, { list: eventList });
-          rustplus.sendTeamMessage(msg);
-        } else {
-          rustplus.sendTeamMessage(this.formatMsg(steamId, ip, 'cmd_events_none', `No hay eventos globales activos en este momento.`));
-        }
-      }
-      else if (baseCommand === "!team" || baseCommand === "!equipo") {
-        const teamResp = await this.sendRequest(steamId, ip, { getTeamInfo: {} });
-        const members = teamResp.response.teamInfo.members || [];
-        let online = 0;
-        let dead = 0;
-        members.forEach((m: any) => {
-          if (m.isOnline) online++;
-          if (!m.isAlive) dead++;
-        });
-        const details = dead > 0 ? `({dead} Muertos)` : `¡Todos Vivos!`;
-        const msg = this.formatMsg(steamId, ip, 'cmd_team', `Equipo: {online}/{total} Online. {details}`, { 
-          online, 
-          total: members.length, 
-          details: dead > 0 ? details.replace('{dead}', String(dead)) : details 
-        });
-        rustplus.sendTeamMessage(msg);
-      }
-      else if (baseCommand === "!mapa" || baseCommand === "!seed" || baseCommand === "!map") {
-        const infoResp = await this.sendRequest(steamId, ip, { getInfo: {} });
-        const info = infoResp.response.info;
-        const msg = this.formatMsg(steamId, ip, 'cmd_map', `Mapa: {map} (Tamaño: {size} | Seed: {seed})`, { 
-          map: info.map, 
-          size: info.mapSize, 
-          seed: info.seed 
-        });
-        rustplus.sendTeamMessage(msg);
-      }
-      else if (baseCommand === "!upkeep" || baseCommand === "!tc") {
-        rustplus.sendTeamMessage(this.formatMsg(steamId, ip, 'cmd_dashboard_reminder', `Utiliza el Dashboard para ver el mapa y cámaras.`));
-      }
-      else if (baseCommand === "!lider" || baseCommand === "!leader") {
-        if (!args) {
-          rustplus.sendTeamMessage(`:exclamation: Uso: !lider <nombre del jugador>`);
-          return;
-        }
-        console.log(`[Rust Ops] Ejecutando !lider para ${args}...`);
-        const teamResp = await this.sendRequest(steamId, ip, { getTeamInfo: {} });
-        const members = teamResp.response.teamInfo.members || [];
-        const target = members.find((m: any) => m.name && m.name.toLowerCase().includes(args.toLowerCase()));
-
-        if (target) {
-          await this.sendRequest(steamId, ip, { promoteToLeader: { steamId: target.steamId } });
-          rustplus.sendTeamMessage(`:exclamation: ${target.name} ha sido promovido a líder del equipo.`);
-        } else {
-          rustplus.sendTeamMessage(`:exclamation: No se encontró a nadie llamado "${args}" en el equipo.`);
-        }
-      }
-      else if (baseCommand === "!help" || baseCommand === "!ayuda") {
-        rustplus.sendTeamMessage(`:exclamation: Comandos: !pop, !time, !wipe, !eventos, !team, !mapa, !lider, !tc`);
-      }
-
-    } catch (err) {
-      console.error("[RustPlus Command Error]:", err);
-    }
+    const { CommandRouter } = require('./CommandRouter');
+    await CommandRouter.handle(steamId, ip, cmd);
   }
 
   async sendRequest(steamId: string, ip: string, request: any, timeoutMs = 10000): Promise<any> {
@@ -402,7 +275,7 @@ class RustPlusManager extends EventEmitter {
     return new Promise((resolve, reject) => {
       const t = setTimeout(() => reject(new Error(`Request timeout for ${JSON.stringify(request)}`)), timeoutMs);
       try {
-        client.sendRequest(request, (response: any) => {
+        client.sendRequest(request, (response: RustPlusResponse) => {
           clearTimeout(t);
           resolve(response);
         });
@@ -447,8 +320,8 @@ class RustPlusManager extends EventEmitter {
     try {
       // Necesitamos tanto el mapa como el info para tener el mapSize real (unidades Unity)
       const [mapResp, infoResp] = await Promise.all([
-        this.sendRequest(steamId, ip, { getMap: {} }, 90000),
-        this.sendRequest(steamId, ip, { getInfo: {} }).catch(() => null)
+        this.sendRequest(steamId, ip, { getMap: {} }, 90000) as Promise<RustPlusResponse>,
+        this.sendRequest(steamId, ip, { getInfo: {} }).catch(() => null) as Promise<RustPlusResponse | null>
       ]);
 
       const map = mapResp?.response?.map;
@@ -611,10 +484,10 @@ class RustPlusManager extends EventEmitter {
            this.lastActivity.set(key, Date.now());
         }
 
-        const [teamResp, markersResp, infoResp] = await Promise.all(promises);
+        const [teamResp, markersResp, infoResp] = await Promise.all(promises) as [RustPlusResponse | null, RustPlusResponse | null, RustPlusResponse | null];
 
-        if (teamResp) this.processTeamMonitor(steamId, ip, teamResp.response.teamInfo, infoResp?.response?.info);
-        if (markersResp) this.processMarkersMonitor(steamId, ip, markersResp.response.mapMarkers.markers, infoResp?.response?.info);
+        if (teamResp?.response?.teamInfo) this.processTeamMonitor(steamId, ip, teamResp.response.teamInfo, infoResp?.response?.info);
+        if (markersResp?.response?.mapMarkers) this.processMarkersMonitor(steamId, ip, markersResp.response.mapMarkers.markers, infoResp?.response?.info);
         
         // Fase 2.3: Monitoreo de Entidades Inteligentes (Smart Alarms / Switches)
         this.monitorEntities(steamId, ip).catch(() => {});
@@ -668,7 +541,7 @@ class RustPlusManager extends EventEmitter {
         const resp = await this.sendRequest(steamId, ip, {
           entityId: parseInt(ent.entityId),
           getEntityInfo: {}
-        });
+        }) as RustPlusResponse;
         
         if (resp?.response?.entityInfo) {
           const isActive = resp.response.entityInfo.payload.value === true;
@@ -704,7 +577,7 @@ class RustPlusManager extends EventEmitter {
     }
   }
 
-  private processTeamMonitor(steamId: string, ip: string, teamInfo: any, serverInfo: any) {
+  private processTeamMonitor(steamId: string, ip: string, teamInfo: RustPlusTeamInfo, serverInfo?: RustPlusInfo) {
     const key = `${steamId}-${ip}`;
     const members = teamInfo.members || [];
     const mapSize = serverInfo?.mapSize || 4000;
@@ -842,7 +715,7 @@ class RustPlusManager extends EventEmitter {
     }
   }
 
-  private processMarkersMonitor(steamId: string, ip: string, markers: any[], serverInfo: any) {
+  private processMarkersMonitor(steamId: string, ip: string, markers: RustPlusMarker[], serverInfo?: RustPlusInfo) {
     const key = `${steamId}-${ip}`;
     const rustplus = this.connections.get(key);
     const hasPreviousState = this.lastMarkerStates.has(key);

@@ -16,13 +16,6 @@ export function indexToLetter(index: number): string {
 // Tamaño exacto de celda de grilla en Rust (fuente: TerrainTexturing.cs)
 export const GRID_CELL_SIZE = 146.28571428571428;
 
-/**
- * Normaliza una coordenada que puede venir en formato 0..mapSize (marcadores) 
- * a formato mundo -half..half (equipo/muertes).
- */
-export function normalizeToWorld(val: number, mapSize: number): number {
-    return val;
-}
 
 /**
  * Convierte coordenadas de mundo Unity a formato de cuadrícula Rust (Ej: "M14")
@@ -48,7 +41,10 @@ export function worldToGrid(x: number, y: number, mapSize: number): string {
     // Fila: desde +half (arriba/norte) hacia -half (abajo/sur)
     const rowIndex = Math.floor((half - ny) / cellSize);
 
-    if (colIndex < 0 || rowIndex < 0) return "Water";
+    // Calcular límites de la grilla basado en el tamaño del mapa
+    const maxIndex = Math.floor(mapSize / cellSize);
+
+    if (colIndex < 0 || rowIndex < 0 || colIndex >= maxIndex || rowIndex >= maxIndex) return "Water";
     
     // Rust usa filas 0-indexed (A0, B0, C0...)
     return `${indexToLetter(colIndex)}${rowIndex}`;

@@ -6,12 +6,13 @@ import AndroidFCM from "@liamcottle/push-receiver/src/android/fcm";
 import PushReceiverClient from "@liamcottle/push-receiver/src/client";
 import { saveServer, saveEntity } from "../db";
 import db from "../db";
+import { DbServer, DbEntity } from "../../types/db";
 
 const FCM_CONFIG = {
-  apiKey: "AIzaSyB5y2y-Tzqb4-I4Qnlsh_9naYv_TD8pCvY",
-  projectId: "rust-companion-app",
-  gcmSenderId: "976529667804",
-  gmsAppId: "1:976529667804:android:d6f1ddeb4403b338fea619",
+  apiKey: process.env.FCM_API_KEY || "AIzaSyB5y2y-Tzqb4-I4Qnlsh_9naYv_TD8pCvY",
+  projectId: process.env.FCM_PROJECT_ID || "rust-companion-app",
+  gcmSenderId: process.env.FCM_GCM_SENDER_ID || "976529667804",
+  gmsAppId: process.env.FCM_GMS_APP_ID || "1:976529667804:android:d6f1ddeb4403b338fea619",
   androidPackageName: "com.facepunch.rust.companion",
   androidPackageCert: "E28D05345FB78A7A1A63D70F4A302DBF426CA5AD",
 };
@@ -20,7 +21,7 @@ import { listenerRegistry } from "./ListenerRegistry";
 import { worldToGrid } from "../rustplus/coordUtils";
 
 export class FcmManager {
-  public static debugLogs: any[] = [];
+  public static debugLogs: { timestamp: number, data: any }[] = [];
 
   static async register(steamId: string, authToken: string) {
     console.log(`[FCM] Verificando registro persistente para ${steamId}...`);
@@ -114,7 +115,7 @@ export class FcmManager {
   static async initAllListeners() {
     console.log("[FCM] Iniciando recuperación masiva de listeners tácticos...");
     try {
-      const rows = db.prepare("SELECT steamId FROM fcm_keys").all() as any[];
+      const rows = db.prepare("SELECT steamId FROM fcm_keys").all() as { steamId: string }[];
       console.log(`[FCM] Se encontraron ${rows.length} identidades registradas.`);
 
       for (const row of rows) {
@@ -220,13 +221,14 @@ export class FcmManager {
       if (isDeathNotify && !normalizedPayload.playertoken) {
          // Continuar a la lógica de muerte
       } else if (isServerPairing) {
-        const server = {
+        const server: Partial<DbServer> & { ip: string, port: string, playerId: string, playerToken: string } = {
           ip: ip,
           port: port?.toString(),
           playerId: (normalizedPayload.playerid || normalizedPayload.player_id)?.toString(),
           playerToken: (normalizedPayload.playertoken || normalizedPayload.player_token)?.toString(),
           name: normalizedPayload.servername || normalizedPayload.name || payload.body || "Servidor Rust+",
-          steamId: steamId
+          steamId: steamId,
+          id: `${steamId}-${ip}`
         };
         
         console.log(`[FCM] Detected Server Pairing! Info:`, server);
@@ -289,14 +291,16 @@ export class FcmManager {
           console.warn("[FCM] Error procesando notificación de muerte", err);
         }
       } else if (isEntityPairing) {
-        const entity = {
+        const entity: DbEntity = {
+          id: `${steamId}-${ip}-${normalizedPayload.entityid}`,
           steamId: steamId,
           serverId: ip || "unknown", 
           entityId: normalizedPayload.entityid,
           entityType: parseInt(normalizedPayload.entitytype) || 0,
           name: normalizedPayload.entityname || normalizedPayload.name || "Dispositivo Rust+",
-          value: normalizedPayload.value === "true",
-          capacity: parseFloat(normalizedPayload.capacity) || 0
+          value: normalizedPayload.value === "true" ? 1 : 0,
+          capacity: parseFloat(normalizedPayload.capacity) || 0,
+          hasCapacity: (parseFloat(normalizedPayload.capacity) || 0) > 0 ? 1 : 0
         };
         
         console.log(`[FCM] Detected Entity Update/Pairing! Info:`, entity);

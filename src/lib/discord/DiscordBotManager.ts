@@ -1,4 +1,6 @@
-import { Client, GatewayIntentBits, EmbedBuilder, TextChannel } from "discord.js";
+import { Client, GatewayIntentBits, EmbedBuilder, TextChannel, Interaction, REST, Routes, SlashCommandBuilder } from "discord.js";
+import { getWhitelistByDiscordId, getServers } from "../db";
+import { rustPlusManager } from "../rustplus/RustPlusManager";
 
 class DiscordBotManager {
   private client: Client | null = null;
@@ -8,8 +10,10 @@ class DiscordBotManager {
     if (this.client) return;
 
     const token = process.env.DISCORD_BOT_TOKEN;
+    const clientId = process.env.DISCORD_CLIENT_ID;
+
     if (!token) {
-      console.warn("[Discord Bot] No DISCORD_BOT_TOKEN found in environment variables.");
+      console.warn("[Discord Bot] No DISCORD_BOT_TOKEN found. El bot no se iniciará.");
       return;
     }
 
@@ -17,30 +21,153 @@ class DiscordBotManager {
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent,
       ],
     });
 
-    this.client.once("ready", () => {
+    this.client.once("ready", async () => {
       this.isConnected = true;
-      console.log(`[Discord Bot] Logged in as ${this.client?.user?.tag}! Ready to serve.`);
+      console.log(`[Discord Bot] Conectado como ${this.client?.user?.tag}!`);
+      
+      if (clientId) {
+        await this.registerCommands(token, clientId);
+      }
+    });
+
+    this.client.on("interactionCreate", async (interaction: Interaction) => {
+      if (!interaction.isChatInputCommand()) return;
+
+      const user = getWhitelistByDiscordId(interaction.user.id);
+      if (!user) {
+        return await interaction.reply({ 
+          content: "❌ No tienes permiso para usar este bot. Vincula tu Discord en el Dashboard web primero.", 
+          ephemeral: true 
+        });
+      }
+
+      try {
+        switch (interaction.commandName) {
+          case "status":
+            await interaction.reply({
+              embeds: [
+                new EmbedBuilder()
+                  .setTitle("🛰️ RUST OPS - STATUS")
+                  .setDescription("El sistema de inteligencia táctica está operativo.")
+                  .setColor(0x22c55e)
+                  .setTimestamp()
+              ]
+            });
+            break;
+
+          case "team":
+            await this.handleTeamCommand(interaction, user.steamId);
+            break;
+
+          case "pop":
+            await this.handlePopCommand(interaction, user.steamId);
+            break;
+        }
+      } catch (err) {
+        console.error(`[Discord Bot] Error en comando /${interaction.commandName}:`, err);
+        if (!interaction.replied) await interaction.reply({ content: "⚠️ Hubo un error procesando el comando.", ephemeral: true });
+      }
     });
 
     this.client.on("error", (error) => {
-      console.error("[Discord Bot] Client Error:", error);
+      console.error("[Discord Bot] Error del Cliente:", error);
     });
 
     try {
       await this.client.login(token);
     } catch (err) {
-      console.error("[Discord Bot] Failed to login:", err);
+      console.error("[Discord Bot] Error al iniciar sesión:", err);
       this.client = null;
+    }
+  }
+
+  private async handleTeamCommand(interaction: Interaction, steamId: string) {
+    if (!interaction.isChatInputCommand()) return;
+    await interaction.deferReply();
+    
+    const servers = getServers(steamId);
+    if (servers.length === 0) return await interaction.editReply("No tienes servidores conectados.");
+
+    const server = servers[0]; // Simplificación: Tomamos el primero
+    try {
+      const teamResp = await rustPlusManager.sendRequest(steamId, server.ip, { getTeamInfo: {} });
+      const members = teamResp.response.teamInfo.members || [];
+      const online = members.filter((m: any) => m.isOnline).length;
+      
+      const embed = new EmbedBuilder()
+        .setTitle(`👥 Equipo en ${server.name}`)
+        .setDescription(`${online} jugadores online de ${members.length} totales.`)
+        .setColor(0x3b82f6)
+        .addFields(members.map((m: any) => ({
+          name: m.name,
+          value: m.isOnline ? "🟢 Online" : "⚪ Offline",
+          inline: true
+        })));
+
+      await interaction.editReply({ embeds: [embed] });
+    } catch (e) {
+      await interaction.editReply("❌ Error al conectar con el servidor de Rust.");
+    }
+  }
+
+  private async handlePopCommand(interaction: Interaction, steamId: string) {
+    if (!interaction.isChatInputCommand()) return;
+    await interaction.deferReply();
+    
+    const servers = getServers(steamId);
+    if (servers.length === 0) return await interaction.editReply("No tienes servidores conectados.");
+
+    const server = servers[0];
+    try {
+      const infoResp = await rustPlusManager.sendRequest(steamId, server.ip, { getInfo: {} });
+      const i = infoResp.response.info;
+      
+      const embed = new EmbedBuilder()
+        .setTitle(`📊 Población: ${server.name}`)
+        .addFields(
+          { name: "Jugadores", value: `${i.players} / ${i.maxPlayers}`, inline: true },
+          { name: "Cola", value: `${i.queued}`, inline: true }
+        )
+        .setColor(0xeab308);
+
+      await interaction.editReply({ embeds: [embed] });
+    } catch (e) {
+      await interaction.editReply("❌ Error al obtener información del servidor.");
+    }
+  }
+
+  private async registerCommands(token: string, clientId: string) {
+    const commands = [
+      new SlashCommandBuilder()
+        .setName("status")
+        .setDescription("Verifica el estado del bot de Rust Ops"),
+      new SlashCommandBuilder()
+        .setName("team")
+        .setDescription("Ver estado del equipo en el servidor principal"),
+      new SlashCommandBuilder()
+        .setName("pop")
+        .setDescription("Ver población del servidor"),
+    ].map(command => command.toJSON());
+
+    const rest = new REST({ version: "10" }).setToken(token);
+
+    try {
+      console.log("[Discord Bot] Registrando comandos slash...");
+      await rest.put(Routes.applicationCommands(clientId), { body: commands });
+      console.log("[Discord Bot] Comandos slash registrados con éxito.");
+    } catch (error) {
+      console.error("[Discord Bot] Error registrando comandos:", error);
     }
   }
 
   async sendEmbed(channelId: string, embedData: any) {
     if (!this.client || !this.isConnected) {
-      console.warn("[Discord Bot] Cannot send message: Client not connected.");
-      return;
+      console.warn("[Discord Bot] No se puede enviar el mensaje: Bot desconectado.");
+      return false;
     }
 
     try {
@@ -49,11 +176,9 @@ class DiscordBotManager {
         const embed = new EmbedBuilder(embedData);
         await (channel as TextChannel).send({ embeds: [embed] });
         return true;
-      } else {
-        console.warn(`[Discord Bot] Channel ${channelId} not found or not text-based.`);
       }
     } catch (err) {
-      console.error(`[Discord Bot] Error sending message to ${channelId}:`, err);
+      console.error(`[Discord Bot] Error enviando embed a ${channelId}:`, err);
     }
     return false;
   }

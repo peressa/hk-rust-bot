@@ -1,7 +1,5 @@
-import Database from "better-sqlite3";
-import path from "path";
-
 import fs from "fs";
+import { DbServer, DbEntity, DbMapCache, DbWhitelist } from "../types/db";
 
 const dataDir = path.resolve(process.cwd(), "data");
 if (!fs.existsSync(dataDir)) {
@@ -109,38 +107,30 @@ db.exec(`
   );
 `);
 
-// Patcheo dinámico de esquema por si la DB ya existía sin estas columnas (Migración silente)
-try {
-  db.exec("ALTER TABLE map_cache ADD COLUMN oceanMargin INTEGER DEFAULT 0;");
-} catch(e) {}
-try { db.exec("ALTER TABLE map_cache ADD COLUMN mapSize INTEGER;"); } catch (e) {}
-try { db.exec("ALTER TABLE map_cache ADD COLUMN monuments TEXT;"); } catch (e) {}
-try {
-  db.exec("ALTER TABLE servers ADD COLUMN discordWebhook TEXT;");
-} catch(e) {}
-try {
-  db.exec("ALTER TABLE servers ADD COLUMN bmId TEXT;");
-} catch(e) {}
-try { db.exec("ALTER TABLE war_room_invites ADD COLUMN name TEXT;"); } catch (e) {}
-try { db.exec("ALTER TABLE war_room_invites ADD COLUMN expiresAt TEXT;"); } catch (e) {}
-try {
-  db.exec("ALTER TABLE servers ADD COLUMN discordChannelId TEXT;");
-} catch(e) {}
-try {
-  db.exec("ALTER TABLE entities ADD COLUMN value INTEGER DEFAULT 0;");
-} catch(e) {}
-try {
-  db.exec("ALTER TABLE entities ADD COLUMN capacity REAL DEFAULT 0;");
-} catch(e) {}
-try {
-  db.exec("ALTER TABLE entities ADD COLUMN hasCapacity INTEGER DEFAULT 0;");
-} catch(e) {}
-try {
-  db.exec("ALTER TABLE servers ADD COLUMN botPrefix TEXT DEFAULT ':exclamation:';");
-} catch(e) {}
-try {
-  db.exec("ALTER TABLE servers ADD COLUMN botTemplates TEXT;"); // JSON string
-} catch(e) {}
+// Helper para migraciones seguras
+function addColumnIfNotExists(table: string, column: string, definition: string) {
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition};`);
+  } catch (e) {
+    // Ignorar si la columna ya existe
+  }
+}
+
+// Ejecutar Migraciones
+addColumnIfNotExists("map_cache", "oceanMargin", "INTEGER DEFAULT 0");
+addColumnIfNotExists("map_cache", "mapSize", "INTEGER");
+addColumnIfNotExists("map_cache", "monuments", "TEXT");
+addColumnIfNotExists("servers", "discordWebhook", "TEXT");
+addColumnIfNotExists("servers", "bmId", "TEXT");
+addColumnIfNotExists("servers", "discordChannelId", "TEXT");
+addColumnIfNotExists("servers", "botPrefix", "TEXT DEFAULT ':exclamation:'");
+addColumnIfNotExists("servers", "botTemplates", "TEXT");
+addColumnIfNotExists("war_room_invites", "name", "TEXT");
+addColumnIfNotExists("war_room_invites", "expiresAt", "TEXT");
+addColumnIfNotExists("entities", "value", "INTEGER DEFAULT 0");
+addColumnIfNotExists("entities", "capacity", "REAL DEFAULT 0");
+addColumnIfNotExists("entities", "hasCapacity", "INTEGER DEFAULT 0");
+addColumnIfNotExists("whitelist", "discordId", "TEXT");
 
 // MIGRACIÓN: Purgar caché para aplicar lógica PROFESIONAL de Píxeles vs Metros (como RustPlusBot)
 try {
@@ -151,16 +141,16 @@ try {
 
 // === Whitelist Admin Inicial ===
 try {
-  const adminId = "76561197960580123";
+  const adminId = process.env.ADMIN_STEAM_ID || "76561197960580123";
   const stmt = db.prepare("INSERT OR IGNORE INTO whitelist (steamId, name, role, createdAt) VALUES (?, ?, ?, ?)");
   stmt.run(adminId, "Admin Principal", "admin", new Date().toISOString());
 } catch(e) {}
 
 
-export function saveServer(server: any) {
-  // Validación crítica: No guardar si faltan tokens (notificaciones de muerte, etc.)
+export function saveServer(server: Partial<DbServer> & { ip: string, port: string, playerId: string, playerToken: string }) {
+  // Validación crítica: No guardar si faltan tokens
   if (!server.playerId || !server.playerToken || String(server.playerId) === "undefined") {
-    console.warn(`[DB] Ignorando grabación de servidor incompleto (Death/Event notification) para ${server.ip}`);
+    console.warn(`[DB] Ignorando grabación de servidor incompleto para ${server.ip}`);
     return;
   }
 
@@ -181,7 +171,7 @@ export function saveServer(server: any) {
     server.discordChannelId || null,
     server.bmId || null,
     server.botPrefix || ':exclamation:',
-    server.botTemplates ? JSON.stringify(server.botTemplates) : null
+    server.botTemplates ? (typeof server.botTemplates === 'string' ? server.botTemplates : JSON.stringify(server.botTemplates)) : null
   );
 }
 
@@ -194,17 +184,12 @@ export function saveMapCache(serverId: string, data: { jpgImage: string, width: 
   stmt.run(serverId, data.jpgImage, data.width, data.height, monumentsJson, data.mapSize, data.oceanMargin, new Date().toISOString());
 }
 
-export function getMapCache(serverId: string) {
-  const row = db.prepare("SELECT * FROM map_cache WHERE serverId = ?").get(serverId) as any;
+export function getMapCache(serverId: string): (Omit<DbMapCache, 'monuments'> & { monuments: any[] }) | null {
+  const row = db.prepare("SELECT * FROM map_cache WHERE serverId = ?").get(serverId) as DbMapCache | undefined;
   if (!row) return null;
   return {
-    jpgImage: row.jpgImage,
-    width: row.width,
-    height: row.height,
-    mapSize: row.mapSize,
-    oceanMargin: row.oceanMargin !== undefined ? row.oceanMargin : 0,
+    ...row,
     monuments: row.monuments ? JSON.parse(row.monuments) : [],
-    updatedAt: row.updatedAt
   };
 }
 
@@ -213,18 +198,18 @@ export function clearMapCache(serverId: string) {
   stmt.run(serverId);
 }
 
-export function getServers(steamId: string) {
+export function getServers(steamId: string): DbServer[] {
   const stmt = db.prepare("SELECT * FROM servers WHERE steamId = ?");
-  return stmt.all(steamId);
+  return stmt.all(steamId) as DbServer[];
 }
 
-export function saveEntity(entity: any) {
+export function saveEntity(entity: DbEntity) {
   const stmt = db.prepare(`
     INSERT OR REPLACE INTO entities (id, steamId, serverId, entityId, entityType, name, value, capacity, hasCapacity)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   stmt.run(
-    `${entity.steamId}-${entity.serverId}-${entity.entityId}`, 
+    entity.id || `${entity.steamId}-${entity.serverId}-${entity.entityId}`, 
     entity.steamId, 
     entity.serverId, 
     entity.entityId, 
@@ -236,9 +221,9 @@ export function saveEntity(entity: any) {
   );
 }
 
-export function getEntities(steamId: string, serverId: string) {
+export function getEntities(steamId: string, serverId: string): DbEntity[] {
   const stmt = db.prepare("SELECT * FROM entities WHERE steamId = ? AND serverId = ?");
-  return stmt.all(steamId, serverId);
+  return stmt.all(steamId, serverId) as DbEntity[];
 }
 
 // === Death Markers ===
@@ -288,10 +273,10 @@ export function deleteCamera(cameraId: string) {
 }
 
 // === Whitelist Functions ===
-export function isWhitelisted(steamId: string): any | null {
+export function isWhitelisted(steamId: string): DbWhitelist | null {
   if (!steamId) return null;
   const stmt = db.prepare("SELECT * FROM whitelist WHERE steamId = ?");
-  const row = stmt.get(steamId) as any;
+  const row = stmt.get(steamId) as DbWhitelist | undefined;
   
   if (!row) return null;
 
@@ -307,9 +292,9 @@ export function isWhitelisted(steamId: string): any | null {
   return row;
 }
 
-export function getAllWhitelisted() {
+export function getAllWhitelisted(): DbWhitelist[] {
   const stmt = db.prepare("SELECT * FROM whitelist ORDER BY createdAt DESC");
-  return stmt.all();
+  return stmt.all() as DbWhitelist[];
 }
 
 export function addToWhitelist(steamId: string, name: string = "User", role: string = "user", days: number = 0) {
@@ -325,6 +310,16 @@ export function addToWhitelist(steamId: string, name: string = "User", role: str
     VALUES (?, ?, ?, ?, ?)
   `);
   stmt.run(steamId, name, role, expiresAt, new Date().toISOString());
+}
+
+export function linkDiscordId(steamId: string, discordId: string) {
+  const stmt = db.prepare("UPDATE whitelist SET discordId = ? WHERE steamId = ?");
+  stmt.run(discordId, steamId);
+}
+
+export function getWhitelistByDiscordId(discordId: string): DbWhitelist | null {
+  const stmt = db.prepare("SELECT * FROM whitelist WHERE discordId = ?");
+  return stmt.get(discordId) as DbWhitelist | undefined || null;
 }
 
 export function removeFromWhitelist(steamId: string) {

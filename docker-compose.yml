@@ -5,10 +5,18 @@ services:
     container_name: rust-plus-web
     ports:
       - "3000:3000"
-    environment:
-      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-changeme}
-      - STEAM_API_KEY=${STEAM_API_KEY}
     volumes:
-      - ./rust-plus.db:/app/rust-plus.db
+      - ./data:/ROOT/data
+    environment:
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - STEAM_API_KEY=${STEAM_API_KEY}
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN}
+      - DISCORD_CLIENT_ID=${DISCORD_CLIENT_ID}
+      - NEXT_PUBLIC_DISCORD_CLIENT_ID=${NEXT_PUBLIC_DISCORD_CLIENT_ID}
+      - ADMIN_STEAM_ID=${ADMIN_STEAM_ID}
+      - FCM_API_KEY=${FCM_API_KEY}
+      - FCM_PROJECT_ID=${FCM_PROJECT_ID}
+      - FCM_GCM_SENDER_ID=${FCM_GCM_SENDER_ID}
+      - FCM_GMS_APP_ID=${FCM_GMS_APP_ID}
     restart: always
