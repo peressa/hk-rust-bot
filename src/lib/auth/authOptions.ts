@@ -1,7 +1,7 @@
 import SteamProvider from "next-auth-steam";
 import DiscordProvider from "next-auth/providers/discord";
 import { NextRequest } from "next/server";
-import { isWhitelisted, linkDiscordId, getWhitelistByDiscordId } from "@/lib/db";
+import { isWhitelisted, linkDiscordId, getWhitelistByDiscordId, ensureAdminExists } from "@/lib/db";
 
 export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
   return {
@@ -20,6 +20,9 @@ export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
         if (account?.provider === "steam") {
           const steamId = (profile as any)?.steamid;
           console.log(`[Auth] Intento de login Steam: ${steamId}`);
+          
+          // Forzar sincronización del admin antes de chequear
+          ensureAdminExists();
           
           const whitelistEntry = steamId ? isWhitelisted(String(steamId).trim()) : null;
           

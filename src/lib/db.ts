@@ -142,19 +142,23 @@ try {
 
 
 // === Whitelist Admin Inicial ===
-try {
-  const envAdminId = process.env.ADMIN_STEAM_ID?.trim();
-  const adminId = envAdminId || "76561197960580123";
-  
-  console.log(`[DB] Configurando Admin Principal. ID: ${adminId} ${envAdminId ? '(desde ENV)' : '(default)'}`);
-  
-  // Usamos INSERT OR REPLACE para asegurar que si el ID cambia en el ENV, se actualice el rol a admin
-  const stmt = db.prepare("INSERT OR REPLACE INTO whitelist (steamId, name, role, expiresAt, createdAt) VALUES (?, ?, ?, ?, ?)");
-  stmt.run(adminId, "Admin Principal", "admin", null, new Date().toISOString());
-} catch(e) {
-  console.error("[DB] Error inicializando admin:", e);
+export function ensureAdminExists() {
+  try {
+    const envAdminId = process.env.ADMIN_STEAM_ID?.trim();
+    if (!envAdminId) return;
+
+    console.log(`[DB] Asegurando Admin Principal: ${envAdminId}`);
+    
+    // Usamos INSERT OR REPLACE para asegurar que si el ID cambia en el ENV, se actualice el rol a admin
+    const stmt = db.prepare("INSERT OR REPLACE INTO whitelist (steamId, name, role, expiresAt, createdAt) VALUES (?, ?, ?, ?, ?)");
+    stmt.run(envAdminId, "Admin Principal", "admin", null, new Date().toISOString());
+  } catch(e) {
+    console.error("[DB] Error asegurando admin:", e);
+  }
 }
 
+// Ejecutar al cargar el módulo
+ensureAdminExists();
 
 
 export function saveServer(server: Partial<DbServer> & { ip: string, port: string, playerId: string, playerToken: string }) {

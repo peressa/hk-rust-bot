@@ -14,6 +14,10 @@ export async function GET() {
     },
     fcm: {
       activeListeners: activeFcm
+    },
+    auth: {
+      adminConfigured: process.env.ADMIN_STEAM_ID ? "YES" : "NO",
+      adminIdPrefix: process.env.ADMIN_STEAM_ID ? process.env.ADMIN_STEAM_ID.substring(0, 4) + "..." : "NONE"
     }
   });
 }
