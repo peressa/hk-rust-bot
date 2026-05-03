@@ -17,7 +17,9 @@ export async function GET() {
     },
     auth: {
       adminConfigured: process.env.ADMIN_STEAM_ID ? "YES" : "NO",
-      adminIdPrefix: process.env.ADMIN_STEAM_ID ? process.env.ADMIN_STEAM_ID.substring(0, 4) + "..." : "NONE"
+      adminIdPrefix: process.env.ADMIN_STEAM_ID ? process.env.ADMIN_STEAM_ID.substring(0, 4) + "..." : "NONE",
+      fallbackActive: !process.env.ADMIN_STEAM_ID,
+      availableKeys: Object.keys(process.env).filter(key => key.includes('STEAM') || key.includes('ADMIN') || key.includes('NEXTAUTH'))
     }
   });
 }
