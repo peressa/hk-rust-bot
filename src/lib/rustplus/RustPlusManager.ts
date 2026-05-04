@@ -75,6 +75,7 @@ class RustPlusManager extends EventEmitter {
   private lastBaseAlerts: Map<string, number> = new Map(); 
   private lastEntityStates: Map<string, Map<string, boolean>> = new Map(); 
   private playerHistory: Map<string, Map<string, { x: number, y: number, time: number }[]>> = new Map(); 
+  private pendingVendingAlerts: Map<string, any[]> = new Map(); 
 
   constructor() {
     super();
@@ -888,17 +889,49 @@ class RustPlusManager extends EventEmitter {
         }
       }
 
-      // Detección de nuevas Vending Machines (Tipo 3)
-      if (m.type === 3 && hasPreviousState && !lastEventIds.includes(m.id)) {
-        const grid = worldToGrid(m.x, m.y, mapSize);
-        const name = m.name || "Tienda Desconocida";
+      // 6. Detección en Tiempo Real de Vending Machines (Tipo 3)
+      if (m.type === 3) {
         const totalItems = (m.sellOrders || []).reduce((acc: number, so: any) => acc + (so.amountInStock || 0), 0);
-        
-        const msg = this.formatMsg(steamId, ip, 'event_vending_new', `¡Nueva máquina expendedora '{name}' con {stock} artículos en stock en {grid}!`, { name, stock: totalItems, grid });
-        this.botSendTeamMessage(steamId, ip, msg);
-        this.addIntel(steamId, ip, 'EVENT', msg, { eventName: "Nueva Vending", grid, name, totalItems });
+        const grid = worldToGrid(m.x, m.y, mapSize);
+
+        // Guardamos en la base de datos como respaldo para el buscador histórico
+        const serverObj = getServers(steamId).find((s: any) => s.ip === ip) as any;
+        if (serverObj) {
+          const { saveVending } = require('../db');
+          saveVending(serverObj.id, {
+            id: m.id.toString(),
+            name: m.name || "Tienda",
+            x: m.x,
+            y: m.y,
+            grid: grid,
+            orders: JSON.stringify(m.sellOrders || [])
+          });
+        }
+
+        // Lógica de Notificación Anti-Spam (Solo avisar si es nueva ID)
+        const connectionTime = this.lastActivity.get(key) || 0;
+        if (hasPreviousState && !lastEventIds.includes(m.id) && (Date.now() - connectionTime) > 30000) {
+            if (!this.pendingVendingAlerts.has(key)) this.pendingVendingAlerts.set(key, []);
+            this.pendingVendingAlerts.get(key)!.push({ name: m.name || "Tienda", grid });
+        }
       }
     });
+
+    // Procesar alertas de vending acumuladas (Debounce de 5 segundos)
+    if (this.pendingVendingAlerts.has(key) && this.pendingVendingAlerts.get(key)!.length > 0) {
+        const pending = this.pendingVendingAlerts.get(key)!;
+        this.pendingVendingAlerts.set(key, []); // Limpiar
+        
+        if (pending.length > 3) {
+           const msg = this.formatMsg(steamId, ip, 'event_vending_batch', `📊 Se han detectado {count} nuevas tiendas en el mapa. Revisa el Buscador Web para ver los detalles.`, { count: pending.length });
+           this.botSendTeamMessage(steamId, ip, msg);
+        } else {
+           pending.forEach(p => {
+             const msg = this.formatMsg(steamId, ip, 'event_vending_new', `¡Nueva máquina expendedora '{name}' en {grid}!`, { name: p.name, grid: p.grid });
+             this.botSendTeamMessage(steamId, ip, msg);
+           });
+        }
+    }
 
     // Limpieza de barcos que ya no existen en el mapa
     for (const dId of Array.from(dockedSet)) {
