@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, EmbedBuilder, TextChannel, Interaction, REST, Routes, SlashCommandBuilder, Events, MessageFlags } from "discord.js";
-import { getWhitelistByDiscordId, getServers } from "../db";
+import { getWhitelistByDiscordId, getServers, linkDiscordId } from "../db";
 import { rustPlusManager } from "../rustplus/RustPlusManager";
 
 class DiscordBotManager {
