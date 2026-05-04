@@ -37,7 +37,9 @@ export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
 
         if (account?.provider === "discord") {
           const discordId = profile?.id;
-          const whitelistEntry = discordId ? getWhitelistByDiscordId(discordId) : null;
+          if (!discordId) return false;
+
+          const whitelistEntry = getWhitelistByDiscordId(discordId);
           
           if (whitelistEntry) {
             (user as any).role = whitelistEntry.role;
@@ -45,23 +47,38 @@ export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
             return true;
           }
           
-          // Si no está en whitelist, pero tenemos una sesión de Steam activa, podríamos vincularlos.
-          // Pero NextAuth no facilita acceder a la sesión actual aquí fácilmente sin trucos.
-          console.warn(`[Auth] Bloqueado DiscordID: ${discordId}`);
-          return `/auth/unauthorized?discordId=${discordId}`;
+          // Si no está vinculado pero el usuario inició sesión desde el dashboard, 
+          // permitimos el login para que el callback JWT haga el vínculo.
+          return true;
         }
         
         return false;
       },
       jwt({ token, user, account, profile }) {
+        // Al iniciar sesión con Steam
         if (account?.provider === "steam" && profile) {
           token.steamId = (profile as any).steamid;
           token.name = (profile as any).personaname;
           token.image = (profile as any).avatarfull;
         }
+
+        // Al iniciar sesión con Discord (Vínculo)
         if (account?.provider === "discord" && profile) {
-          token.discordId = (profile as any).id;
-          if ((user as any).steamId) token.steamId = (user as any).steamId;
+          const discordId = (profile as any).id;
+          token.discordId = discordId;
+          
+          // Lógica de Vínculo: Si ya teníamos un steamId en el token, los enlazamos
+          if (token.steamId) {
+            console.log(`[Auth] Vinculando Discord ${discordId} a Steam ${token.steamId}`);
+            linkDiscordId(String(token.steamId), discordId);
+          } else {
+            // Si entró directo con Discord, intentamos buscar si ya estaba vinculado
+            const entry = getWhitelistByDiscordId(discordId);
+            if (entry) {
+              token.steamId = entry.steamId;
+              token.role = entry.role;
+            }
+          }
         }
         if (user) {
           token.role = (user as any).role;
@@ -71,6 +88,7 @@ export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
       session({ session, token }) {
         if (session.user) {
           (session.user as any).steamId = token.steamId;
+          (session.user as any).discordId = token.discordId;
           (session.user as any).role = token.role || 'user';
         }
         return session;
