@@ -1,14 +1,22 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useSession, signIn } from "next-auth/react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Settings, ShieldCheck, Cpu, ExternalLink, RefreshCw } from "lucide-react";
+import { Settings, ShieldCheck, Cpu, ExternalLink, RefreshCw, CheckCircle2 } from "lucide-react";
 import ManualPairingInput from "@/components/dashboard/ManualPairingInput";
 
 export default function SettingsPage() {
+  const { data: session } = useSession();
   const [authToken, setAuthToken] = useState("");
   const [status, setStatus] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  
+  const discordId = (session?.user as any)?.discordId;
+
+  const handleLinkDiscord = () => {
+    signIn('discord', { callbackUrl: '/dashboard/settings' });
+  };
 
   const handleRegister = async () => {
     setLoading(true);
@@ -119,6 +127,55 @@ export default function SettingsPage() {
                         >
                             ¿Dónde consigo el token? <ExternalLink size={10} />
                         </a>
+                    </div>
+                </section>
+
+                {/* Discord Integration Section */}
+                <section className="premium-card" style={{ borderTop: '1px solid rgba(88, 101, 242, 0.3)' }}>
+                    <h3 style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', fontFamily: 'var(--font-barlow)', fontSize: '1.5rem', color: '#5865F2' }}>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515a.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0a12.64 12.64 0 0 0-.617-1.25a.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057a19.9 19.9 0 0 0 5.993 3.03a.078.078 0 0 0 .084-.028a14.09 14.09 0 0 0 1.226-1.994a.076.076 0 0 0-.041-.106a13.107 13.107 0 0 1-1.872-.892a.077.077 0 0 1-.008-.128a10.2 10.2 0 0 0 .372-.292a.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127a12.299 12.299 0 0 1-1.873.892a.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028a19.839 19.839 0 0 0 6.002-3.03a.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.956-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419c0-1.333.955-2.419 2.157-2.419c1.21 0 2.176 1.096 2.157 2.42c0 1.333-.946 2.418-2.157 2.418z"/></svg>
+                    Integración de Discord
+                    </h3>
+                    <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1.5rem', fontWeight: 700 }}>
+                    Vincula el bot a tu servidor para recibir alertas de raid, muertes y controlar dispositivos mediante comandos slash.
+                    </p>
+                    
+                    <div style={{ background: 'rgba(88, 101, 242, 0.1)', padding: '1.5rem', borderRadius: '0.5rem', border: '1px solid rgba(88, 101, 242, 0.2)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+                            <div>
+                                <div style={{ fontSize: '0.7rem', color: '#5865F2', fontWeight: 900, textTransform: 'uppercase', marginBottom: '0.25rem' }}>Cuenta de Discord</div>
+                                <div style={{ fontSize: '1.1rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {discordId ? (
+                                        <>
+                                            <CheckCircle2 size={18} style={{ color: '#22c55e' }} />
+                                            ID: {discordId}
+                                        </>
+                                    ) : (
+                                        "No vinculada"
+                                    )}
+                                </div>
+                            </div>
+                            
+                            <div style={{ display: 'flex', gap: '1rem' }}>
+                                {!discordId && (
+                                    <button 
+                                        onClick={handleLinkDiscord}
+                                        className="btn-primary"
+                                        style={{ background: '#5865F2', border: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                                    >
+                                        Vincular Mi Cuenta
+                                    </button>
+                                )}
+                                <a 
+                                    href={`https://discord.com/oauth2/authorize?client_id=${process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID}&permissions=2147862528&scope=bot+applications.commands&integration_type=0`}
+                                    target="_blank"
+                                    className="btn-primary"
+                                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}
+                                >
+                                    <ExternalLink size={16} /> Invitar Bot al Servidor
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </section>
             </div>
