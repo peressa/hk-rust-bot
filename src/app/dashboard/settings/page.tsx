@@ -18,6 +18,26 @@ export default function SettingsPage() {
     signIn('discord', { callbackUrl: '/dashboard/settings' });
   };
 
+  const handleSyncDiscord = async () => {
+    if (!discordId) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/user/link", {
+        method: "POST",
+        body: JSON.stringify({ discordId })
+      });
+      if (res.ok) {
+        alert("✅ Sincronización exitosa. El bot ya debería reconocerte.");
+      } else {
+        alert("❌ Error al sincronizar. Revisa los logs del servidor.");
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRegister = async () => {
     setLoading(true);
     try {
