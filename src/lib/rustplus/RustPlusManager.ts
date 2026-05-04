@@ -1,8 +1,10 @@
-import db, { saveTeamMessage, getMapCache, saveMapCache, getServers, getEntities } from "../db";
+import db, { saveTeamMessage, getMapCache, saveMapCache, getServers, getEntities, saveVending } from "../db";
 import { worldToGrid, worldToLeaflet, getRegionName } from "./coordUtils";
 import { FcmManager } from "../fcm/FcmManager";
 import protobuf from "protobufjs";
 import { EventEmitter } from "events";
+import fs from 'fs';
+import path from 'path';
 import { 
   RustPlusMember, 
   RustPlusMarker, 
@@ -14,6 +16,7 @@ import {
 } from "../../types/rustplus";
 import { DbServer, DbEntity } from "../../types/db";
 import { DiscordManager } from "../discord/DiscordManager";
+import { CommandRouter } from './CommandRouter';
 
 // =====================================================================
 // MONKEY PATCH: Forzar campos Opcionales en Protobufjs
@@ -264,9 +267,8 @@ class RustPlusManager extends EventEmitter {
     return `${prefix} ${msg}`.trim();
   }
 
-  private async handleTeamCommand(steamId: string, ip: string, cmd: string) {
-    const { CommandRouter } = require('./CommandRouter');
-    await CommandRouter.handle(steamId, ip, cmd);
+  private async handleTeamCommand(steamId: string, ip: string, message: any) {
+    await CommandRouter.handle(steamId, ip, message.message || "");
   }
 
   async sendRequest(steamId: string, ip: string, request: any, timeoutMs = 10000): Promise<any> {
@@ -893,7 +895,6 @@ class RustPlusManager extends EventEmitter {
         // Guardamos en la base de datos como respaldo para el buscador histórico
         const serverObj = getServers(steamId).find((s: any) => s.ip === ip) as any;
         if (serverObj) {
-          const { saveVending } = require('../db');
           saveVending(serverObj.id, {
             id: m.id.toString(),
             name: m.name || "Tienda",
@@ -997,8 +998,6 @@ class RustPlusManager extends EventEmitter {
   }
 
   async checkProtos() {
-    const fs = require('fs');
-    const path = require('path');
     try {
       console.log("[RustPlus] Starting Self-Patching Protocol Check...");
       
