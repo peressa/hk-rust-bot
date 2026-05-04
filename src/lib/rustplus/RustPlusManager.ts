@@ -960,61 +960,41 @@ class RustPlusManager extends EventEmitter {
     }
   }
 
-  // Diagnostic & Auto-Patch helper
-
-    // 1. Find where the library is actually running from
-    let libPath = '';
+  async checkProtos() {
     try {
-      libPath = path.dirname(require.resolve('@liamcottle/rustplus.js'));
-      console.log(`[RustPlus] Library detected at: ${libPath}`);
-    } catch (e) {
-      console.error("[RustPlus] Could not resolve library path!");
-    }
+      console.log("[RustPlus] Starting Self-Patching Protocol Check...");
+      
+      let libPath = '';
+      try {
+        libPath = path.dirname(require.resolve('@liamcottle/rustplus.js'));
+        console.log(`[RustPlus] Library detected at: ${libPath}`);
+      } catch (e) {
+        console.warn("[RustPlus] Warning: Could not resolve library path for patching.");
+      }
 
-    // 2. Definir donde DEBERÍAN estar los protos (en el root o en data)
-    const sourceProtos = [
-      path.join(process.cwd(), 'rustplus.proto'),
-      path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
-      path.join(process.cwd(), 'resources/rustplus.proto'),
-    ];
+      const sourceProtos = [
+        path.join(process.cwd(), 'rustplus.proto'),
+        path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
+        path.join(process.cwd(), 'resources/rustplus.proto'),
+      ];
 
-    // 3. Intentar parchear la librería COPIANDO el archivo a su lado
-    if (libPath) {
-      const targetProto = path.join(libPath, 'rustplus.proto');
-      if (!fs.existsSync(targetProto) || fs.statSync(targetProto).size < 100) {
-        console.log(`[RustPlus] Target proto MISSING or INVALID at ${targetProto}. Searching...`);
-        for (const src of sourceProtos) {
-          if (fs.existsSync(src)) {
-            console.log(`[RustPlus] FOUND source proto at ${src}. Patching library...`);
-            try {
-              fs.copyFileSync(src, targetProto);
-              console.log("[RustPlus] SUCCESS: Library patched with rustplus.proto.");
-              break;
-            } catch (copyErr) {
-              console.error(`[RustPlus] Failed to copy proto: ${copyErr}`);
+      if (libPath) {
+        const targetProto = path.join(libPath, 'rustplus.proto');
+        if (!fs.existsSync(targetProto) || fs.statSync(targetProto).size < 100) {
+          for (const src of sourceProtos) {
+            if (fs.existsSync(src)) {
+              try {
+                fs.copyFileSync(src, targetProto);
+                console.log("[RustPlus] SUCCESS: Library patched with rustplus.proto.");
+                break;
+              } catch (copyErr) {}
             }
           }
         }
-      } else {
-        console.log(`[RustPlus] Proto present in library folder (${fs.statSync(targetProto).size} bytes).`);
       }
+    } catch (err) {
+      console.error("[RustPlus] Error non-critical during proto check:", err);
     }
-
-    // Diagnostic logging of all potential locations
-    const routes = [
-      path.resolve(__dirname, '../../node_modules/@liamcottle/rustplus.js/rustplus.proto'),
-      path.resolve(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
-      '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
-      '/ROOT/.next/standalone/node_modules/@liamcottle/rustplus.js/rustplus.proto',
-      path.join(libPath || '', 'rustplus.proto')
-    ];
-
-    routes.forEach(r => {
-      if (r) results.files[r] = fs.existsSync(r);
-    });
-
-    console.log("[RustPlus Diagnostic Final]:", JSON.stringify(results, null, 2));
-    return results;
   }
 
   /**
