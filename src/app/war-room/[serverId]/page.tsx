@@ -15,7 +15,7 @@ import {
   Share2,
   RefreshCw,
   Search,
-  ShieldCheck,
+  Shield,
   MessageSquare,
   X,
   Plus,
@@ -445,7 +445,7 @@ export default function WarRoomPage() {
 
           {(activeModule === "CCTV") && (
             <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', opacity: 0.2 }}>
-               <ShieldCheck size={80} color="var(--primary)" style={{ marginBottom: '2rem' }} />
+               <Shield size={80} color="var(--primary)" style={{ marginBottom: '2rem' }} />
                <h2 style={{ fontSize: '2rem', fontWeight: 700 }}>Módulo en Desarrollo</h2>
             </div>
           )}
@@ -594,14 +594,12 @@ function IntelItem({ log }: { log: any }) {
   const isDeath = log.type === 'DEATH' || log.type === 'RAID';
   const isEvent = log.type === 'EVENT';
   
-  const formatTime = (ts: any) => {
+  const formatTime = (ts: number) => {
+    if (!ts) return "--:--";
     try {
       const d = new Date(ts);
-      if (isNaN(d.getTime())) return "00:00:00";
-      return d.toTimeString().split(' ')[0];
-    } catch (e) {
-      return "00:00:00";
-    }
+      return isNaN(d.getTime()) ? "--:--" : d.toLocaleTimeString();
+    } catch (e) { return "--:--"; }
   };
 
   return (
