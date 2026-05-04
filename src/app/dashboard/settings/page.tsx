@@ -208,8 +208,6 @@ export default function SettingsPage() {
           </aside>
         </div>
       </div>
->
-      </div>
     </DashboardLayout>
   );
 }
