@@ -54,12 +54,18 @@ export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
         
         return false;
       },
-      jwt({ token, user, account, profile }) {
+      async jwt({ token, user, account, profile }) {
         // Al iniciar sesión con Steam
         if (account?.provider === "steam" && profile) {
           token.steamId = (profile as any).steamid;
           token.name = (profile as any).personaname;
           token.image = (profile as any).avatarfull;
+
+          const entry = isWhitelisted(token.steamId as string);
+          if (entry) {
+            token.role = entry.role;
+            if (entry.discordId) token.discordId = entry.discordId;
+          }
         }
 
         // Al iniciar sesión con Discord (Vínculo)
@@ -69,7 +75,7 @@ export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
           
           // Lógica de Vínculo: Si ya teníamos un steamId en el token, los enlazamos
           if (token.steamId) {
-            console.log(`[Auth] Vinculando Discord ${discordId} a Steam ${token.steamId}`);
+            console.log(`[Auth Auto-Link] Vinculando Discord ${discordId} a Steam ${token.steamId}`);
             linkDiscordId(String(token.steamId), discordId);
           } else {
             // Si entró directo con Discord, intentamos buscar si ya estaba vinculado
