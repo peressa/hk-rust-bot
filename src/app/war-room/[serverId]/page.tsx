@@ -376,8 +376,7 @@ export default function WarRoomPage() {
                       <tbody>
                         {Array.isArray(filteredOffers) && filteredOffers.length > 0 ? (
                           filteredOffers.map((o, idx) => (
-                             o ? (
-                              <tr key={`${o.itemToSell}-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: '0.1s' }} className="table-row-premium">
+                            <tr key={`${o.itemToSell}-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: '0.1s' }} className="table-row-premium">
                                   <td style={{ padding: '1.5rem 2rem' }}>
                                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                           <img src={getItemIcon(o.currencyReq)} style={{ width: '22px', height: '22px', objectFit: 'contain' }} alt="" />
@@ -427,8 +426,7 @@ export default function WarRoomPage() {
                                     </div>
                                   </td>
                               </tr>
-                             ) : null
-                          )
+                          ))
                         ) : (
                           <tr>
                             <td colSpan={4} style={{ padding: '5rem', textAlign: 'center', opacity: 0.2, fontWeight: 900, letterSpacing: '0.5em', fontSize: '1.2rem' }}>
