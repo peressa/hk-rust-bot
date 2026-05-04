@@ -891,7 +891,6 @@ class RustPlusManager extends EventEmitter {
 
       // 6. Detección en Tiempo Real de Vending Machines (Tipo 3)
       if (m.type === 3) {
-        const totalItems = (m.sellOrders || []).reduce((acc: number, so: any) => acc + (so.amountInStock || 0), 0);
         const grid = worldToGrid(m.x, m.y, mapSize);
 
         // Guardamos en la base de datos como respaldo para el buscador histórico
@@ -908,30 +907,37 @@ class RustPlusManager extends EventEmitter {
           });
         }
 
-        // Lógica de Notificación Anti-Spam (Solo avisar si es nueva ID)
+        // Lógica de Notificación Anti-Spam (Acumulación Temporal)
         const connectionTime = this.lastActivity.get(key) || 0;
         if (hasPreviousState && !lastEventIds.includes(m.id) && (Date.now() - connectionTime) > 30000) {
             if (!this.pendingVendingAlerts.has(key)) this.pendingVendingAlerts.set(key, []);
             this.pendingVendingAlerts.get(key)!.push({ name: m.name || "Tienda", grid });
+
+            // Si no hay un temporizador activo para este servidor, iniciamos uno de 10 segundos
+            if (!(this as any).vendingTimers) (this as any).vendingTimers = new Map();
+            if (!(this as any).vendingTimers.has(key)) {
+                const timer = setTimeout(() => {
+                    const pending = this.pendingVendingAlerts.get(key) || [];
+                    this.pendingVendingAlerts.set(key, []); // Limpiar cola
+                    (this as any).vendingTimers.delete(key); // Limpiar timer
+
+                    if (pending.length === 0) return;
+
+                    if (pending.length > 2) {
+                        const msg = this.formatMsg(steamId, ip, 'event_vending_batch', `📊 REPORTE LOGÍSTICO: {count} nuevas tiendas detectadas. Revisa el terminal web para detalles de stock.`, { count: pending.length });
+                        this.botSendTeamMessage(steamId, ip, msg);
+                    } else {
+                        pending.forEach(p => {
+                            const msg = this.formatMsg(steamId, ip, 'event_vending_new', `¡Nueva expendedora '{name}' en {grid}!`, { name: p.name, grid: p.grid });
+                            this.botSendTeamMessage(steamId, ip, msg);
+                        });
+                    }
+                }, 10000); // 10 SEGUNDOS DE ESPERA TÁCTICA
+                (this as any).vendingTimers.set(key, timer);
+            }
         }
       }
     });
-
-    // Procesar alertas de vending acumuladas (Debounce de 5 segundos)
-    if (this.pendingVendingAlerts.has(key) && this.pendingVendingAlerts.get(key)!.length > 0) {
-        const pending = this.pendingVendingAlerts.get(key)!;
-        this.pendingVendingAlerts.set(key, []); // Limpiar
-        
-        if (pending.length > 3) {
-           const msg = this.formatMsg(steamId, ip, 'event_vending_batch', `📊 Se han detectado {count} nuevas tiendas en el mapa. Revisa el Buscador Web para ver los detalles.`, { count: pending.length });
-           this.botSendTeamMessage(steamId, ip, msg);
-        } else {
-           pending.forEach(p => {
-             const msg = this.formatMsg(steamId, ip, 'event_vending_new', `¡Nueva máquina expendedora '{name}' en {grid}!`, { name: p.name, grid: p.grid });
-             this.botSendTeamMessage(steamId, ip, msg);
-           });
-        }
-    }
 
     // Limpieza de barcos que ya no existen en el mapa
     for (const dId of Array.from(dockedSet)) {
