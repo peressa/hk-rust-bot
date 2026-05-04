@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Settings, ShieldCheck, Cpu, ExternalLink, RefreshCw, CheckCircle2 } from "lucide-react";
+import { Settings, ShieldCheck, Cpu, ExternalLink, RefreshCw, CheckCircle2, MessageSquare } from "lucide-react";
 import ManualPairingInput from "@/components/dashboard/ManualPairingInput";
 
 export default function SettingsPage() {
