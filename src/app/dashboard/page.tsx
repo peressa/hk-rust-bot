@@ -52,35 +52,30 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '3rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <header style={{ marginBottom: '4rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '4px solid var(--primary)', paddingLeft: '2rem' }}>
           <div>
-            <h1 style={{ fontSize: '3rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', letterSpacing: '-0.02em', lineHeight: 1, color: '#fff', textTransform: 'uppercase' }}>
-              Central de Mando
+            <div className="text-tech" style={{ color: 'var(--primary)', marginBottom: '0.25rem' }}>TACTICAL MANAGEMENT SYSTEM // ROOT</div>
+            <h1 style={{ fontSize: '3.5rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', letterSpacing: '-0.03em', lineHeight: 0.9, color: '#fff' }}>
+              COMMAND <span style={{ color: 'var(--primary)' }}>HUB</span>
             </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginTop: '0.5rem', fontWeight: 400 }}>
-              Seleccione un servidor para iniciar la monitorización táctica en tiempo real.
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.75rem', fontWeight: 500, maxWidth: '500px', lineHeight: 1.5 }}>
+              Sincronización táctica establecida. Seleccione un nodo operativo para iniciar el despliegue de inteligencia.
             </p>
           </div>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <Link href="/dashboard/settings" className="btn-secondary" style={{ padding: '0.75rem 1.5rem', fontWeight: 600, fontFamily: 'var(--font-barlow)' }}>
-              <SettingsIcon size={18} /> configuración
+          <div style={{ display: 'flex', gap: '1.25rem' }}>
+            <Link href="/dashboard/settings" className="btn-secondary" style={{ padding: '0.8rem 1.8rem', fontSize: '0.8rem', fontWeight: 800, background: 'rgba(255,255,255,0.02)', borderColor: 'rgba(255,255,255,0.1)' }}>
+              <SettingsIcon size={16} /> SETTINGS
             </Link>
-            <Link href="/dashboard/settings" className="btn-primary" style={{ padding: '0.75rem 1.5rem', fontWeight: 700, fontFamily: 'var(--font-barlow)' }}>
-              <PlusCircle size={18} /> vincular nuevo
+            <Link href="/dashboard/settings" className="btn-primary" style={{ padding: '0.8rem 1.8rem', fontSize: '0.8rem', fontWeight: 900 }}>
+              <PlusCircle size={16} /> ADD SERVER
             </Link>
           </div>
         </header>
 
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
-           <button onClick={() => setActiveTab("SERVERS")} style={{ background: 'none', border: 'none', color: activeTab === 'SERVERS' ? '#fff' : '#666', borderBottom: activeTab === 'SERVERS' ? '2px solid var(--primary)' : '2px solid transparent', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--font-barlow)', fontSize: '1.1rem', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <LayoutGrid size={18} /> MIS SERVIDORES
-           </button>
-           <button onClick={() => setActiveTab("BOT")} style={{ background: 'none', border: 'none', color: activeTab === 'BOT' ? '#fff' : '#666', borderBottom: activeTab === 'BOT' ? '2px solid var(--primary)' : '2px solid transparent', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--font-barlow)', fontSize: '1.1rem', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <SettingsIcon size={18} /> CONFIGURACIÓN BOT
-           </button>
-           <button onClick={() => setActiveTab("DISCORD")} style={{ background: 'none', border: 'none', color: activeTab === 'DISCORD' ? '#fff' : '#666', borderBottom: activeTab === 'DISCORD' ? '2px solid var(--primary)' : '2px solid transparent', padding: '0.5rem 1rem', cursor: 'pointer', fontWeight: 700, fontFamily: 'var(--font-barlow)', fontSize: '1.1rem', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <MessageSquare size={18} /> ALARMAS DISCORD
-           </button>
+        <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '3rem', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+           <TabBtn active={activeTab === 'SERVERS'} label="OPERATIONAL NODES" onClick={() => setActiveTab("SERVERS")} icon={<LayoutGrid size={18} />} />
+           <TabBtn active={activeTab === 'BOT'} label="TACTICAL CONFIG" onClick={() => setActiveTab("BOT")} icon={<SettingsIcon size={18} />} />
+           <TabBtn active={activeTab === 'DISCORD'} label="COMMS INTERFACE" onClick={() => setActiveTab("DISCORD")} icon={<MessageSquare size={18} />} />
         </div>
 
         {activeTab === "SERVERS" && (
@@ -260,25 +255,59 @@ export default function DashboardPage() {
         )}
 
         <footer style={{ 
-            marginTop: '5rem', 
+            marginTop: '8rem', 
             borderTop: '1px solid rgba(255,255,255,0.03)', 
-            paddingTop: '2rem', 
+            paddingTop: '2.5rem', 
+            paddingBottom: '4rem',
             display: 'flex', 
             justifyContent: 'space-between', 
             fontSize: '0.65rem', 
             fontWeight: 800, 
-            color: 'rgba(255,255,255,0.2)', 
-            fontFamily: 'var(--font-roboto)',
+            color: 'rgba(255,255,255,0.15)', 
+            fontFamily: 'var(--font-mono)',
             textTransform: 'uppercase',
-            letterSpacing: '0.1em'
+            letterSpacing: '0.2em'
         }}>
-           <div style={{ display: 'flex', gap: '2.5rem' }}>
-             <span>SISTEMA: RUST OPS v3.0</span>
-             <span style={{ color: 'rgba(255,255,255,0.1)' }}>ENLACES ACTIVOS: {servers.length}</span>
+           <div style={{ display: 'flex', gap: '3rem' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--primary)', boxShadow: '0 0 8px var(--primary)' }}></div>
+                <span>CORE SYSTEM: RUST OPS v3.1.0-STABLE</span>
+             </div>
+             <span style={{ color: 'rgba(255,255,255,0.05)' }}>NODES: {servers.length} FOUND</span>
            </div>
-           <div>ESTADO DE RED: <span style={{ color: '#22c55e' }}>NOMINAL</span></div>
+           <div style={{ display: 'flex', gap: '2rem' }}>
+              <span>LATENCY: <span style={{ color: 'var(--accent)' }}>34MS</span></span>
+              <span>UPLINK: <span style={{ color: 'var(--accent)' }}>NOMINAL</span></span>
+           </div>
         </footer>
       </div>
     </DashboardLayout>
+  );
+}
+
+function TabBtn({ active, label, onClick, icon }: any) {
+  return (
+    <button 
+      onClick={onClick} 
+      style={{ 
+        background: 'none', 
+        border: 'none', 
+        color: active ? '#fff' : '#666', 
+        borderBottom: active ? '2px solid var(--primary)' : '2px solid transparent', 
+        padding: '1rem 0.5rem', 
+        cursor: 'pointer', 
+        fontWeight: 900, 
+        fontFamily: 'var(--font-barlow)', 
+        fontSize: '0.9rem', 
+        transition: '0.2s', 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '0.75rem',
+        letterSpacing: '0.05em'
+      }}
+    >
+      {React.cloneElement(icon, { size: 16, color: active ? 'var(--primary)' : 'currentColor' })}
+      {label}
+    </button>
   );
 }
