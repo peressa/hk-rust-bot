@@ -55,11 +55,17 @@ export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
         return false;
       },
       async jwt({ token, user, account, profile }) {
-        // Al iniciar sesión con Steam
+        // 1. Al iniciar sesión con Steam
         if (account?.provider === "steam" && profile) {
           token.steamId = (profile as any).steamid;
           token.name = (profile as any).personaname;
           token.image = (profile as any).avatarfull;
+          
+          // Si ya teníamos un discordId en el token (de una sesión previa), lo forzamos a la DB
+          if (token.discordId) {
+            console.log(`[Auth Sync] Forzando vínculo Discord ${token.discordId} -> Steam ${token.steamId}`);
+            linkDiscordId(String(token.steamId), token.discordId as string);
+          }
 
           const entry = isWhitelisted(token.steamId as string);
           if (entry) {
@@ -68,17 +74,15 @@ export const getAuthOptions = (req?: NextRequest): NextAuthOptions => {
           }
         }
 
-        // Al iniciar sesión con Discord (Vínculo)
+        // 2. Al iniciar sesión con Discord (Vínculo)
         if (account?.provider === "discord" && profile) {
           const discordId = (profile as any).id;
           token.discordId = discordId;
           
-          // Lógica de Vínculo: Si ya teníamos un steamId en el token, los enlazamos
           if (token.steamId) {
             console.log(`[Auth Auto-Link] Vinculando Discord ${discordId} a Steam ${token.steamId}`);
             linkDiscordId(String(token.steamId), discordId);
           } else {
-            // Si entró directo con Discord, intentamos buscar si ya estaba vinculado
             const entry = getWhitelistByDiscordId(discordId);
             if (entry) {
               token.steamId = entry.steamId;
