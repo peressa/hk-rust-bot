@@ -169,6 +169,12 @@ export default function SettingsPage() {
                                         <>
                                             <CheckCircle2 size={18} style={{ color: '#22c55e' }} />
                                             ID: {discordId}
+                                            <button 
+                                                onClick={handleSyncDiscord}
+                                                style={{ marginLeft: '1rem', fontSize: '0.65rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#aaa', padding: '0.2rem 0.5rem', borderRadius: '4px', cursor: 'pointer', fontFamily: 'var(--font-barlow)', fontWeight: 800 }}
+                                            >
+                                                Sincronizar DB
+                                            </button>
                                         </>
                                     ) : (
                                         "No vinculada"
