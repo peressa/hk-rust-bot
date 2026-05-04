@@ -428,7 +428,7 @@ export default function WarRoomPage() {
                                   </td>
                               </tr>
                              ) : null
-                          ))
+                          )
                         ) : (
                           <tr>
                             <td colSpan={4} style={{ padding: '5rem', textAlign: 'center', opacity: 0.2, fontWeight: 900, letterSpacing: '0.5em', fontSize: '1.2rem' }}>
