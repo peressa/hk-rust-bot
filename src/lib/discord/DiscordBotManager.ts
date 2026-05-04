@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, EmbedBuilder, TextChannel, Interaction, REST, Routes, SlashCommandBuilder } from "discord.js";
+import { Client, GatewayIntentBits, EmbedBuilder, TextChannel, Interaction, REST, Routes, SlashCommandBuilder, Events, MessageFlags } from "discord.js";
 import { getWhitelistByDiscordId, getServers } from "../db";
 import { rustPlusManager } from "../rustplus/RustPlusManager";
 
@@ -25,23 +25,27 @@ class DiscordBotManager {
       ],
     });
 
-    this.client.once("ready", async () => {
+    this.client.once(Events.ClientReady, async (c) => {
       this.isConnected = true;
-      console.log(`[Discord Bot] Conectado como ${this.client?.user?.tag}!`);
+      console.log(`[Discord Bot] Conectado como ${c.user.tag}!`);
       
       if (clientId) {
         await this.registerCommands(token, clientId);
       }
     });
 
-    this.client.on("interactionCreate", async (interaction: Interaction) => {
+    this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       if (!interaction.isChatInputCommand()) return;
 
+      console.log(`[Discord Bot] Comando /${interaction.commandName} recibido de ${interaction.user.tag} (${interaction.user.id})`);
+      
       const user = getWhitelistByDiscordId(interaction.user.id);
+      
       if (!user) {
+        console.warn(`[Discord Bot] Acceso denegado: El ID ${interaction.user.id} no está vinculado en la DB.`);
         return await interaction.reply({ 
           content: "❌ No tienes permiso para usar este bot. Vincula tu Discord en el Dashboard web primero.", 
-          ephemeral: true 
+          flags: [MessageFlags.Ephemeral]
         });
       }
 
@@ -69,11 +73,11 @@ class DiscordBotManager {
         }
       } catch (err) {
         console.error(`[Discord Bot] Error en comando /${interaction.commandName}:`, err);
-        if (!interaction.replied) await interaction.reply({ content: "⚠️ Hubo un error procesando el comando.", ephemeral: true });
+        if (!interaction.replied) await interaction.reply({ content: "⚠️ Hubo un error procesando el comando.", flags: [MessageFlags.Ephemeral] });
       }
     });
 
-    this.client.on("error", (error) => {
+    this.client.on(Events.Error, (error) => {
       console.error("[Discord Bot] Error del Cliente:", error);
     });
 
