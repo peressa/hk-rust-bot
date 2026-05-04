@@ -37,32 +37,32 @@ class DiscordBotManager {
     this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       if (!interaction.isChatInputCommand()) return;
 
+      // Diferimos la respuesta de inmediato para evitar el timeout de 3 segundos
+      await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+
       console.log(`[Discord Bot] Comando /${interaction.commandName} recibido de ${interaction.user.tag} (${interaction.user.id})`);
       
       let user = getWhitelistByDiscordId(interaction.user.id);
       
-      // EMERGENCIA: Si es el Admin (según ENV) y no está vinculado, lo vinculamos ahora mismo
+      // Auto-vínculo de emergencia para el Admin
       if (!user && interaction.user.id === process.env.DISCORD_ADMIN_ID) {
           const adminSteamId = process.env.ADMIN_STEAM_ID?.trim();
           if (adminSteamId) {
-              console.log(`[Discord Bot] Auto-vinculando ADMIN de emergencia: Steam ${adminSteamId} -> Discord ${interaction.user.id}`);
               linkDiscordId(adminSteamId, interaction.user.id);
               user = getWhitelistByDiscordId(interaction.user.id);
           }
       }
       
       if (!user) {
-        console.warn(`[Discord Bot] Acceso denegado: El ID ${interaction.user.id} no está vinculado en la DB.`);
-        return await interaction.reply({ 
-          content: "❌ No tienes permiso para usar este bot. Vincula tu Discord en el Dashboard web primero.", 
-          flags: [MessageFlags.Ephemeral]
+        return await interaction.editReply({ 
+          content: "❌ No tienes permiso para usar este bot. Vincula tu Discord en el Dashboard web primero."
         });
       }
 
       try {
         switch (interaction.commandName) {
           case "status":
-            await interaction.reply({
+            await interaction.editReply({
               embeds: [
                 new EmbedBuilder()
                   .setTitle("🛰️ RUST OPS - STATUS")
@@ -101,7 +101,6 @@ class DiscordBotManager {
 
   private async handleTeamCommand(interaction: Interaction, steamId: string) {
     if (!interaction.isChatInputCommand()) return;
-    await interaction.deferReply();
     
     const servers = getServers(steamId);
     if (servers.length === 0) return await interaction.editReply("No tienes servidores conectados.");
@@ -130,7 +129,6 @@ class DiscordBotManager {
 
   private async handlePopCommand(interaction: Interaction, steamId: string) {
     if (!interaction.isChatInputCommand()) return;
-    await interaction.deferReply();
     
     const servers = getServers(steamId);
     if (servers.length === 0) return await interaction.editReply("No tienes servidores conectados.");
