@@ -1010,9 +1010,9 @@ class RustPlusManager extends EventEmitter {
       }
 
       const sourceProtos = [
-        path.join(process.cwd(), 'rustplus.proto'),
-        path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
-        path.join(process.cwd(), 'resources/rustplus.proto'),
+        path.join(/*turbopackIgnore: true*/ process.cwd(), 'rustplus.proto'),
+        path.join(/*turbopackIgnore: true*/ process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
+        path.join(/*turbopackIgnore: true*/ process.cwd(), 'resources/rustplus.proto'),
       ];
 
       if (libPath) {
