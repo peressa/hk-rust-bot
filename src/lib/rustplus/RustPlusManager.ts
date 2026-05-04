@@ -13,6 +13,7 @@ import {
   RustPlusMap
 } from "../../types/rustplus";
 import { DbServer, DbEntity } from "../../types/db";
+import { DiscordManager } from "../discord/DiscordManager";
 
 // =====================================================================
 // MONKEY PATCH: Forzar campos Opcionales en Protobufjs
@@ -566,7 +567,6 @@ class RustPlusManager extends EventEmitter {
               
               if (serverObj.discordWebhook || serverObj.discordChannelId) {
                 try {
-                  const { DiscordManager } = require('../discord/DiscordManager');
                   DiscordManager.sendGenericAlert(serverObj, "Alerta de Dispositivo", msg);
                 } catch (e) {}
               }
@@ -657,7 +657,6 @@ class RustPlusManager extends EventEmitter {
           // Alerta en Discord
           const server = getServers(steamId).find((s: any) => s.ip === ip) as any;
           if (server && (server.discordWebhook || server.discordChannelId)) {
-            const { DiscordManager } = require('../discord/DiscordManager');
             DiscordManager.sendDeath({
               webhookUrl: server.discordWebhook,
               channelId: server.discordChannelId
@@ -810,7 +809,6 @@ class RustPlusManager extends EventEmitter {
           // Alerta en Discord
           const serverObj = getServers(steamId).find((s: any) => s.ip === ip) as any;
           if (serverObj && (serverObj.discordWebhook || serverObj.discordChannelId)) {
-            const { DiscordManager } = require('@/lib/discord/DiscordManager');
             DiscordManager.sendEvent({
               webhookUrl: serverObj.discordWebhook,
               channelId: serverObj.discordChannelId
@@ -876,7 +874,6 @@ class RustPlusManager extends EventEmitter {
               const serverObj = getServers(steamId).find((s: any) => s.ip === ip) as any;
               if (serverObj && (serverObj.discordWebhook || serverObj.discordChannelId)) {
                 try {
-                  const { DiscordManager } = require('../discord/DiscordManager');
                   DiscordManager.sendRaidAlert({
                     webhookUrl: serverObj.discordWebhook,
                     channelId: serverObj.discordChannelId
