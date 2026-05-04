@@ -38,7 +38,7 @@ class DiscordBotManager {
       if (!interaction.isChatInputCommand()) return;
 
       // Diferimos la respuesta de inmediato para evitar el timeout de 3 segundos
-      await interaction.deferReply({ flags: [MessageFlags.Ephemeral] });
+      await interaction.deferReply();
 
       console.log(`[Discord Bot] Comando /${interaction.commandName} recibido de ${interaction.user.tag} (${interaction.user.id})`);
       
@@ -83,7 +83,7 @@ class DiscordBotManager {
         }
       } catch (err) {
         console.error(`[Discord Bot] Error en comando /${interaction.commandName}:`, err);
-        if (!interaction.replied) await interaction.reply({ content: "⚠️ Hubo un error procesando el comando.", flags: [MessageFlags.Ephemeral] });
+        if (!interaction.replied) await interaction.reply({ content: "⚠️ Hubo un error procesando el comando." });
       }
     });
 
