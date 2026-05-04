@@ -197,60 +197,65 @@ export default function WarRoomPage() {
   return (
     <div className="war-room-root" style={{ height: '100vh', width: '100vw', background: '#050505', color: '#fff', position: 'relative', overflow: 'hidden', fontFamily: 'Inter, sans-serif' }}>
       
-      {/* TACTICAL TOP BAR - INTEGRATED */}
+      {/* TACTICAL TOP BAR - COMMAND CENTER STYLE */}
       <header style={{ 
-        height: '64px',
+        height: '70px',
         width: '100%',
-        background: '#080808',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
+        background: 'rgba(10, 10, 12, 0.95)',
+        borderBottom: '1px solid rgba(232, 0, 28, 0.15)',
         display: 'flex',
         alignItems: 'center',
-        padding: '0 1.5rem',
+        padding: '0 2rem',
         zIndex: 1000,
         position: 'absolute',
         top: 0,
-        left: 0
+        left: 0,
+        backdropFilter: 'blur(10px)'
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <button onClick={() => router.push('/dashboard')} className="icon-btn-simple" title="Volver al Panel">
-            <ChevronLeft size={20} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+          <button onClick={() => router.push('/dashboard')} className="icon-btn-simple" title="Abortar Misión">
+            <ChevronLeft size={22} color="var(--primary)" />
           </button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginLeft: '0.5rem' }}>
-             <span style={{ fontSize: '1rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{serverInfo?.name}</span>
-             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(34, 197, 94, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-                <div className="status-blink" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#22c55e' }}></div>
-                <span style={{ fontSize: '0.6rem', color: '#22c55e', fontWeight: 800 }}>LIVE</span>
-             </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+             <span style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 800, letterSpacing: '0.2em', marginBottom: '-2px' }}>TACTICAL COMMAND</span>
+             <span style={{ fontSize: '1.2rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', color: '#fff', textTransform: 'uppercase' }}>{serverInfo?.name}</span>
           </div>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '0.5rem' }}>
-          <NavBtn active={activeModule === "RADAR"} icon={<MapIcon size={16} />} label="Radar" onClick={() => setActiveModule("RADAR")} />
-          <NavBtn active={activeModule === "COMMS"} icon={<MessageSquare size={16} />} label="Comunicaciones" onClick={() => setActiveModule("COMMS")} />
-          <NavBtn active={activeModule === "ECONOMY"} icon={<ShoppingCart size={16} />} label="Logística" onClick={() => setActiveModule("ECONOMY")} />
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+          <NavBtn active={activeModule === "RADAR"} icon={<MapIcon size={18} />} label="RADAR INTEL" onClick={() => setActiveModule("RADAR")} />
+          <NavBtn active={activeModule === "COMMS"} icon={<MessageSquare size={18} />} label="VHF COMMS" onClick={() => setActiveModule("COMMS")} />
+          <NavBtn active={activeModule === "ECONOMY"} icon={<ShoppingCart size={18} />} label="QUARTERMASTER" onClick={() => setActiveModule("ECONOMY")} />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <IconButton icon={<Share2 size={16} />} title="Invitados" onClick={() => setShowInviteModal(true)} highlight />
-          <IconButton icon={<RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />} title="Sincronizar" onClick={refreshTacticalData} />
-          <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.05)', margin: '0 0.5rem' }}></div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="status-blink" style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'rgba(34, 197, 94, 0.1)', padding: '4px 12px', borderRadius: '4px', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+             <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 10px #22c55e' }}></div>
+             <span style={{ fontSize: '0.7rem', color: '#22c55e', fontWeight: 900, letterSpacing: '0.1em' }}>UPLINK ESTABLISHED</span>
+          </div>
+          
+          <IconButton icon={<Share2 size={18} />} title="Gestión de Enlaces" onClick={() => setShowInviteModal(true)} highlight />
+          
           <button 
             onClick={() => setShowLogoutConfirm(true)}
             style={{ 
-                background: 'rgba(239, 68, 68, 0.1)', 
-                border: '1px solid rgba(239, 68, 68, 0.2)', 
+                background: 'transparent', 
+                border: '1px solid rgba(239, 68, 68, 0.4)', 
                 color: '#ef4444',
-                padding: '0.4rem 0.8rem',
+                padding: '0.5rem 1rem',
                 borderRadius: '4px',
-                fontSize: '0.7rem',
+                fontSize: '0.75rem',
                 fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem'
+                gap: '0.5rem',
+                transition: '0.2s'
             }}
+            onMouseOver={(e) => (e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)')}
+            onMouseOut={(e) => (e.currentTarget.style.background = 'transparent')}
           >
-            <LogOut size={14} /> SALIR
+            <LogOut size={16} /> DISCONNECT
           </button>
         </div>
       </header>
@@ -260,33 +265,44 @@ export default function WarRoomPage() {
               {/* LEFT PANEL: ROSTER & ACTIVITY */}
         {activeModule === "RADAR" && (
           <aside style={{ 
-            width: '320px', 
-            borderRight: '1px solid rgba(255,255,255,0.05)', 
-            background: '#0a0a0b', 
+            width: '350px', 
+            borderRight: '1px solid rgba(232, 0, 28, 0.1)', 
+            background: 'rgba(10, 10, 12, 0.98)', 
             display: 'flex', 
             flexDirection: 'column', 
             height: '100%',
             overflow: 'hidden',
-            paddingTop: '64px'
+            paddingTop: '70px',
+            backdropFilter: 'blur(20px)'
           }}>
-            <div style={{ padding: '1.5rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ padding: '2rem 1.5rem', height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <section style={{ marginBottom: '2.5rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '1.5rem' }}>
-                    <h3 className="premium-title" style={{ fontSize: '1rem' }}>Operativos</h3>
-                    <span style={{ fontSize: '0.6rem', color: '#444', fontWeight: 800, textTransform: 'uppercase' }}>{team.length} Activos</span>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <h3 className="premium-title" style={{ fontSize: '1.1rem', color: '#fff' }}>FIELD OPERATIVES</h3>
+                      <span className="text-tech" style={{ color: 'var(--primary)', fontWeight: 800 }}>SQUAD STATUS // ACTIVE</span>
+                    </div>
+                    <div style={{ background: 'rgba(232, 0, 28, 0.1)', padding: '4px 10px', borderRadius: '4px', border: '1px solid rgba(232, 0, 28, 0.2)' }}>
+                      <span style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 900 }}>{team.length}</span>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {Array.isArray(team) && team.map((m, idx) => (
-                      m && m.steamId ? <MemberCard key={String(m.steamId)} member={m} /> : <div key={idx} className="opacity-10 py-1 text-[0.6rem]">DESCRIPTOR DESCONOCIDO</div>
-                    ))}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {Array.isArray(team) && team.length > 0 ? team.map((m, idx) => (
+                      m && m.steamId ? <MemberCard key={String(m.steamId)} member={m} /> : null
+                    )) : (
+                      <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.1, fontSize: '0.7rem', fontWeight: 900, letterSpacing: '0.2em' }}>SCANNING FOR SIGNALS...</div>
+                    )}
                 </div>
                 </section>
 
-                <section style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '1.5rem' }}>
-                    <h3 className="premium-title" style={{ opacity: 0.4, fontSize: '0.8rem' }}>Inteligencia en Vivo</h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1.25rem' }}>
+                <section style={{ flex: 1, overflowY: 'auto', borderTop: '1px solid rgba(255,255,255,0.05)', paddingTop: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem' }}>
+                      <Activity size={16} color="var(--primary)" />
+                      <h3 className="premium-title" style={{ fontSize: '0.85rem', opacity: 0.8 }}>TACTICAL LOGS</h3>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {!Array.isArray(intel) || intel.length === 0 ? (
-                        <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.1, fontSize: '0.7rem', fontWeight: 700 }}>SIN DATOS REPORTADOS</div>
+                        <div style={{ textAlign: 'center', padding: '3rem', opacity: 0.1, fontSize: '0.7rem', fontWeight: 900 }}>NO SIGNAL DETECTED</div>
                         ) : (
                         intel.map((log, i) => (
                            log ? <IntelItem key={log.id || `intel-${i}`} log={log} /> : null
@@ -318,68 +334,108 @@ export default function WarRoomPage() {
           {activeModule === "COMMS" && <CommsModule serverId={serverId} />}
           
           {activeModule === "ECONOMY" && (
-            <div style={{ height: '100%', padding: '100px 40px 40px', display: 'flex', flexDirection: 'column', background: 'radial-gradient(circle at top right, rgba(206, 66, 43, 0.05), transparent)' }}>
-                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div style={{ height: '100%', padding: '110px 3rem 3rem', display: 'flex', flexDirection: 'column', background: 'radial-gradient(circle at top right, rgba(232, 0, 28, 0.03), transparent)' }}>
+                <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '2.5rem', borderBottom: '1px solid rgba(255,255,255,0.03)', paddingBottom: '1.5rem' }}>
                    <div>
-                      <h2 style={{ fontSize: '2.5rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', textTransform: 'uppercase', margin: 0, letterSpacing: '-0.02em' }}>Logística de <em style={{ fontStyle: 'italic', color: 'var(--primary)' }}>Mercado</em></h2>
-                      <div style={{ opacity: 0.3, textTransform: 'uppercase', letterSpacing: '0.15rem', fontSize: '0.6rem', fontWeight: 800, marginTop: '0.25rem' }}>Ecosistema de Economía Táctica v3</div>
+                      <h2 style={{ fontSize: '2.8rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', textTransform: 'uppercase', margin: 0, letterSpacing: '-0.03em', color: 'var(--primary)' }}>QUARTERMASTER</h2>
+                      <div className="text-tech" style={{ marginTop: '0.25rem' }}>SUPPLY CHAIN INTELLIGENCE // LIVE FEED</div>
                    </div>
                    <div style={{ position: 'relative' }}>
-                      <Search size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3 }} />
+                      <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', opacity: 0.3, color: 'var(--primary)' }} />
                       <input 
                         type="text" 
-                        placeholder="BUSCAR ARTÍCULO O TIENDA..." 
+                        placeholder="FILTER BY ITEM OR MERCHANT..." 
                         value={vendingQuery}
                         onChange={(e) => setVendingQuery(e.target.value)}
-                        style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', padding: '0.75rem 1rem 0.75rem 2.8rem', width: '350px', fontSize: '0.8rem', color: 'white', transition: '0.2s', fontFamily: 'var(--font-barlow)', fontWeight: 700 }}
+                        style={{ 
+                          background: 'rgba(0,0,0,0.3)', 
+                          border: '1px solid rgba(232, 0, 28, 0.2)', 
+                          padding: '1rem 1.5rem 1rem 3.2rem', 
+                          width: '400px', 
+                          fontSize: '0.85rem', 
+                          color: 'white', 
+                          fontFamily: 'var(--font-mono)', 
+                          borderRadius: '4px',
+                          outline: 'none'
+                        }}
                         className="search-input-premium"
                       />
                    </div>
                 </header>
 
-                <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead style={{ position: 'sticky', top: 0, background: '#0a0a0b', zIndex: 5, borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                        <tr style={{ textAlign: 'left', fontSize: '0.6rem', opacity: 0.4, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1rem', fontFamily: 'var(--font-barlow)' }}>
-                          <th style={{ padding: '1rem 1.5rem' }}>Precio Venta</th>
-                          <th style={{ padding: '1rem 1.5rem' }}>Artículo</th>
-                          <th style={{ padding: '1rem 1.5rem' }}>Suministro</th>
-                          <th style={{ padding: '1rem 1.5rem' }}>Vendedor / Ubicación</th>
+                <div style={{ flex: 1, overflowY: 'auto', background: 'rgba(10, 10, 12, 0.5)', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(5px)' }}>
+                   <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-barlow)' }}>
+                      <thead style={{ position: 'sticky', top: 0, background: '#0a0a0b', zIndex: 5, borderBottom: '1px solid var(--primary)' }}>
+                        <tr style={{ textAlign: 'left', fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em' }}>
+                          <th style={{ padding: '1.25rem 2rem' }}>Unit Cost</th>
+                          <th style={{ padding: '1.25rem 2rem' }}>Resource / Item</th>
+                          <th style={{ padding: '1.25rem 2rem' }}>Availability</th>
+                          <th style={{ padding: '1.25rem 2rem' }}>Merchant Identity</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {Array.isArray(filteredOffers) && filteredOffers.map((o, idx) => (
-                           o ? (
-                            <tr key={`${o.itemToSell}-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)' }} className="table-row-premium">
-                                <td style={{ padding: '1.25rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <img src={getItemIcon(o.currencyReq)} style={{ width: '20px', height: '20px', objectFit: 'contain' }} alt="" />
-                                        <span style={{ color: '#fbbf24', fontWeight: 600 }}>{o.costPerItem}x</span> {getItemName(o.currencyReq)}
+                        {Array.isArray(filteredOffers) && filteredOffers.length > 0 ? (
+                          filteredOffers.map((o, idx) => (
+                             o ? (
+                              <tr key={`${o.itemToSell}-${idx}`} style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', transition: '0.1s' }} className="table-row-premium">
+                                  <td style={{ padding: '1.5rem 2rem' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                          <img src={getItemIcon(o.currencyReq)} style={{ width: '22px', height: '22px', objectFit: 'contain' }} alt="" />
+                                          <span style={{ color: '#fbbf24', fontWeight: 800, fontSize: '1.1rem', fontFamily: 'var(--font-mono)' }}>{o.costPerItem}</span>
+                                          <span style={{ fontSize: '0.65rem', opacity: 0.5, fontWeight: 700 }}>{getItemName(o.currencyReq).toUpperCase()}</span>
+                                      </div>
+                                  </td>
+                                  <td style={{ padding: '1.5rem 2rem' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                          <div style={{ position: 'relative' }}>
+                                            <img src={getItemIcon(o.itemToSell)} style={{ width: '28px', height: '28px', objectFit: 'contain', zIndex: 2, position: 'relative' }} alt="" />
+                                            <div style={{ position: 'absolute', inset: -5, background: 'rgba(232, 0, 28, 0.1)', filter: 'blur(8px)', borderRadius: '50%' }}></div>
+                                          </div>
+                                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                            <span style={{ color: '#fff', fontWeight: 700, fontSize: '1rem' }}>{o.amountToSell}x {getItemName(o.itemToSell)}</span>
+                                            <span style={{ fontSize: '0.6rem', opacity: 0.4, fontWeight: 800 }}>ID: {o.itemToSell}</span>
+                                          </div>
+                                      </div>
+                                  </td>
+                                  <td style={{ padding: '1.5rem 2rem' }}>
+                                      <div style={{ 
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '4px'
+                                      }}>
+                                          <div style={{ height: '4px', width: '100px', background: 'rgba(255,255,255,0.05)', borderRadius: '2px', overflow: 'hidden' }}>
+                                            <div style={{ 
+                                              height: '100%', 
+                                              width: `${Math.min(100, (o.amountInStock / 1000) * 100)}%`, 
+                                              background: o.amountInStock === 0 ? 'var(--error)' : (o.amountInStock < 100 ? 'var(--warn)' : 'var(--accent)')
+                                            }}></div>
+                                          </div>
+                                          <span style={{ 
+                                            color: o.amountInStock === 0 ? 'var(--error)' : (o.amountInStock < 100 ? 'var(--warn)' : 'var(--accent)'),
+                                            fontSize: '0.8rem',
+                                            fontWeight: 900,
+                                            fontFamily: 'var(--font-mono)'
+                                          }}>
+                                            {o.amountInStock === 0 ? "OUT OF STOCK" : `${o.amountInStock} UNITS`}
+                                          </span>
+                                      </div>
+                                  </td>
+                                  <td style={{ padding: '1.5rem 2rem' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                      <span style={{ color: '#fff', fontSize: '0.8rem', fontWeight: 800, letterSpacing: '0.05em' }}>{(o.machineName || "UNKNOWN MERCHANT").toUpperCase()}</span>
+                                      <span style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>LOC: {o.x.toFixed(0)}, {o.y.toFixed(0)}</span>
                                     </div>
-                                </td>
-                                <td style={{ padding: '1.25rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                        <img src={getItemIcon(o.itemToSell)} style={{ width: '24px', height: '24px', objectFit: 'contain', filter: 'drop-shadow(0 0 5px rgba(96, 165, 250, 0.4))' }} alt="" />
-                                        <span style={{ color: '#60a5fa', fontWeight: 600 }}>{o.amountToSell}x</span> {getItemName(o.itemToSell)}
-                                    </div>
-                                </td>
-                                <td style={{ padding: '1.25rem' }}>
-                                    <div style={{ 
-                                      background: o.amountInStock === 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)',
-                                      color: o.amountInStock === 0 ? '#ef4444' : '#22c55e',
-                                      padding: '4px 12px',
-                                      borderRadius: '4px',
-                                      display: 'inline-block',
-                                      fontSize: '0.75rem',
-                                      fontWeight: 700
-                                    }}>
-                                        {o.amountInStock} UNID
-                                    </div>
-                                </td>
-                                <td style={{ padding: '0.75rem 1.5rem', opacity: 0.3, fontSize: '0.7rem', fontWeight: 600 }}>{(o.machineName || "TIENDA").toUpperCase()}</td>
-                            </tr>
-                           ) : null
-                        ))}
+                                  </td>
+                              </tr>
+                             ) : null
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan={4} style={{ padding: '5rem', textAlign: 'center', opacity: 0.2, fontWeight: 900, letterSpacing: '0.5em', fontSize: '1.2rem' }}>
+                              NO INTEL FOUND
+                            </td>
+                          </tr>
+                        )}
                       </tbody>
                    </table>
                 </div>
@@ -479,56 +535,97 @@ function IconButton({ icon, title, onClick, highlight = false }: any) {
 function MemberCard({ member }: { member: any }) {
   const isOnline = member.isOnline;
   const isAlive = member.isAlive;
+  
   return (
     <div style={{ 
-      background: 'rgba(255,255,255,0.02)', 
-      padding: '0.8rem 1rem', 
-      borderRadius: '8px',
-      border: '1px solid rgba(255,255,255,0.03)',
+      background: isOnline ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.01)', 
+      padding: '1rem', 
+      borderRadius: '4px',
+      border: `1px solid ${isOnline ? (isAlive ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)') : 'rgba(255,255,255,0.02)'}`,
       display: 'flex',
       alignItems: 'center',
-      gap: '1rem',
-      opacity: isOnline ? 1 : 0.3,
-      transition: '0.2s'
-    }}>
-      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: isOnline ? 'rgba(255,255,255,0.05)' : '#000', fontSize: '0.9rem', display: 'grid', placeItems: 'center', fontWeight: 600, border: isOnline ? '1px solid rgba(255,255,255,0.1)' : '1px solid transparent' }}>
-         {member.name?.charAt(0)}
+      gap: '1.25rem',
+      opacity: isOnline ? 1 : 0.4,
+      transition: '0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      position: 'relative',
+      overflow: 'hidden'
+    }} className="member-card-premium">
+      {/* Indicador de vida/muerte lateral */}
+      <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '3px', background: isOnline ? (isAlive ? '#22c55e' : '#ef4444') : '#333' }}></div>
+      
+      <div style={{ 
+        width: '42px', 
+        height: '42px', 
+        borderRadius: '4px', 
+        background: '#000', 
+        display: 'grid', 
+        placeItems: 'center', 
+        fontWeight: 900, 
+        border: `1px solid ${isOnline ? (isAlive ? '#22c55e44' : '#ef444444') : '#222'}`,
+        color: isOnline ? '#fff' : '#444',
+        fontSize: '1.2rem',
+        fontFamily: 'var(--font-barlow)'
+      }}>
+         {member.name?.charAt(0).toUpperCase()}
       </div>
+
       <div style={{ flex: 1, minWidth: 0 }}>
-         <div style={{ fontSize: '0.9rem', fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{member.name}</div>
-         <div style={{ fontSize: '0.65rem', fontWeight: 600, color: isOnline ? (isAlive ? '#22c55e' : '#ef4444') : '#555', letterSpacing: '0.05rem', textTransform: 'uppercase' }}>
-            {isOnline ? (isAlive ? "Operativo" : "Abatido") : "Desconectado"}
+         <div style={{ fontSize: '0.95rem', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isOnline ? '#fff' : '#666', fontFamily: 'var(--font-barlow)' }}>
+            {member.name}
+         </div>
+         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '2px' }}>
+            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: isOnline ? (isAlive ? '#22c55e' : '#ef4444') : '#444', boxShadow: isOnline ? `0 0 8px ${isAlive ? '#22c55e' : '#ef4444'}` : 'none' }}></div>
+            <span style={{ fontSize: '0.6rem', fontWeight: 900, color: isOnline ? (isAlive ? '#22c55e' : '#ef4444') : '#555', letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: 'var(--font-mono)' }}>
+                {isOnline ? (isAlive ? "OPERATIONAL" : "K.I.A.") : "OFFLINE"}
+            </span>
          </div>
       </div>
+      
+      {isOnline && isAlive && (
+        <div className="text-tech" style={{ fontSize: '0.55rem', position: 'absolute', right: '0.5rem', top: '0.5rem', color: 'var(--primary)', opacity: 0.4 }}>
+          TRK-7{Math.floor(Math.random() * 9)}
+        </div>
+      )}
     </div>
   );
 }
 
 function IntelItem({ log }: { log: any }) {
-  const isDeath = log.type === 'DEATH';
+  const isDeath = log.type === 'DEATH' || log.type === 'RAID';
   const isEvent = log.type === 'EVENT';
   
   const formatTime = (ts: any) => {
     try {
       const d = new Date(ts);
-      if (isNaN(d.getTime())) return "Reciente";
-      return d.toLocaleTimeString();
+      if (isNaN(d.getTime())) return "00:00:00";
+      return d.toTimeString().split(' ')[0];
     } catch (e) {
-      return "Reciente";
+      return "00:00:00";
     }
   };
 
   return (
     <div style={{ 
-      borderLeft: `2px solid ${isDeath ? '#ef4444' : (isEvent ? '#fbbf24' : '#222')}`, 
-      paddingLeft: '1.25rem', 
-      background: 'linear-gradient(to right, rgba(255,255,255,0.01), transparent)',
-      paddingTop: '0.5rem',
-      paddingBottom: '0.5rem'
+      padding: '0.75rem 1rem', 
+      background: 'rgba(255,255,255,0.01)',
+      borderLeft: `2px solid ${isDeath ? '#ef4444' : (isEvent ? '#fbbf24' : '#333')}`,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+      marginBottom: '2px'
     }}>
-       <div style={{ fontSize: '0.6rem', color: '#555', marginBottom: '0.3rem', fontWeight: 700 }}>{formatTime(log.timestamp)}</div>
-       <div style={{ fontSize: '0.85rem', color: isDeath ? '#ef4444' : (isEvent ? '#fbbf24' : '#ccc'), fontWeight: isDeath || isEvent ? 600 : 400, lineHeight: 1.4 }}>
-          {log.message}
+       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ fontSize: '0.6rem', color: 'var(--primary)', fontWeight: 900, fontFamily: 'var(--font-mono)' }}>[{formatTime(log.timestamp)}]</span>
+          <span style={{ fontSize: '0.55rem', opacity: 0.3, fontWeight: 800 }}>TYPE: {log.type}</span>
+       </div>
+       <div style={{ 
+          fontSize: '0.8rem', 
+          color: isDeath ? '#ef4444' : (isEvent ? '#fbbf24' : '#aaa'), 
+          fontWeight: isDeath || isEvent ? 700 : 400, 
+          lineHeight: 1.4,
+          fontFamily: isDeath ? 'var(--font-barlow)' : 'var(--font-main)'
+       }}>
+          {log.message?.toUpperCase()}
        </div>
     </div>
   );
