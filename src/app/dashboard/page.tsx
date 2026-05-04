@@ -28,10 +28,12 @@ export default function DashboardPage() {
   const fetchServers = async () => {
     try {
       const res = await fetch("/api/servers");
+      if (!res.ok) throw new Error("Unauthorized");
       const data = await res.json();
-      setServers(data);
+      setServers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+      setServers([]);
     } finally {
       setLoading(false);
     }
@@ -222,21 +224,13 @@ export default function DashboardPage() {
                            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '2rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1rem', color: '#22c55e' }}>2. VINCULA TU CUENTA</h3>
                               <p style={{ fontSize: '0.9rem', color: '#888', marginBottom: '1.5rem' }}>Para que el bot sepa qué servidores controlas, debes vincular tu identidad de Discord.</p>
-                              <button 
-                                onClick={() => {
-                                  const discordId = prompt("Introduce tu Discord ID (Activa el modo desarrollador en Discord y haz clic derecho en tu perfil -> Copiar ID):");
-                                  if (discordId) {
-                                    fetch("/api/user/link", {
-                                      method: "POST",
-                                      body: JSON.stringify({ discordId })
-                                    }).then(() => alert("✅ Discord vinculado con éxito."));
-                                  }
-                                }}
+                              <Link 
+                                href="/dashboard/settings"
                                 className="btn-secondary"
-                                style={{ width: '100%', justifyContent: 'center', background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.2)' }}
+                                style={{ width: '100%', justifyContent: 'center', background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', border: '1px solid rgba(34, 197, 94, 0.2)', textDecoration: 'none', display: 'flex' }}
                               >
-                                 VINCULAR DISCORD ID
-                              </button>
+                                 CONFIGURAR VÍNCULO
+                              </Link>
                            </div>
                         </div>
 
