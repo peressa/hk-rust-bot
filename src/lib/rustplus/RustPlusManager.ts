@@ -961,6 +961,8 @@ class RustPlusManager extends EventEmitter {
   }
 
   async checkProtos() {
+    const fs = require('fs');
+    const path = require('path');
     try {
       console.log("[RustPlus] Starting Self-Patching Protocol Check...");
       
