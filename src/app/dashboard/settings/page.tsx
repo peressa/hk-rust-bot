@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useSession, signIn } from "next-auth/react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Settings, ShieldCheck, Cpu, ExternalLink, RefreshCw, CheckCircle2, MessageSquare } from "lucide-react";
+import { Settings, Shield, Cpu, ExternalLink, RefreshCw, Check, MessageSquare } from "lucide-react";
 import ManualPairingInput from "@/components/dashboard/ManualPairingInput";
 
 export default function SettingsPage() {
@@ -168,7 +168,7 @@ export default function SettingsPage() {
           <aside style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
             <div className="premium-card" style={{ background: 'rgba(232, 0, 28, 0.02)', border: '1px solid rgba(232, 0, 28, 0.1)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '2rem' }}>
-                  <ShieldCheck size={18} color="var(--primary)" />
+                  <Shield size={20} color="var(--primary)" />
                   <h4 style={{ fontSize: '0.85rem', opacity: 0.8 }}>DIAGNOSTICS</h4>
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
