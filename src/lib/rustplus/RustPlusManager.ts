@@ -961,17 +961,6 @@ class RustPlusManager extends EventEmitter {
   }
 
   // Diagnostic & Auto-Patch helper
-  public async checkProtos(): Promise<any> {
-    const fs = require('fs');
-    const path = require('path');
-    
-    console.log("[RustPlus] Starting Self-Patching Protocol Check...");
-    
-    const results: any = {
-      cwd: process.cwd(),
-      dirname: __dirname,
-      files: {}
-    };
 
     // 1. Find where the library is actually running from
     let libPath = '';
