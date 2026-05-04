@@ -330,7 +330,12 @@ export function addToWhitelist(steamId: string, name: string = "User", role: str
 
 export function linkDiscordId(steamId: string, discordId: string) {
   const stmt = db.prepare("UPDATE whitelist SET discordId = ? WHERE steamId = ?");
-  stmt.run(discordId, steamId);
+  const result = stmt.run(discordId, steamId);
+  if (result.changes > 0) {
+    console.log(`[DB] Vínculo exitoso: Steam ${steamId} -> Discord ${discordId}`);
+  } else {
+    console.warn(`[DB] Fallo al vincular: No se encontró SteamID ${steamId} en la whitelist.`);
+  }
 }
 
 export function getWhitelistByDiscordId(discordId: string): DbWhitelist | null {
