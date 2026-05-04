@@ -329,13 +329,28 @@ export function addToWhitelist(steamId: string, name: string = "User", role: str
 }
 
 export function linkDiscordId(steamId: string, discordId: string) {
+  const cleanSteamId = String(steamId).trim();
+  const cleanDiscordId = String(discordId).trim();
+  
   const stmt = db.prepare("UPDATE whitelist SET discordId = ? WHERE steamId = ?");
-  const result = stmt.run(discordId, steamId);
+  const result = stmt.run(cleanDiscordId, cleanSteamId);
+  
   if (result.changes > 0) {
-    console.log(`[DB] Vínculo exitoso: Steam ${steamId} -> Discord ${discordId}`);
+    console.log(`[DB] Vínculo exitoso: Steam ${cleanSteamId} -> Discord ${cleanDiscordId}`);
+    return true;
   } else {
-    console.warn(`[DB] Fallo al vincular: No se encontró SteamID ${steamId} en la whitelist.`);
+    // Si falla el update, puede que el usuario no esté en la tabla (común en primer inicio)
+    console.warn(`[DB] Fallo al vincular: No se encontró SteamID ${cleanSteamId}. Intentando inserción de emergencia...`);
+    
+    // Si es el admin de las variables de entorno, lo creamos
+    if (cleanSteamId === process.env.ADMIN_STEAM_ID?.trim()) {
+      db.prepare("INSERT OR REPLACE INTO whitelist (steamId, name, role, discordId, createdAt) VALUES (?, ?, ?, ?, ?)")
+        .run(cleanSteamId, "Admin Principal", "admin", cleanDiscordId, new Date().toISOString());
+      console.log(`[DB] Admin vinculado y creado con éxito.`);
+      return true;
+    }
   }
+  return false;
 }
 
 export function getWhitelistByDiscordId(discordId: string): DbWhitelist | null {
