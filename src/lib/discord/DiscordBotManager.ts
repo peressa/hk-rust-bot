@@ -39,7 +39,17 @@ class DiscordBotManager {
 
       console.log(`[Discord Bot] Comando /${interaction.commandName} recibido de ${interaction.user.tag} (${interaction.user.id})`);
       
-      const user = getWhitelistByDiscordId(interaction.user.id);
+      let user = getWhitelistByDiscordId(interaction.user.id);
+      
+      // EMERGENCIA: Si es el Admin (según ENV) y no está vinculado, lo vinculamos ahora mismo
+      if (!user && interaction.user.id === process.env.DISCORD_ADMIN_ID) {
+          const adminSteamId = process.env.ADMIN_STEAM_ID?.trim();
+          if (adminSteamId) {
+              console.log(`[Discord Bot] Auto-vinculando ADMIN de emergencia: Steam ${adminSteamId} -> Discord ${interaction.user.id}`);
+              linkDiscordId(adminSteamId, interaction.user.id);
+              user = getWhitelistByDiscordId(interaction.user.id);
+          }
+      }
       
       if (!user) {
         console.warn(`[Discord Bot] Acceso denegado: El ID ${interaction.user.id} no está vinculado en la DB.`);
