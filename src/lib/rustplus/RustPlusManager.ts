@@ -1,4 +1,6 @@
 import db, { saveTeamMessage, getMapCache, saveMapCache, getServers, getEntities, saveVending } from "../db";
+import RustPlus from "@liamcottle/rustplus.js";
+
 import { worldToGrid, worldToLeaflet, getRegionName } from "./coordUtils";
 import { FcmManager } from "../fcm/FcmManager";
 import protobuf from "protobufjs";
@@ -267,8 +269,8 @@ class RustPlusManager extends EventEmitter {
     return `${prefix} ${msg}`.trim();
   }
 
-  private async handleTeamCommand(steamId: string, ip: string, message: any) {
-    await CommandRouter.handle(steamId, ip, message.message || "");
+  private async handleTeamCommand(steamId: string, ip: string, messageContent: string) {
+    await CommandRouter.handle(steamId, ip, messageContent);
   }
 
   async sendRequest(steamId: string, ip: string, request: any, timeoutMs = 10000): Promise<any> {
