@@ -217,10 +217,8 @@ export class FcmManager {
       const isEntityPairing = normalizedPayload.type === "entity" || normalizedPayload.entityid;
       const isDeathNotify = normalizedPayload.type === "death" || normalizedPayload.gcm_notification_title?.toLowerCase().includes("killed");
 
-      // Si es muerte, NO es pairing de servidor aunque traiga IP/Port (a menos que traiga token explícito)
-      if (isDeathNotify && !normalizedPayload.playertoken) {
-         // Continuar a la lógica de muerte
-      } else if (isServerPairing) {
+      // Priority 1: Server Pairing (Must have playertoken)
+      if (isServerPairing) {
         const server: Partial<DbServer> & { ip: string, port: string, playerId: string, playerToken: string } = {
           ip: ip,
           port: port?.toString(),
@@ -240,7 +238,6 @@ export class FcmManager {
           // Enviar Webhook
           const dbModule = require('@/lib/db');
           const servers = dbModule.getServers(steamId);
-          // Find the just saved or existing server to get webhook if it existed
           const existing = servers.find((s:any) => s.ip === ip);
           if (existing && (existing.discordWebhook || existing.discordChannelId)) {
             const { DiscordManager } = require('@/lib/discord/DiscordManager');
@@ -249,11 +246,12 @@ export class FcmManager {
               channelId: existing.discordChannelId 
             }, existing.name, ip, server.port);
           }
-
         } catch (err) {
           console.error(`[FCM] DATABASE ERROR: Failed to save server:`, err);
         }
-      } else if (isDeathNotify) {
+      } 
+      // Priority 2: Death Notification
+      else if (isDeathNotify) {
         console.log(`[FCM] Detected Death Notification!`);
         try {
           const dbModule = require('@/lib/db');
@@ -290,7 +288,9 @@ export class FcmManager {
         } catch(err) {
           console.warn("[FCM] Error procesando notificación de muerte", err);
         }
-      } else if (isEntityPairing) {
+      } 
+      // Priority 3: Entity Update
+      else if (isEntityPairing) {
         const entity: DbEntity = {
           id: `${steamId}-${ip}-${normalizedPayload.entityid}`,
           steamId: steamId,
@@ -325,13 +325,33 @@ export class FcmManager {
         } catch (err) {
           console.error(`[FCM] DATABASE ERROR: Failed to save entity:`, err);
         }
-      } else if (normalizedPayload.type === "alarm" || normalizedPayload.channelid === "alarm") {
+      } 
+      // Priority 4: Presence (Login/Logout)
+      else if (normalizedPayload.type === "login" || normalizedPayload.type === "logout") {
+        console.log(`[FCM] Detected Presence Notification: ${normalizedPayload.type}`);
+        try {
+          const dbModule = require('@/lib/db');
+          const servers = dbModule.getServers(steamId);
+          const server = servers.find((s: any) => s.ip === ip) || servers[0];
+          
+          if (server && (server.discordWebhook || server.discordChannelId)) {
+            const { DiscordManager } = require('@/lib/discord/DiscordManager');
+            await DiscordManager.sendPresence({
+              webhookUrl: server.discordWebhook,
+              channelId: server.discordChannelId
+            }, normalizedPayload.targetname || "Jugador", normalizedPayload.targetid || "N/A", normalizedPayload.type === "login", server.name);
+          }
+        } catch(err) {
+          console.warn("[FCM] Error procesando notificación de presencia", err);
+        }
+      }
+      // Priority 5: Smart Alarm
+      else if (normalizedPayload.type === "alarm" || normalizedPayload.channelid === "alarm") {
         console.log(`[FCM] Detected Smart Alarm!`);
         try {
           const dbModule = require('@/lib/db');
           const servers = dbModule.getServers(steamId);
           const serverName = normalizedPayload.servername || "Servidor Desconocido";
-          // We can try to find the server just by matching name or assuming the active one
           const matchingServer = servers.find((s:any) => s.name === serverName) || servers[0];
           
           if (matchingServer && (matchingServer.discordWebhook || matchingServer.discordChannelId)) {
