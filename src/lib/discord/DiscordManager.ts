@@ -106,6 +106,20 @@ export class DiscordManager {
     });
   }
 
+  static async sendPresence(config: DiscordConfig, playerName: string, steamId: string, isOnline: boolean, serverName: string) {
+    await this.sendBaseEmbed(config, {
+      title: isOnline ? `✅ JUGADOR CONECTADO` : `❌ JUGADOR DESCONECTADO`,
+      description: `**${playerName}** ${isOnline ? "se ha unido al servidor" : "ha salido del servidor"}.`,
+      fields: [
+        { name: "SteamID", value: `\`${steamId}\``, inline: true },
+        { name: "Estado", value: isOnline ? "🟢 Online" : "🔴 Offline", inline: true }
+      ],
+      color: isOnline ? 0x22c55e : 0xef4444,
+      authorName: "RUST OPS TACTICAL",
+      serverName
+    });
+  }
+
   static async sendPairing(config: DiscordConfig, serverName: string, ip: string, port: string) {
     await this.sendBaseEmbed(config, {
       title: `🔗 ENLACE SATELITAL ESTABLECIDO`,
