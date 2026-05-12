@@ -235,6 +235,16 @@ export class FcmManager {
           saveServer(server);
           console.log(`[FCM] SUCCESS: Server saved correctly: ${server.name}`);
 
+          // Conectar inmediatamente para activar escucha de chat/comandos
+          const { rustPlusManager } = await import("../rustplus/RustPlusManager");
+          rustPlusManager.connect(steamId, {
+            ip: server.ip,
+            port: server.port,
+            playerId: server.playerId,
+            playerToken: server.playerToken,
+            useProxy: false
+          }).catch(err => console.error(`[FCM] Error en auto-conexión tras pairing:`, err.message));
+
           // Enviar Webhook
           const dbModule = require('@/lib/db');
           const servers = dbModule.getServers(steamId);
