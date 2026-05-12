@@ -15,7 +15,7 @@ import {
   ShoppingCart, 
   Calculator, 
   Zap, 
-  ShieldCheck,
+  Shield,
   ChevronRight
 } from "lucide-react";
 import { useSession, signOut } from "next-auth/react";
@@ -114,7 +114,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   Administración
               </h4>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                <SidebarItem icon={<ShieldCheck size={18} />} label="Consola de Mando" href="/dashboard/admin" active={pathname === "/dashboard/admin"} />
+                <SidebarItem icon={<Shield size={18} />} label="Consola de Mando" href="/dashboard/admin" active={pathname === "/dashboard/admin"} />
               </div>
             </div>
           )}
@@ -148,7 +148,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <img src={session.user.image} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   ) : (
                     <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary)' }}>
-                        <ShieldCheck size={18} />
+                        <Shield size={18} />
                     </div>
                   )}
                </div>

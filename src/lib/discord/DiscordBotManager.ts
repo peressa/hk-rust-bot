@@ -1,5 +1,5 @@
-import { Client, GatewayIntentBits, EmbedBuilder, TextChannel, Interaction, REST, Routes, SlashCommandBuilder } from "discord.js";
-import { getWhitelistByDiscordId, getServers } from "../db";
+import { Client, GatewayIntentBits, EmbedBuilder, TextChannel, Interaction, REST, Routes, SlashCommandBuilder, Events, MessageFlags } from "discord.js";
+import { getWhitelistByDiscordId, getServers, linkDiscordId } from "../db";
 import { rustPlusManager } from "../rustplus/RustPlusManager";
 
 class DiscordBotManager {
@@ -25,30 +25,44 @@ class DiscordBotManager {
       ],
     });
 
-    this.client.once("ready", async () => {
+    this.client.once(Events.ClientReady, async (c) => {
       this.isConnected = true;
-      console.log(`[Discord Bot] Conectado como ${this.client?.user?.tag}!`);
+      console.log(`[Discord Bot] Conectado como ${c.user.tag}!`);
       
       if (clientId) {
         await this.registerCommands(token, clientId);
       }
     });
 
-    this.client.on("interactionCreate", async (interaction: Interaction) => {
+    this.client.on(Events.InteractionCreate, async (interaction: Interaction) => {
       if (!interaction.isChatInputCommand()) return;
 
-      const user = getWhitelistByDiscordId(interaction.user.id);
+      // Diferimos la respuesta de inmediato para evitar el timeout de 3 segundos
+      await interaction.deferReply();
+
+      console.log(`[Discord Bot] Comando /${interaction.commandName} recibido de ${interaction.user.tag} (${interaction.user.id})`);
+      
+      let user = getWhitelistByDiscordId(interaction.user.id);
+      
+      // Auto-vínculo de emergencia para el Admin
+      if (!user && interaction.user.id === process.env.DISCORD_ADMIN_ID) {
+          const adminSteamId = process.env.ADMIN_STEAM_ID?.trim();
+          if (adminSteamId) {
+              linkDiscordId(adminSteamId, interaction.user.id);
+              user = getWhitelistByDiscordId(interaction.user.id);
+          }
+      }
+      
       if (!user) {
-        return await interaction.reply({ 
-          content: "❌ No tienes permiso para usar este bot. Vincula tu Discord en el Dashboard web primero.", 
-          ephemeral: true 
+        return await interaction.editReply({ 
+          content: "❌ No tienes permiso para usar este bot. Vincula tu Discord en el Dashboard web primero."
         });
       }
 
       try {
         switch (interaction.commandName) {
           case "status":
-            await interaction.reply({
+            await interaction.editReply({
               embeds: [
                 new EmbedBuilder()
                   .setTitle("🛰️ RUST OPS - STATUS")
@@ -69,11 +83,11 @@ class DiscordBotManager {
         }
       } catch (err) {
         console.error(`[Discord Bot] Error en comando /${interaction.commandName}:`, err);
-        if (!interaction.replied) await interaction.reply({ content: "⚠️ Hubo un error procesando el comando.", ephemeral: true });
+        if (!interaction.replied) await interaction.reply({ content: "⚠️ Hubo un error procesando el comando." });
       }
     });
 
-    this.client.on("error", (error) => {
+    this.client.on(Events.Error, (error) => {
       console.error("[Discord Bot] Error del Cliente:", error);
     });
 
@@ -87,7 +101,6 @@ class DiscordBotManager {
 
   private async handleTeamCommand(interaction: Interaction, steamId: string) {
     if (!interaction.isChatInputCommand()) return;
-    await interaction.deferReply();
     
     const servers = getServers(steamId);
     if (servers.length === 0) return await interaction.editReply("No tienes servidores conectados.");
@@ -116,7 +129,6 @@ class DiscordBotManager {
 
   private async handlePopCommand(interaction: Interaction, steamId: string) {
     if (!interaction.isChatInputCommand()) return;
-    await interaction.deferReply();
     
     const servers = getServers(steamId);
     if (servers.length === 0) return await interaction.editReply("No tienes servidores conectados.");

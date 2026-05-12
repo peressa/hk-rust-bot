@@ -11,55 +11,63 @@ export default function ServerCard({ server }: ServerCardProps) {
     <div className="premium-card animate-fade-in" style={{ 
       display: 'flex', 
       flexDirection: 'column', 
-      gap: '1.25rem',
-      borderLeft: '4px solid var(--primary)',
-      background: 'rgba(5, 5, 5, 0.6)',
-      padding: '1.5rem',
+      gap: '1.5rem',
+      background: 'rgba(10, 10, 12, 0.8)',
+      padding: '1.75rem',
       position: 'relative',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      border: '1px solid rgba(255,255,255,0.05)',
+      borderRadius: '4px'
     }}>
-      {/* Background Decor */}
-      <div style={{ position: 'absolute', top: 0, right: 0, opacity: 0.03, pointerEvents: 'none' }}>
-          <Server size={120} />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ background: 'var(--primary)', padding: '0.5rem', borderRadius: '2px' }}>
-          <Server color="white" size={18} />
+      {/* Tactical Corner Markers */}
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '10px', height: '10px', borderTop: '2px solid var(--primary)', borderLeft: '2px solid var(--primary)' }}></div>
+      <div style={{ position: 'absolute', bottom: 0, right: 0, width: '10px', height: '10px', borderBottom: '2px solid var(--primary)', borderRight: '2px solid var(--primary)' }}></div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ background: 'rgba(232, 0, 28, 0.1)', padding: '0.6rem', borderRadius: '4px', border: '1px solid rgba(232, 0, 28, 0.2)' }}>
+          <Server color="var(--primary)" size={20} />
         </div>
         <div style={{ textAlign: 'right' }}>
-           <div style={{ fontSize: '0.6rem', color: '#22c55e', fontWeight: 800, fontFamily: 'var(--font-barlow)', display: 'flex', alignItems: 'center', gap: '0.3rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-             <Activity size={10} /> Sistema Activo
+           <div style={{ fontSize: '0.65rem', color: 'var(--accent)', fontWeight: 900, fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+             <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--accent)', boxShadow: '0 0 8px var(--accent)' }}></div>
+             LINK_ACTIVE
            </div>
-           <div style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)', fontWeight: 700, fontFamily: 'var(--font-roboto)' }}>ID: {server.id.split('-')[0].toUpperCase()}</div>
+           <div className="text-tech" style={{ fontSize: '0.55rem', color: 'rgba(255,255,255,0.2)', marginTop: '4px' }}>
+              SIG_STRENGTH: 98%
+           </div>
         </div>
       </div>
 
-      <div>
-        <h3 style={{ fontSize: '1.4rem', fontWeight: 800, fontFamily: 'var(--font-barlow)', marginBottom: '0.4rem', letterSpacing: '0.01em', color: '#fff' }}>
+      <div style={{ flex: 1 }}>
+        <h3 style={{ fontSize: '1.6rem', fontWeight: 900, fontFamily: 'var(--font-barlow)', marginBottom: '0.5rem', letterSpacing: '-0.02em', color: '#fff', textTransform: 'uppercase' }}>
           {server.name}
         </h3>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem', color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.02em' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}><Globe size={10} /> {server.ip}</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', color: server.useProxy ? 'var(--primary)' : 'inherit' }}><Shield size={10} /> Proxy: {server.useProxy ? 'ON' : 'OFF'}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+            <Globe size={12} /> {server.ip}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: server.useProxy ? 'var(--primary)' : 'rgba(255,255,255,0.2)', fontSize: '0.7rem', fontWeight: 800, fontFamily: 'var(--font-mono)' }}>
+            <Shield size={12} /> {server.useProxy ? 'PROXY_ENABLED' : 'DIRECT_CONNECTION'}
+          </div>
         </div>
       </div>
 
-      <div style={{ marginTop: 'auto', paddingTop: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+      <div style={{ marginTop: '1rem' }}>
         <Link href={`/war-room/${server.id}`} className="btn-primary" style={{ 
             width: '100%', 
             justifyContent: 'center', 
-            fontSize: '0.75rem', 
-            padding: '0.8rem',
-            background: 'rgba(206, 66, 43, 0.1)',
-            border: '1px solid rgba(206, 66, 43, 0.2)',
-            color: 'var(--primary)',
-            fontWeight: 800
-        }}
-        onMouseOver={(e) => (e.currentTarget.style.background = 'var(--primary)', e.currentTarget.style.color = 'white')}
-        onMouseOut={(e) => (e.currentTarget.style.background = 'rgba(206, 66, 43, 0.1)', e.currentTarget.style.color = 'var(--primary)')}
-        >
-          ACCEDER AL PANEL <ChevronRight size={14} />
+            fontSize: '0.8rem', 
+            padding: '1rem',
+            fontWeight: 900,
+            letterSpacing: '0.1em'
+        }}>
+          DEPLOY WAR ROOM <ChevronRight size={16} />
         </Link>
+      </div>
+
+      {/* Decorative Decal */}
+      <div style={{ position: 'absolute', bottom: '1.75rem', right: '-1rem', opacity: 0.02, pointerEvents: 'none', transform: 'rotate(-90deg)', fontSize: '2rem', fontWeight: 900, whiteSpace: 'nowrap' }}>
+        RUST OPS UNIT
       </div>
     </div>
   );

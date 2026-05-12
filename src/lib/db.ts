@@ -107,6 +107,17 @@ db.exec(`
     color TEXT,
     timestamp INTEGER
   );
+
+  CREATE TABLE IF NOT EXISTS vending_machines (
+    id TEXT PRIMARY KEY,
+    serverId TEXT,
+    name TEXT,
+    x REAL,
+    y REAL,
+    grid TEXT,
+    orders TEXT,
+    lastUpdate INTEGER
+  );
 `);
 
 // Helper para migraciones seguras
@@ -329,13 +340,45 @@ export function addToWhitelist(steamId: string, name: string = "User", role: str
 }
 
 export function linkDiscordId(steamId: string, discordId: string) {
+  const cleanSteamId = String(steamId).trim();
+  const cleanDiscordId = String(discordId).trim();
+  
   const stmt = db.prepare("UPDATE whitelist SET discordId = ? WHERE steamId = ?");
-  stmt.run(discordId, steamId);
+  const result = stmt.run(cleanDiscordId, cleanSteamId);
+  
+  if (result.changes > 0) {
+    console.log(`[DB] Vínculo exitoso: Steam ${cleanSteamId} -> Discord ${cleanDiscordId}`);
+    return true;
+  } else {
+    // Si falla el update, puede que el usuario no esté en la tabla (común en primer inicio)
+    console.warn(`[DB] Fallo al vincular: No se encontró SteamID ${cleanSteamId}. Intentando inserción de emergencia...`);
+    
+    // Si es el admin de las variables de entorno, lo creamos
+    if (cleanSteamId === process.env.ADMIN_STEAM_ID?.trim()) {
+      db.prepare("INSERT OR REPLACE INTO whitelist (steamId, name, role, discordId, createdAt) VALUES (?, ?, ?, ?, ?)")
+        .run(cleanSteamId, "Admin Principal", "admin", cleanDiscordId, new Date().toISOString());
+      console.log(`[DB] Admin vinculado y creado con éxito.`);
+      return true;
+    }
+  }
+  return false;
 }
 
 export function getWhitelistByDiscordId(discordId: string): DbWhitelist | null {
   const stmt = db.prepare("SELECT * FROM whitelist WHERE discordId = ?");
   return stmt.get(discordId) as DbWhitelist | undefined || null;
+}
+
+export function saveVending(serverId: string, vending: { id: string, name: string, x: number, y: number, grid: string, orders: string }) {
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO vending_machines (id, serverId, name, x, y, grid, orders, lastUpdate)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(vending.id, serverId, vending.name, vending.x, vending.y, vending.grid, vending.orders, Date.now());
+}
+
+export function getVendings(serverId: string) {
+  return db.prepare("SELECT * FROM vending_machines WHERE serverId = ? ORDER BY lastUpdate DESC").all(serverId) as any[];
 }
 
 export function removeFromWhitelist(steamId: string) {

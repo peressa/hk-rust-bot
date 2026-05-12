@@ -1,8 +1,10 @@
-import db, { saveTeamMessage, getMapCache, saveMapCache, getServers, getEntities } from "../db";
+import db, { saveTeamMessage, getMapCache, saveMapCache, getServers, getEntities, saveVending } from "../db";
 import { worldToGrid, worldToLeaflet, getRegionName } from "./coordUtils";
 import { FcmManager } from "../fcm/FcmManager";
 import protobuf from "protobufjs";
 import { EventEmitter } from "events";
+import fs from 'fs';
+import path from 'path';
 import { 
   RustPlusMember, 
   RustPlusMarker, 
@@ -13,6 +15,8 @@ import {
   RustPlusMap
 } from "../../types/rustplus";
 import { DbServer, DbEntity } from "../../types/db";
+import { DiscordManager } from "../discord/DiscordManager";
+import { CommandRouter } from './CommandRouter';
 
 // =====================================================================
 // MONKEY PATCH: Forzar campos Opcionales en Protobufjs
@@ -75,6 +79,7 @@ class RustPlusManager extends EventEmitter {
   private lastBaseAlerts: Map<string, number> = new Map(); 
   private lastEntityStates: Map<string, Map<string, boolean>> = new Map(); 
   private playerHistory: Map<string, Map<string, { x: number, y: number, time: number }[]>> = new Map(); 
+  private pendingVendingAlerts: Map<string, any[]> = new Map(); 
 
   constructor() {
     super();
@@ -262,9 +267,8 @@ class RustPlusManager extends EventEmitter {
     return `${prefix} ${msg}`.trim();
   }
 
-  private async handleTeamCommand(steamId: string, ip: string, cmd: string) {
-    const { CommandRouter } = require('./CommandRouter');
-    await CommandRouter.handle(steamId, ip, cmd);
+  private async handleTeamCommand(steamId: string, ip: string, message: any) {
+    await CommandRouter.handle(steamId, ip, message.message || "");
   }
 
   async sendRequest(steamId: string, ip: string, request: any, timeoutMs = 10000): Promise<any> {
@@ -565,7 +569,6 @@ class RustPlusManager extends EventEmitter {
               
               if (serverObj.discordWebhook || serverObj.discordChannelId) {
                 try {
-                  const { DiscordManager } = require('../discord/DiscordManager');
                   DiscordManager.sendGenericAlert(serverObj, "Alerta de Dispositivo", msg);
                 } catch (e) {}
               }
@@ -656,7 +659,6 @@ class RustPlusManager extends EventEmitter {
           // Alerta en Discord
           const server = getServers(steamId).find((s: any) => s.ip === ip) as any;
           if (server && (server.discordWebhook || server.discordChannelId)) {
-            const { DiscordManager } = require('../discord/DiscordManager');
             DiscordManager.sendDeath({
               webhookUrl: server.discordWebhook,
               channelId: server.discordChannelId
@@ -809,7 +811,6 @@ class RustPlusManager extends EventEmitter {
           // Alerta en Discord
           const serverObj = getServers(steamId).find((s: any) => s.ip === ip) as any;
           if (serverObj && (serverObj.discordWebhook || serverObj.discordChannelId)) {
-            const { DiscordManager } = require('@/lib/discord/DiscordManager');
             DiscordManager.sendEvent({
               webhookUrl: serverObj.discordWebhook,
               channelId: serverObj.discordChannelId
@@ -875,7 +876,6 @@ class RustPlusManager extends EventEmitter {
               const serverObj = getServers(steamId).find((s: any) => s.ip === ip) as any;
               if (serverObj && (serverObj.discordWebhook || serverObj.discordChannelId)) {
                 try {
-                  const { DiscordManager } = require('../discord/DiscordManager');
                   DiscordManager.sendRaidAlert({
                     webhookUrl: serverObj.discordWebhook,
                     channelId: serverObj.discordChannelId
@@ -888,15 +888,52 @@ class RustPlusManager extends EventEmitter {
         }
       }
 
-      // Detección de nuevas Vending Machines (Tipo 3)
-      if (m.type === 3 && hasPreviousState && !lastEventIds.includes(m.id)) {
+      // 6. Detección en Tiempo Real de Vending Machines (Tipo 3)
+      if (m.type === 3) {
         const grid = worldToGrid(m.x, m.y, mapSize);
-        const name = m.name || "Tienda Desconocida";
-        const totalItems = (m.sellOrders || []).reduce((acc: number, so: any) => acc + (so.amountInStock || 0), 0);
-        
-        const msg = this.formatMsg(steamId, ip, 'event_vending_new', `¡Nueva máquina expendedora '{name}' con {stock} artículos en stock en {grid}!`, { name, stock: totalItems, grid });
-        this.botSendTeamMessage(steamId, ip, msg);
-        this.addIntel(steamId, ip, 'EVENT', msg, { eventName: "Nueva Vending", grid, name, totalItems });
+
+        // Guardamos en la base de datos como respaldo para el buscador histórico
+        const serverObj = getServers(steamId).find((s: any) => s.ip === ip) as any;
+        if (serverObj) {
+          saveVending(serverObj.id, {
+            id: m.id.toString(),
+            name: m.name || "Tienda",
+            x: m.x,
+            y: m.y,
+            grid: grid,
+            orders: JSON.stringify(m.sellOrders || [])
+          });
+        }
+
+        // Lógica de Notificación Anti-Spam (Acumulación Temporal)
+        const connectionTime = this.lastActivity.get(key) || 0;
+        if (hasPreviousState && !lastEventIds.includes(m.id) && (Date.now() - connectionTime) > 30000) {
+            if (!this.pendingVendingAlerts.has(key)) this.pendingVendingAlerts.set(key, []);
+            this.pendingVendingAlerts.get(key)!.push({ name: m.name || "Tienda", grid });
+
+            // Si no hay un temporizador activo para este servidor, iniciamos uno de 10 segundos
+            if (!(this as any).vendingTimers) (this as any).vendingTimers = new Map();
+            if (!(this as any).vendingTimers.has(key)) {
+                const timer = setTimeout(() => {
+                    const pending = this.pendingVendingAlerts.get(key) || [];
+                    this.pendingVendingAlerts.set(key, []); // Limpiar cola
+                    (this as any).vendingTimers.delete(key); // Limpiar timer
+
+                    if (pending.length === 0) return;
+
+                    if (pending.length > 2) {
+                        const msg = this.formatMsg(steamId, ip, 'event_vending_batch', `📊 REPORTE LOGÍSTICO: {count} nuevas tiendas detectadas. Revisa el terminal web para detalles de stock.`, { count: pending.length });
+                        this.botSendTeamMessage(steamId, ip, msg);
+                    } else {
+                        pending.forEach(p => {
+                            const msg = this.formatMsg(steamId, ip, 'event_vending_new', `¡Nueva expendedora '{name}' en {grid}!`, { name: p.name, grid: p.grid });
+                            this.botSendTeamMessage(steamId, ip, msg);
+                        });
+                    }
+                }, 10000); // 10 SEGUNDOS DE ESPERA TÁCTICA
+                (this as any).vendingTimers.set(key, timer);
+            }
+        }
       }
     });
 
@@ -960,72 +997,41 @@ class RustPlusManager extends EventEmitter {
     }
   }
 
-  // Diagnostic & Auto-Patch helper
-  public async checkProtos(): Promise<any> {
-    const fs = require('fs');
-    const path = require('path');
-    
-    console.log("[RustPlus] Starting Self-Patching Protocol Check...");
-    
-    const results: any = {
-      cwd: process.cwd(),
-      dirname: __dirname,
-      files: {}
-    };
-
-    // 1. Find where the library is actually running from
-    let libPath = '';
+  async checkProtos() {
     try {
-      libPath = path.dirname(require.resolve('@liamcottle/rustplus.js'));
-      console.log(`[RustPlus] Library detected at: ${libPath}`);
-    } catch (e) {
-      console.error("[RustPlus] Could not resolve library path!");
-    }
+      console.log("[RustPlus] Starting Self-Patching Protocol Check...");
+      
+      let libPath = '';
+      try {
+        libPath = path.dirname(require.resolve('@liamcottle/rustplus.js'));
+        console.log(`[RustPlus] Library detected at: ${libPath}`);
+      } catch (e) {
+        console.warn("[RustPlus] Warning: Could not resolve library path for patching.");
+      }
 
-    // 2. Definir donde DEBERÍAN estar los protos (en el root o en data)
-    const sourceProtos = [
-      path.join(process.cwd(), 'rustplus.proto'),
-      path.join(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
-      path.join(process.cwd(), 'resources/rustplus.proto'),
-    ];
+      const sourceProtos = [
+        path.join(/*turbopackIgnore: true*/ process.cwd(), 'rustplus.proto'),
+        path.join(/*turbopackIgnore: true*/ process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
+        path.join(/*turbopackIgnore: true*/ process.cwd(), 'resources/rustplus.proto'),
+      ];
 
-    // 3. Intentar parchear la librería COPIANDO el archivo a su lado
-    if (libPath) {
-      const targetProto = path.join(libPath, 'rustplus.proto');
-      if (!fs.existsSync(targetProto) || fs.statSync(targetProto).size < 100) {
-        console.log(`[RustPlus] Target proto MISSING or INVALID at ${targetProto}. Searching...`);
-        for (const src of sourceProtos) {
-          if (fs.existsSync(src)) {
-            console.log(`[RustPlus] FOUND source proto at ${src}. Patching library...`);
-            try {
-              fs.copyFileSync(src, targetProto);
-              console.log("[RustPlus] SUCCESS: Library patched with rustplus.proto.");
-              break;
-            } catch (copyErr) {
-              console.error(`[RustPlus] Failed to copy proto: ${copyErr}`);
+      if (libPath) {
+        const targetProto = path.join(libPath, 'rustplus.proto');
+        if (!fs.existsSync(targetProto) || fs.statSync(targetProto).size < 100) {
+          for (const src of sourceProtos) {
+            if (fs.existsSync(src)) {
+              try {
+                fs.copyFileSync(src, targetProto);
+                console.log("[RustPlus] SUCCESS: Library patched with rustplus.proto.");
+                break;
+              } catch (copyErr) {}
             }
           }
         }
-      } else {
-        console.log(`[RustPlus] Proto present in library folder (${fs.statSync(targetProto).size} bytes).`);
       }
+    } catch (err) {
+      console.error("[RustPlus] Error non-critical during proto check:", err);
     }
-
-    // Diagnostic logging of all potential locations
-    const routes = [
-      path.resolve(__dirname, '../../node_modules/@liamcottle/rustplus.js/rustplus.proto'),
-      path.resolve(process.cwd(), 'node_modules/@liamcottle/rustplus.js/rustplus.proto'),
-      '/ROOT/node_modules/@liamcottle/rustplus.js/rustplus.proto',
-      '/ROOT/.next/standalone/node_modules/@liamcottle/rustplus.js/rustplus.proto',
-      path.join(libPath || '', 'rustplus.proto')
-    ];
-
-    routes.forEach(r => {
-      if (r) results.files[r] = fs.existsSync(r);
-    });
-
-    console.log("[RustPlus Diagnostic Final]:", JSON.stringify(results, null, 2));
-    return results;
   }
 
   /**

@@ -7,7 +7,7 @@ const nextConfig = {
   output: 'standalone',
   
   // Moved from experimental to top-level in Next.js 14+
-  serverExternalPackages: ["@liamcottle/push-receiver", "better-sqlite3", "discord.js", "@discordjs/ws"],
+  serverExternalPackages: ["@liamcottle/push-receiver", "better-sqlite3", "discord.js"],
   
   experimental: {
     // Keep empty as instrumentationHook is default and other keys removed
