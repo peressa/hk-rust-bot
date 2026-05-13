@@ -1,4 +1,5 @@
 import { SteamQueryManager } from "./SteamQueryManager";
+import { BattleMetricsManager } from "./BattleMetricsManager";
 import db, { getTrackedPlayers, updatePlayerStatus, getServers } from "../db";
 import { DiscordManager } from "../discord/DiscordManager";
 import { rustPlusManager } from "../rustplus/RustPlusManager";
@@ -44,17 +45,26 @@ export class TrackingManager {
         let serverName = player.lastServerName || "Servidor Desconocido";
         let serverId = player.lastServerId;
 
-        // MODO HORUS UNIFICADO: Consultamos directamente al servidor
+        // MODO HÍBRIDO DE VIGILANCIA
         if (player.targetServerIp) {
             const [ip, portStr] = player.targetServerIp.split(":");
             const gamePort = parseInt(portStr || "28015");
             
-            // Intentamos los puertos más probables en paralelo para no perder tiempo
-            const ports = [gamePort + 1, gamePort + 215, gamePort];
+            // 1. Intentar vía Horus (Directo)
+            const ports = [gamePort + 1, gamePort + 215, gamePort, 28016];
             const results = await Promise.all(ports.map(p => SteamQueryManager.isPlayerOnline(ip, p, player.name).catch(() => false)));
-            
             isOnline = results.some(r => r === true);
             serverName = player.targetServerIp;
+
+            // 2. Si Horus falla y tenemos ID de BattleMetrics, usar Intel API
+            if (!isOnline && player.id && !player.id.startsWith('horus-')) {
+                console.log(`[Tracking] Horus no ve a ${player.name}. Consultando Intel API...`);
+                const bmServer = await BattleMetricsManager.getServerByIP(ip, portStr);
+                if (bmServer) {
+                    const status = await BattleMetricsManager.getPlayerStatus(bmServer.id, player.id);
+                    if (status) isOnline = status.isOnline;
+                }
+            }
         } 
 
         const newStatus = isOnline ? 'online' : 'offline';
