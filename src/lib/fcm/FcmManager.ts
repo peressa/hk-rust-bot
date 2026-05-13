@@ -338,12 +338,28 @@ export class FcmManager {
           const servers = dbModule.getServers(steamId);
           const server = servers.find((s: any) => s.ip === ip) || servers[0];
 
-          if (server && (server.discordWebhook || server.discordChannelId)) {
-            const { DiscordManager } = require('@/lib/discord/DiscordManager');
-            await DiscordManager.sendPresence({
-              webhookUrl: server.discordWebhook,
-              channelId: server.discordChannelId
-            }, normalizedPayload.targetname || "Jugador", normalizedPayload.targetid || "N/A", normalizedPayload.type === "login", server.name);
+          if (server) {
+            const isLogin = normalizedPayload.type === "login";
+            const playerName = normalizedPayload.targetname || "Un aliado";
+            
+            // 1. Notificar en el chat del equipo (Rust)
+            const { rustPlusManager } = await import("../rustplus/RustPlusManager");
+            const teamMsg = isLogin 
+              ? `PRESENCIA: ${playerName} se ha CONECTADO.`
+              : `PRESENCIA: ${playerName} se ha DESCONECTADO.`;
+            
+            rustPlusManager.botSendTeamMessage(steamId, server.ip, 
+              rustPlusManager.formatMsg(steamId, server.ip, '', teamMsg)
+            ).catch(() => {});
+
+            // 2. Notificar en Discord
+            if (server.discordWebhook || server.discordChannelId) {
+              const { DiscordManager } = require('@/lib/discord/DiscordManager');
+              await DiscordManager.sendPresence({
+                webhookUrl: server.discordWebhook,
+                channelId: server.discordChannelId
+              }, playerName, normalizedPayload.targetid || "N/A", isLogin, server.name);
+            }
           }
         } catch (err) {
           console.warn("[FCM] Error procesando notificación de presencia", err);
