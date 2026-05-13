@@ -794,7 +794,7 @@ class RustPlusManager extends EventEmitter {
           eventName = "Chinook (CH47)";
         } else if (m.type === 8) {
           msg = this.formatMsg(steamId, ip, 'event_heli_start', `Un Helicóptero de Patrulla está activo en {region} ({grid})`, { region, grid });
-          eventName = "Heli Patrulla";
+          eventName = "Patrol";
         } else if (m.type === 6) {
            const isFar = Math.abs(m.x) > mapSize / 3 || Math.abs(m.y) > mapSize / 3;
            if (isFar) {

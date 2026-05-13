@@ -39,6 +39,8 @@ export class CommandRouter {
         case "!help":
         case "!ayuda":
           return await this.cmdHelp(steamId, ip);
+        case "!track":
+          return await this.cmdTrack(steamId, ip, args);
         default:
           return; // Comando no reconocido
       }
@@ -108,7 +110,7 @@ export class CommandRouter {
     
     markers.forEach((m: any) => {
       if (m.type === 5) activeEvents.push("Cargo Ship");
-      else if (m.type === 8) activeEvents.push("Heli Patrulla");
+      else if (m.type === 8) activeEvents.push("Patrol");
       else if (m.type === 4) activeEvents.push("Chinook (CH47)");
       else if (m.type === 6) activeEvents.push("Crate");
       else if (m.type === 2) activeEvents.push("Explosión");
@@ -180,7 +182,30 @@ export class CommandRouter {
     }
   }
 
+  private static async cmdTrack(steamId: string, ip: string, args: string) {
+    const parts = args.split(" ");
+    
+    // Necesitamos al menos nombre, X e Y (3 partes)
+    if (parts.length < 3) {
+      rustPlusManager.sendTeamMessage(steamId, ip, `⚠️ Uso: !track <nombre> <x> <y>`);
+      return;
+    }
+
+    const y = parts.pop();
+    const x = parts.pop();
+    const name = parts.join(" ");
+
+    if (isNaN(Number(x)) || isNaN(Number(y))) {
+      rustPlusManager.sendTeamMessage(steamId, ip, `⚠️ Error: Las coordenadas X e Y deben ser números.`);
+      return;
+    }
+
+    // Mensaje de éxito solicitado
+    const msg = `✅ Objetivo fijado: ${name} en [${x}, ${y}]`;
+    rustPlusManager.sendTeamMessage(steamId, ip, msg);
+  }
+
   private static async cmdHelp(steamId: string, ip: string) {
-    rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Comandos: !pop, !time, !wipe, !eventos, !team, !mapa, !lider, !tc`);
+    rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Comandos: !pop, !time, !wipe, !eventos, !team, !mapa, !lider, !tc, !track`);
   }
 }
