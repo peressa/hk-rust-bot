@@ -141,6 +141,21 @@ export class BattleMetricsManager {
   }
 
   /**
+   * Busca jugadores por nombre filtrando por un servidor específico de BattleMetrics.
+   */
+  static async searchPlayerInServer(name: string, bmServerId: string) {
+    try {
+      const headers: any = {};
+      if (this.API_KEY) headers["Authorization"] = `Bearer ${this.API_KEY}`;
+      const res = await fetch(`${this.BASE_URL}/players?filter[search]=${encodeURIComponent(name)}&filter[servers]=${bmServerId}&page[size]=5`, { headers });
+      if (!res.ok) return { data: [] };
+      return await res.json();
+    } catch (err) {
+      return { data: [] };
+    }
+  }
+
+  /**
    * Fetches full player details including identifiers (SteamID) if available.
    */
   static async getPlayerDetails(bmPlayerId: string) {
