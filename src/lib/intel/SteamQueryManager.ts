@@ -32,9 +32,9 @@ export class SteamQueryManager {
       // 1. Enviar solicitud inicial para obtener el Challenge Token
       sendRequest(Buffer.concat([Buffer.from([0x55]), Buffer.from([0xFF, 0xFF, 0xFF, 0xFF])]));
 
-      client.on("message", (msg) => {
-        // Ignorar cabecera de 4 bytes (0xFFFFFFFF)
-        const response = msg.slice(4);
+      const multiPackets: { [id: number]: { total: number, packets: Buffer[] } } = {};
+
+      const processResponse = (response: Buffer) => {
         const type = response[0];
 
         if (type === 0x41) { // Challenge Response
@@ -51,30 +51,67 @@ export class SteamQueryManager {
             let offset = 2;
 
             for (let i = 0; i < playerCount; i++) {
-              // Índice (saltar)
-              offset++; 
+              offset++; // Índice (saltar)
               
-              // Nombre (String terminado en nulo)
               let nameEnd = response.indexOf(0x00, offset);
               if (nameEnd === -1) break;
               const name = response.slice(offset, nameEnd).toString("utf-8");
               offset = nameEnd + 1;
 
-              // Puntuación (Long 4 bytes)
               const score = response.readInt32LE(offset);
               offset += 4;
-
-              // Duración (Float 4 bytes)
               const duration = response.readFloatLE(offset);
               offset += 4;
 
-              if (name) {
-                players.push({ name, score, duration });
-              }
+              if (name) players.push({ name, score, duration });
             }
             resolve(players);
           } catch (e) {
-            reject(new Error("Error al parsear la respuesta del servidor"));
+            reject(new Error("Error al parsear la respuesta de Horus"));
+          }
+        }
+      };
+
+      client.on("message", (msg) => {
+        const header = msg.readInt32LE(0);
+
+        if (header === -1) { 
+          // Paquete Único (0xFFFFFFFF)
+          processResponse(msg.slice(4));
+        } 
+        else if (header === -2) { 
+          // Multi-Paquete (0xFEFFFFFF) - Común en servidores llenos
+          const id = msg.readInt32LE(4);
+          const total = msg[8];
+          const number = msg[9];
+          
+          // Verificar si el MSB de ID es 1 (Compresión BZip2). Si es así, es complejo, pero Rust rara vez lo usa.
+          const isCompressed = (id & 0x80000000) !== 0;
+          if (isCompressed) {
+             console.warn("[Horus] Servidor usa compresión BZip2, respuesta omitida.");
+             return;
+          }
+
+          const payload = msg.slice(12);
+
+          if (!multiPackets[id]) {
+            multiPackets[id] = { total, packets: [] };
+          }
+          multiPackets[id].packets[number] = payload;
+
+          // Comprobar si tenemos todos los fragmentos
+          let allReceived = true;
+          for (let i = 0; i < total; i++) {
+            if (!multiPackets[id].packets[i]) allReceived = false;
+          }
+
+          if (allReceived) {
+            let fullPayload = Buffer.concat(multiPackets[id].packets);
+            // Si el paquete reensamblado comienza con 0xFFFFFFFF (estándar A2S), lo saltamos
+            if (fullPayload.length >= 4 && fullPayload.readInt32LE(0) === -1) {
+              fullPayload = fullPayload.slice(4);
+            }
+            processResponse(fullPayload);
           }
         }
       });
