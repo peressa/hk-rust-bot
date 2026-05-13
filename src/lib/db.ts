@@ -128,6 +128,15 @@ db.exec(`
     lastSeen INTEGER,
     UNIQUE(serverId, steamId)
   );
+
+  CREATE TABLE IF NOT EXISTS ban_watchlist (
+    steamId TEXT PRIMARY KEY,
+    name TEXT,
+    lastCheck INTEGER,
+    isBanned INTEGER DEFAULT 0,
+    banType TEXT, -- 'EAC', 'Server', 'Manual'
+    createdAt TEXT
+  );
 `);
 
 // Helper para migraciones seguras
@@ -154,6 +163,9 @@ addColumnIfNotExists("entities", "value", "INTEGER DEFAULT 0");
 addColumnIfNotExists("entities", "capacity", "REAL DEFAULT 0");
 addColumnIfNotExists("entities", "hasCapacity", "INTEGER DEFAULT 0");
 addColumnIfNotExists("whitelist", "discordId", "TEXT");
+addColumnIfNotExists("tracking_targets", "bmPlayerId", "TEXT");
+addColumnIfNotExists("tracking_targets", "lastStatus", "TEXT");
+addColumnIfNotExists("tracking_targets", "isBanned", "INTEGER DEFAULT 0");
 
 // MIGRACIÓN: Purgar caché para aplicar lógica PROFESIONAL de Píxeles vs Metros (como RustPlusBot)
 try {
@@ -458,9 +470,41 @@ export function removeTrackingTarget(serverId: string, steamId: string) {
   stmt.run(serverId, steamId);
 }
 
-export function updateTrackingStatus(serverId: string, steamId: string, isOnline: boolean) {
-  const stmt = db.prepare("UPDATE tracking_targets SET isOnline = ?, lastSeen = ? WHERE serverId = ? AND steamId = ?");
-  stmt.run(isOnline ? 1 : 0, Date.now(), serverId, steamId);
+export function updateTrackingStatus(serverId: string, steamId: string, isOnline: boolean, bmPlayerId?: string) {
+  if (bmPlayerId) {
+    const stmt = db.prepare("UPDATE tracking_targets SET isOnline = ?, lastSeen = ?, bmPlayerId = ? WHERE serverId = ? AND steamId = ?");
+    stmt.run(isOnline ? 1 : 0, Date.now(), bmPlayerId, serverId, steamId);
+  } else {
+    const stmt = db.prepare("UPDATE tracking_targets SET isOnline = ?, lastSeen = ? WHERE serverId = ? AND steamId = ?");
+    stmt.run(isOnline ? 1 : 0, Date.now(), serverId, steamId);
+  }
+}
+
+export function updateTrackingBan(serverId: string, steamId: string, isBanned: boolean) {
+  const stmt = db.prepare("UPDATE tracking_targets SET isBanned = ? WHERE serverId = ? AND steamId = ?");
+  stmt.run(isBanned ? 1 : 0, serverId, steamId);
+}
+
+// === Ban Watchlist ===
+export function addToBanWatchlist(steamId: string, name: string) {
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO ban_watchlist (steamId, name, lastCheck, isBanned, createdAt)
+    VALUES (?, ?, ?, 0, ?)
+  `);
+  stmt.run(steamId, name, Date.now(), new Date().toISOString());
+}
+
+export function getBanWatchlist() {
+  return db.prepare("SELECT * FROM ban_watchlist").all() as any[];
+}
+
+export function removeFromBanWatchlist(steamId: string) {
+  db.prepare("DELETE FROM ban_watchlist WHERE steamId = ?").run(steamId);
+}
+
+export function updateBanStatus(steamId: string, isBanned: boolean, banType: string) {
+  const stmt = db.prepare("UPDATE ban_watchlist SET isBanned = ?, banType = ?, lastCheck = ? WHERE steamId = ?");
+  stmt.run(isBanned ? 1 : 0, banType, Date.now(), steamId);
 }
 
 export default db;
