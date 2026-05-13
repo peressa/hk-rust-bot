@@ -1,13 +1,15 @@
 import { rustPlusManager } from "./RustPlusManager";
 import { 
-  addTrackingTarget, 
-  removeTrackingTarget, 
-  getTrackingTargets, 
   getServers, 
+  addTrackedPlayer,
+  getTrackedPlayers,
+  removeTrackedPlayer,
   addToBanWatchlist, 
   removeFromBanWatchlist, 
   getBanWatchlist 
 } from "../db";
+import { SteamQueryManager } from "../intel/SteamQueryManager";
+import { BattleMetricsManager } from "../intel/BattleMetricsManager";
 
 export class CommandRouter {
   static async handle(steamId: string, ip: string, cmd: string) {
@@ -16,7 +18,7 @@ export class CommandRouter {
     const baseCommand = splitCmd[0];
     const args = rawCommand.split(" ").slice(1).join(" ");
     
-    console.log(`[Command Router] Procesando: "${baseCommand}" desde ${steamId} en ${ip}`);
+    console.log(`[Command Router] Operación: "${baseCommand}" | Origen: ${steamId} | Nodo: ${ip}`);
     
     try {
       switch (baseCommand) {
@@ -30,14 +32,12 @@ export class CommandRouter {
           return await this.cmdWipe(steamId, ip);
         case "!eventos":
         case "!events":
-        case "!evento":
           return await this.cmdEvents(steamId, ip);
         case "!team":
         case "!equipo":
           return await this.cmdTeam(steamId, ip);
         case "!mapa":
         case "!seed":
-        case "!map":
           return await this.cmdMap(steamId, ip);
         case "!upkeep":
         case "!tc":
@@ -55,16 +55,97 @@ export class CommandRouter {
         case "!targets":
         case "!objetivos":
           return await this.cmdTargets(steamId, ip);
+        case "!status":
+          return await this.cmdStatus(steamId, ip);
         case "!wb":
           return await this.cmdWatchBan(steamId, ip, args);
         case "!uwb":
           return await this.cmdUnwatchBan(steamId, ip, args);
         default:
-          return; // Comando no reconocido
+          return;
       }
     } catch (err) {
       console.error("[Command Router Error]:", err);
     }
+  }
+
+  /**
+   * !track <nombre> - Inteligencia de búsqueda y fijado de objetivos.
+   */
+  private static async cmdTrack(steamId: string, ip: string, args: string) {
+    if (!args) {
+        this.sendResponse(steamId, ip, "Uso: !track <nombre_o_id>");
+        return;
+    }
+
+    const server = getServers(steamId).find(s => s.ip === ip);
+    if (!server) return;
+
+    // 1. Intento de localización local (Modo Horus)
+    try {
+        const queryPort = parseInt(server.port) + 1;
+        const players = await SteamQueryManager.getPlayers(server.ip, queryPort);
+        const match = players.find(p => p.name.toLowerCase().includes(args.toLowerCase()));
+
+        if (match) {
+            addTrackedPlayer({ 
+                id: null, // Generará un ID 'direct-...'
+                name: match.name, 
+                targetServerIp: `${server.ip}:${server.port}` 
+            });
+            this.sendResponse(steamId, ip, `Objetivo '${match.name}' detectado y fijado en este servidor. Se te notificará ante cualquier movimiento.`);
+            return;
+        }
+    } catch (e) {}
+
+    // 2. Intento de localización global (BattleMetrics)
+    try {
+        const bmMatch = await BattleMetricsManager.searchPlayer(args);
+        const p = bmMatch.data?.[0];
+        if (p) {
+            addTrackedPlayer({ id: p.id, name: p.attributes.name });
+            this.sendResponse(steamId, ip, `Objetivo '${p.attributes.name}' localizado en la red global. Iniciando vigilancia 24/7.`);
+            return;
+        }
+    } catch (e) {}
+
+    // 3. Fallback: Vigilancia ciega
+    addTrackedPlayer({ id: null, name: args, targetServerIp: `${server.ip}:${server.port}` });
+    this.sendResponse(steamId, ip, `No se detectó a '${args}' online, pero se ha activado la vigilancia reactiva en este servidor.`);
+  }
+
+  private static async cmdUntrack(steamId: string, ip: string, args: string) {
+    if (!args) {
+      this.sendResponse(steamId, ip, "Uso: !untrack <nombre>");
+      return;
+    }
+
+    const tracked = getTrackedPlayers();
+    const target = tracked.find(t => t.name.toLowerCase().includes(args.toLowerCase()));
+    
+    if (target) {
+      removeTrackedPlayer(target.id);
+      this.sendResponse(steamId, ip, `Vigilancia finalizada para '${target.name}'.`);
+    } else {
+      this.sendResponse(steamId, ip, `No se encontró a '${args}' en la lista de objetivos.`);
+    }
+  }
+
+  private static async cmdTargets(steamId: string, ip: string) {
+    const targets = getTrackedPlayers();
+    if (targets.length === 0) {
+      this.sendResponse(steamId, ip, "Sin objetivos activos en seguimiento.");
+      return;
+    }
+    const list = targets.map((t: any) => `${t.name} [${t.status?.toUpperCase() || 'IDLE'}]`).join(", ");
+    this.sendResponse(steamId, ip, `Lista de Inteligencia: ${list}`);
+  }
+
+  private static async cmdStatus(steamId: string, ip: string) {
+    const targets = getTrackedPlayers().length;
+    const bans = getBanWatchlist().length;
+    const statusMsg = `SISTEMAS OPERATIVOS: [Rastreo: ${targets} objetivos] [Seguridad: ${bans} sospechosos] [Conexión: ESTABLE]`;
+    this.sendResponse(steamId, ip, statusMsg);
   }
 
   private static async cmdTime(steamId: string, ip: string) {
@@ -73,199 +154,104 @@ export class CommandRouter {
     const hours = Math.floor(t.time);
     const mins = Math.floor((t.time - hours) * 60);
     const formattedTime = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
-    
-    let remainingMsg = "";
-    const sunrise = t.sunrise || 8.0;
-    const sunset = t.sunset || 20.0;
-    const dayLength = t.dayLengthMinutes || 60;
-    
-    if (t.time >= sunrise && t.time < sunset) {
-        const inGameHours = sunset - t.time;
-        const realMins = Math.round(inGameHours * (dayLength / 24));
-        remainingMsg = `Faltan ${realMins}m para la noche`;
-    } else {
-        const inGameHours = (t.time >= sunset) ? (24 - t.time) + sunrise : (sunrise - t.time);
-        const realMins = Math.round(inGameHours * (dayLength / 24));
-        remainingMsg = `Faltan ${realMins}m para el día`;
-    }
-    
-    // @ts-ignore
-    const msg = rustPlusManager.formatMsg(steamId, ip, 'cmd_time', `Hora: {time} ({remaining})`, { time: formattedTime, remaining: remainingMsg });
-    rustPlusManager.sendTeamMessage(steamId, ip, msg);
+    this.sendResponse(steamId, ip, `Hora In-Game: ${formattedTime}`);
   }
 
   private static async cmdPop(steamId: string, ip: string) {
     const infoResp = await rustPlusManager.sendRequest(steamId, ip, { getInfo: {} });
     const i = infoResp.response.info;
-    const queuedStr = i.queued > 0 ? ` (Cola: ${i.queued})` : "";
-    // @ts-ignore
-    const msg = rustPlusManager.formatMsg(steamId, ip, 'cmd_pop', `Poblacion: {players}/{maxPlayers}{queued}`, { 
-      players: i.players, 
-      maxPlayers: i.maxPlayers, 
-      queued: queuedStr
-    });
-    rustPlusManager.sendTeamMessage(steamId, ip, msg);
+    this.sendResponse(steamId, ip, `Población: ${i.players}/${i.maxPlayers} (Cola: ${i.queued})`);
   }
 
   private static async cmdWipe(steamId: string, ip: string) {
     const infoResp = await rustPlusManager.sendRequest(steamId, ip, { getInfo: {} });
     const wipeTime = infoResp.response.info.wipeTime;
-    if (wipeTime) {
-      const wipeDate = new Date(wipeTime * 1000).toLocaleString('es-AR');
-      // @ts-ignore
-      const msg = rustPlusManager.formatMsg(steamId, ip, 'cmd_wipe', `Último Wipe: {date}`, { date: wipeDate });
-      rustPlusManager.sendTeamMessage(steamId, ip, msg);
-    } else {
-      // @ts-ignore
-      rustPlusManager.sendTeamMessage(steamId, ip, rustPlusManager.formatMsg(steamId, ip, 'cmd_wipe_none', `No hay datos del Wipe.`));
-    }
+    const wipeDate = wipeTime ? new Date(wipeTime * 1000).toLocaleString('es-AR') : "Desconocido";
+    this.sendResponse(steamId, ip, `Último Wipe detectado: ${wipeDate}`);
   }
 
   private static async cmdEvents(steamId: string, ip: string) {
     const markersResp = await rustPlusManager.sendRequest(steamId, ip, { getMapMarkers: {} });
     const markers = markersResp.response.mapMarkers.markers || [];
-    const activeEvents: string[] = [];
+    const eventNames: any = { 5: "Cargo", 8: "Patrol", 4: "Chinook", 6: "Crate", 2: "Explosión" };
     
-    markers.forEach((m: any) => {
-      if (m.type === 5) activeEvents.push("Cargo Ship");
-      else if (m.type === 8) activeEvents.push("Patrol");
-      else if (m.type === 4) activeEvents.push("Chinook (CH47)");
-      else if (m.type === 6) activeEvents.push("Crate");
-      else if (m.type === 2) activeEvents.push("Explosión");
-    });
+    const active = markers
+        .filter((m: any) => eventNames[m.type])
+        .map((m: any) => eventNames[m.type]);
 
-    if (activeEvents.length > 0) {
+    if (active.length > 0) {
       const counts: any = {};
-      activeEvents.forEach((e: string) => counts[e] = (counts[e] || 0) + 1);
-      const eventList = Object.entries(counts).map(([k, v]) => v === 1 ? k : `${v}x ${k}`).join(", ");
-      // @ts-ignore
-      const msg = rustPlusManager.formatMsg(steamId, ip, 'cmd_events', `Eventos Activos: {list}`, { list: eventList });
-      rustPlusManager.sendTeamMessage(steamId, ip, msg);
+      active.forEach((e: string) => counts[e] = (counts[e] || 0) + 1);
+      const list = Object.entries(counts).map(([k, v]) => v === 1 ? k : `${v}x ${k}`).join(", ");
+      this.sendResponse(steamId, ip, `Eventos: ${list}`);
     } else {
-      // @ts-ignore
-      rustPlusManager.sendTeamMessage(steamId, ip, rustPlusManager.formatMsg(steamId, ip, 'cmd_events_none', `No hay eventos globales activos en este momento.`));
+      this.sendResponse(steamId, ip, "No hay eventos activos.");
     }
   }
 
   private static async cmdTeam(steamId: string, ip: string) {
     const teamResp = await rustPlusManager.sendRequest(steamId, ip, { getTeamInfo: {} });
     const members = teamResp.response.teamInfo.members || [];
-    let online = 0;
-    let dead = 0;
-    members.forEach((m: any) => {
-      if (m.isOnline) online++;
-      if (!m.isAlive) dead++;
-    });
-    const details = dead > 0 ? `({dead} Muertos)` : `¡Todos Vivos!`;
-    // @ts-ignore
-    const msg = rustPlusManager.formatMsg(steamId, ip, 'cmd_team', `Equipo: {online}/{total} Online. {details}`, { 
-      online, 
-      total: members.length, 
-      details: dead > 0 ? details.replace('{dead}', String(dead)) : details 
-    });
-    rustPlusManager.sendTeamMessage(steamId, ip, msg);
+    const online = members.filter((m: any) => m.isOnline).length;
+    this.sendResponse(steamId, ip, `Equipo: ${online}/${members.length} Online.`);
   }
 
   private static async cmdMap(steamId: string, ip: string) {
     const infoResp = await rustPlusManager.sendRequest(steamId, ip, { getInfo: {} });
-    const info = infoResp.response.info;
-    // @ts-ignore
-    const msg = rustPlusManager.formatMsg(steamId, ip, 'cmd_map', `Mapa: {map} (Tamaño: {size} | Seed: {seed})`, { 
-      map: info.map, 
-      size: info.mapSize, 
-      seed: info.seed 
-    });
-    rustPlusManager.sendTeamMessage(steamId, ip, msg);
+    const i = infoResp.response.info;
+    this.sendResponse(steamId, ip, `Nodo: ${i.map} | Tamaño: ${i.mapSize} | Seed: ${i.seed}`);
   }
 
   private static async cmdUpkeep(steamId: string, ip: string) {
-    // @ts-ignore
-    rustPlusManager.sendTeamMessage(steamId, ip, rustPlusManager.formatMsg(steamId, ip, 'cmd_dashboard_reminder', `Utiliza el Dashboard para ver el mapa y cámaras.`));
+    this.sendResponse(steamId, ip, "Consulta el Dashboard para ver el mantenimiento en tiempo real.");
   }
 
   private static async cmdLeader(steamId: string, ip: string, args: string) {
     if (!args) {
-      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Uso: !lider <nombre del jugador>`);
+      this.sendResponse(steamId, ip, "Uso: !lider <nombre>");
       return;
     }
     const teamResp = await rustPlusManager.sendRequest(steamId, ip, { getTeamInfo: {} });
     const members = teamResp.response.teamInfo.members || [];
-    const target = members.find((m: any) => m.name && m.name.toLowerCase().includes(args.toLowerCase()));
+    const target = members.find((m: any) => m.name?.toLowerCase().includes(args.toLowerCase()));
 
     if (target) {
       await rustPlusManager.sendRequest(steamId, ip, { promoteToLeader: { steamId: target.steamId } });
-      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: ${target.name} ha sido promovido a líder del equipo.`);
+      this.sendResponse(steamId, ip, `${target.name} ha sido promovido a Líder.`);
     } else {
-      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: No se encontró a nadie llamado "${args}" en el equipo.`);
+      this.sendResponse(steamId, ip, `No se encontró a '${args}' en el equipo.`);
     }
   }
 
   private static async cmdHelp(steamId: string, ip: string) {
-    // @ts-ignore
-    const prefix = rustPlusManager.formatMsg(steamId, ip, '', '').split(' ')[0] || ':exclamation:';
-    rustPlusManager.sendTeamMessage(steamId, ip, `${prefix} Comandos: !pop, !time, !wipe, !eventos, !team, !mapa, !lider, !tc, !track, !untrack, !targets, !wb, !uwb`);
-  }
-
-  private static async cmdTrack(steamId: string, ip: string, args: string) {
-    const split = args.split(" ");
-    if (split.length < 2) {
-      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Uso: !track <steamId> <nombre>`);
-      return;
-    }
-    const targetSteamId = split[0];
-    const name = split.slice(1).join(" ");
-    
-    const server = getServers(steamId).find(s => s.ip === ip);
-    if (server) {
-      addTrackingTarget(server.id, targetSteamId, name);
-      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Objetivo '${name}' añadido al rastreo.`);
-    }
-  }
-
-  private static async cmdUntrack(steamId: string, ip: string, args: string) {
-    if (!args) {
-      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Uso: !untrack <steamId>`);
-      return;
-    }
-    const server = getServers(steamId).find(s => s.ip === ip);
-    if (server) {
-      removeTrackingTarget(server.id, args);
-      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Objetivo con SteamID ${args} eliminado.`);
-    }
-  }
-
-  private static async cmdTargets(steamId: string, ip: string) {
-    const server = getServers(steamId).find(s => s.ip === ip);
-    if (server) {
-      const targets = getTrackingTargets(server.id);
-      if (targets.length === 0) {
-        rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: No hay objetivos en seguimiento.`);
-        return;
-      }
-      const list = targets.map((t: any) => `${t.name} (${t.status?.toUpperCase() || 'OFF'})`).join(", ");
-      rustPlusManager.sendTeamMessage(steamId, ip, `:dart: Objetivos: ${list}`);
-    }
+    this.sendResponse(steamId, ip, "Comandos: !pop, !time, !wipe, !eventos, !team, !mapa, !lider, !track, !untrack, !targets, !status, !wb");
   }
 
   private static async cmdWatchBan(steamId: string, ip: string, args: string) {
     const split = args.split(" ");
     if (split.length < 1 || !split[0]) {
-      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Uso: !wb <steamId> [nombre]`);
+      this.sendResponse(steamId, ip, "Uso: !wb <steamId> [nombre]");
       return;
     }
-    const targetSteamId = split[0];
-    const name = split.slice(1).join(" ") || "Sospechoso";
-    
-    addToBanWatchlist(targetSteamId, name);
-    rustPlusManager.sendTeamMessage(steamId, ip, `:shield: Objetivo '${name}' (${targetSteamId}) añadido a la vigilancia global.`);
+    addToBanWatchlist(split[0], split.slice(1).join(" ") || "Sospechoso");
+    this.sendResponse(steamId, ip, `Sujeto añadido a la vigilancia de bloqueos global.`);
   }
 
   private static async cmdUnwatchBan(steamId: string, ip: string, args: string) {
     if (!args) {
-      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Uso: !uwb <steamId>`);
+      this.sendResponse(steamId, ip, "Uso: !uwb <steamId>");
       return;
     }
     removeFromBanWatchlist(args);
-    rustPlusManager.sendTeamMessage(steamId, ip, `:shield: SteamID ${args} eliminado de la vigilancia.`);
+    this.sendResponse(steamId, ip, `Vigilancia de seguridad retirada para ${args}.`);
+  }
+
+  /**
+   * Centraliza las respuestas para asegurar el uso del prefijo corporativo.
+   */
+  private static sendResponse(steamId: string, ip: string, message: string) {
+    // @ts-ignore
+    const formatted = rustPlusManager.formatMsg(steamId, ip, '', message);
+    rustPlusManager.sendTeamMessage(steamId, ip, formatted);
   }
 }
