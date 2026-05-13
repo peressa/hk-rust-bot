@@ -14,7 +14,9 @@ import {
   ChevronRight,
   AlertCircle,
   ExternalLink,
-  Target
+  Target,
+  Eye,
+  Plus
 } from "lucide-react";
 
 export default function TestTrackingPage() {
@@ -23,6 +25,19 @@ export default function TestTrackingPage() {
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [trackedPlayers, setTrackedPlayers] = useState<any[]>([]);
+
+  const fetchTracked = async () => {
+    try {
+      const res = await fetch("/api/test/track/list");
+      const data = await res.json();
+      setTrackedPlayers(data);
+    } catch (e) {}
+  };
+
+  React.useEffect(() => {
+    fetchTracked();
+  }, []);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,36 +130,99 @@ export default function TestTrackingPage() {
           </form>
         </div>
 
-        {error && (
-          <div className="premium-card" style={{ borderColor: 'var(--error)', background: 'rgba(239, 68, 68, 0.05)', display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--error)', marginBottom: '2rem' }}>
-            <AlertCircle />
-            <span>{error}</span>
-          </div>
-        )}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: '2rem' }}>
+          <div>
+            {error && (
+              <div className="premium-card" style={{ borderColor: 'var(--error)', background: 'rgba(239, 68, 68, 0.05)', display: 'flex', alignItems: 'center', gap: '1rem', color: 'var(--error)', marginBottom: '2rem' }}>
+                <AlertCircle />
+                <span>{error}</span>
+              </div>
+            )}
 
-        {results && (
-          <div className="animate-fade-in">
-            <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Terminal size={18} color="var(--primary)" /> RESULTADOS DE INTELIGENCIA
-            </h3>
+            {results && (
+              <div className="animate-fade-in">
+                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Terminal size={18} color="var(--primary)" /> RESULTADOS DE INTELIGENCIA
+                </h3>
 
-            {searchType === "player" ? (
-              <PlayerResults data={results} />
-            ) : (
-              <ServerResults data={results} />
+                {searchType === "player" ? (
+                  <PlayerResults data={results} onUpdate={fetchTracked} />
+                ) : (
+                  <ServerResults data={results} />
+                )}
+              </div>
             )}
           </div>
-        )}
+
+          <aside>
+             <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1rem' }}>
+               <Target size={16} color="var(--primary)" /> OBJETIVOS SEGUIDOS
+             </h3>
+             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+               {trackedPlayers.length === 0 ? (
+                 <div style={{ padding: '2rem', textAlign: 'center', opacity: 0.3, fontSize: '0.7rem', fontWeight: 900, background: 'rgba(0,0,0,0.1)', borderRadius: '8px' }}>
+                    SIN OBJETIVOS ACTIVOS
+                 </div>
+               ) : (
+                 trackedPlayers.map(tp => (
+                   <div key={tp.id} className="premium-card" style={{ padding: '1rem', fontSize: '0.8rem' }}>
+                      <div style={{ fontWeight: 800, marginBottom: '0.25rem' }}>{tp.name}</div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.65rem', opacity: 0.5 }}>{tp.id}</span>
+                        <div style={{ 
+                          fontSize: '0.6rem', 
+                          fontWeight: 900, 
+                          color: tp.status === 'online' ? 'var(--accent)' : '#666',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}>
+                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: tp.status === 'online' ? 'var(--accent)' : '#666' }}></div>
+                          {tp.status?.toUpperCase() || 'IDLE'}
+                        </div>
+                      </div>
+                      {tp.lastServerName && (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 800 }}>
+                          LOC: {tp.lastServerName.substring(0, 25)}...
+                        </div>
+                      )}
+                   </div>
+                 ))
+               )}
+             </div>
+          </aside>
+        </div>
       </div>
     </DashboardLayout>
   );
 }
 
-function PlayerResults({ data }: { data: any }) {
+function PlayerResults({ data, onUpdate }: { data: any, onUpdate?: () => void }) {
   const players = data.data || [];
   const included = data.included || [];
+  const [trackingId, setTrackingId] = useState<string | null>(null);
 
   if (players.length === 0) return <div className="premium-card">No se encontraron jugadores.</div>;
+
+  const handleTrack = async (player: any) => {
+    setTrackingId(player.id);
+    try {
+      const res = await fetch("/api/test/track/add", {
+        method: "POST",
+        body: JSON.stringify({
+          id: player.id,
+          name: player.attributes.name
+        })
+      });
+      if (res.ok) {
+        if (onUpdate) onUpdate();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setTrackingId(null);
+    }
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -185,6 +263,27 @@ function PlayerResults({ data }: { data: any }) {
                   {server ? 'ONLINE' : 'OFFLINE'}
                 </div>
                 <div style={{ marginTop: '0.5rem', fontSize: '0.7rem', opacity: 0.4 }}>ÚLTIMA ACTIVIDAD: {new Date(p.attributes.updatedAt).toLocaleDateString()}</div>
+                
+                <button 
+                  onClick={() => handleTrack(p)}
+                  disabled={trackingId === p.id}
+                  style={{ 
+                    marginTop: '1rem',
+                    background: 'rgba(255,255,255,0.05)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    color: '#fff',
+                    padding: '0.4rem 1rem',
+                    borderRadius: '4px',
+                    fontSize: '0.7rem',
+                    fontWeight: 900,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  {trackingId === p.id ? 'PROCESANDO...' : <><Plus size={12} color="var(--primary)" /> SEGUIR OBJETIVO</>}
+                </button>
               </div>
             </div>
 
