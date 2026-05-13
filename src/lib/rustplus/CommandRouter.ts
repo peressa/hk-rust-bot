@@ -50,8 +50,6 @@ export class CommandRouter {
           return await this.cmdHelp(steamId, ip);
         case "!track":
           return await this.cmdTrack(steamId, ip, args);
-<<<<<<< HEAD
-=======
         case "!untrack":
           return await this.cmdUntrack(steamId, ip, args);
         case "!targets":
@@ -61,7 +59,6 @@ export class CommandRouter {
           return await this.cmdWatchBan(steamId, ip, args);
         case "!uwb":
           return await this.cmdUnwatchBan(steamId, ip, args);
->>>>>>> 007ebe57120a44698d75955bc65a39fbfbec9e5c
         default:
           return; // Comando no reconocido
       }
@@ -92,7 +89,7 @@ export class CommandRouter {
         remainingMsg = `Faltan ${realMins}m para el día`;
     }
     
-    // @ts-ignore - Acceso a método privado (temporal hasta refactor completo)
+    // @ts-ignore
     const msg = rustPlusManager.formatMsg(steamId, ip, 'cmd_time', `Hora: {time} ({remaining})`, { time: formattedTime, remaining: remainingMsg });
     rustPlusManager.sendTeamMessage(steamId, ip, msg);
   }
@@ -203,34 +200,10 @@ export class CommandRouter {
     }
   }
 
-  private static async cmdTrack(steamId: string, ip: string, args: string) {
-    const parts = args.split(" ");
-    
-    // Necesitamos al menos nombre, X e Y (3 partes)
-    if (parts.length < 3) {
-      rustPlusManager.sendTeamMessage(steamId, ip, `⚠️ Uso: !track <nombre> <x> <y>`);
-      return;
-    }
-
-    const y = parts.pop();
-    const x = parts.pop();
-    const name = parts.join(" ");
-
-    if (isNaN(Number(x)) || isNaN(Number(y))) {
-      rustPlusManager.sendTeamMessage(steamId, ip, `⚠️ Error: Las coordenadas X e Y deben ser números.`);
-      return;
-    }
-
-    // Mensaje de éxito solicitado
-    const msg = `✅ Objetivo fijado: ${name} en [${x}, ${y}]`;
-    rustPlusManager.sendTeamMessage(steamId, ip, msg);
-  }
-
   private static async cmdHelp(steamId: string, ip: string) {
-<<<<<<< HEAD
-    rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Comandos: !pop, !time, !wipe, !eventos, !team, !mapa, !lider, !tc, !track`);
-=======
-    rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Comandos: !pop, !time, !wipe, !eventos, !team, !mapa, !lider, !tc, !track, !untrack, !targets, !wb, !uwb`);
+    // @ts-ignore
+    const prefix = rustPlusManager.formatMsg(steamId, ip, '', '').split(' ')[0] || ':exclamation:';
+    rustPlusManager.sendTeamMessage(steamId, ip, `${prefix} Comandos: !pop, !time, !wipe, !eventos, !team, !mapa, !lider, !tc, !track, !untrack, !targets, !wb, !uwb`);
   }
 
   private static async cmdTrack(steamId: string, ip: string, args: string) {
@@ -245,7 +218,7 @@ export class CommandRouter {
     const server = getServers(steamId).find(s => s.ip === ip);
     if (server) {
       addTrackingTarget(server.id, targetSteamId, name);
-      rustPlusManager.sendTeamMessage(steamId, ip, `:white_check_mark: Objetivo '${name}' añadido al rastreo.`);
+      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Objetivo '${name}' añadido al rastreo.`);
     }
   }
 
@@ -257,7 +230,7 @@ export class CommandRouter {
     const server = getServers(steamId).find(s => s.ip === ip);
     if (server) {
       removeTrackingTarget(server.id, args);
-      rustPlusManager.sendTeamMessage(steamId, ip, `:white_check_mark: Objetivo con SteamID ${args} eliminado.`);
+      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Objetivo con SteamID ${args} eliminado.`);
     }
   }
 
@@ -269,7 +242,7 @@ export class CommandRouter {
         rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: No hay objetivos en seguimiento.`);
         return;
       }
-      const list = targets.map(t => `${t.name} (${t.isOnline ? 'ON' : 'OFF'})`).join(", ");
+      const list = targets.map((t: any) => `${t.name} (${t.status?.toUpperCase() || 'OFF'})`).join(", ");
       rustPlusManager.sendTeamMessage(steamId, ip, `:dart: Objetivos: ${list}`);
     }
   }
@@ -294,6 +267,5 @@ export class CommandRouter {
     }
     removeFromBanWatchlist(args);
     rustPlusManager.sendTeamMessage(steamId, ip, `:shield: SteamID ${args} eliminado de la vigilancia.`);
->>>>>>> 007ebe57120a44698d75955bc65a39fbfbec9e5c
   }
 }
