@@ -134,12 +134,6 @@ export class CommandRouter {
     }
   }
 
-    } catch (err) {
-        console.error("[Track Command] Fallo:", err);
-        this.sendResponse(steamId, ip, "Error en el sistema de búsqueda. Vigilancia reactiva activada por seguridad.");
-    }
-  }
-
   private static async cmdUntrack(steamId: string, ip: string, args: string) {
     if (!args) {
       this.sendResponse(steamId, ip, "Uso: !untrack <nombre>");
