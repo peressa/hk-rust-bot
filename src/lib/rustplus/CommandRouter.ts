@@ -1,4 +1,13 @@
 import { rustPlusManager } from "./RustPlusManager";
+import { 
+  addTrackingTarget, 
+  removeTrackingTarget, 
+  getTrackingTargets, 
+  getServers, 
+  addToBanWatchlist, 
+  removeFromBanWatchlist, 
+  getBanWatchlist 
+} from "../db";
 
 export class CommandRouter {
   static async handle(steamId: string, ip: string, cmd: string) {
@@ -41,6 +50,18 @@ export class CommandRouter {
           return await this.cmdHelp(steamId, ip);
         case "!track":
           return await this.cmdTrack(steamId, ip, args);
+<<<<<<< HEAD
+=======
+        case "!untrack":
+          return await this.cmdUntrack(steamId, ip, args);
+        case "!targets":
+        case "!objetivos":
+          return await this.cmdTargets(steamId, ip);
+        case "!wb":
+          return await this.cmdWatchBan(steamId, ip, args);
+        case "!uwb":
+          return await this.cmdUnwatchBan(steamId, ip, args);
+>>>>>>> 007ebe57120a44698d75955bc65a39fbfbec9e5c
         default:
           return; // Comando no reconocido
       }
@@ -206,6 +227,73 @@ export class CommandRouter {
   }
 
   private static async cmdHelp(steamId: string, ip: string) {
+<<<<<<< HEAD
     rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Comandos: !pop, !time, !wipe, !eventos, !team, !mapa, !lider, !tc, !track`);
+=======
+    rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Comandos: !pop, !time, !wipe, !eventos, !team, !mapa, !lider, !tc, !track, !untrack, !targets, !wb, !uwb`);
+  }
+
+  private static async cmdTrack(steamId: string, ip: string, args: string) {
+    const split = args.split(" ");
+    if (split.length < 2) {
+      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Uso: !track <steamId> <nombre>`);
+      return;
+    }
+    const targetSteamId = split[0];
+    const name = split.slice(1).join(" ");
+    
+    const server = getServers(steamId).find(s => s.ip === ip);
+    if (server) {
+      addTrackingTarget(server.id, targetSteamId, name);
+      rustPlusManager.sendTeamMessage(steamId, ip, `:white_check_mark: Objetivo '${name}' añadido al rastreo.`);
+    }
+  }
+
+  private static async cmdUntrack(steamId: string, ip: string, args: string) {
+    if (!args) {
+      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Uso: !untrack <steamId>`);
+      return;
+    }
+    const server = getServers(steamId).find(s => s.ip === ip);
+    if (server) {
+      removeTrackingTarget(server.id, args);
+      rustPlusManager.sendTeamMessage(steamId, ip, `:white_check_mark: Objetivo con SteamID ${args} eliminado.`);
+    }
+  }
+
+  private static async cmdTargets(steamId: string, ip: string) {
+    const server = getServers(steamId).find(s => s.ip === ip);
+    if (server) {
+      const targets = getTrackingTargets(server.id);
+      if (targets.length === 0) {
+        rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: No hay objetivos en seguimiento.`);
+        return;
+      }
+      const list = targets.map(t => `${t.name} (${t.isOnline ? 'ON' : 'OFF'})`).join(", ");
+      rustPlusManager.sendTeamMessage(steamId, ip, `:dart: Objetivos: ${list}`);
+    }
+  }
+
+  private static async cmdWatchBan(steamId: string, ip: string, args: string) {
+    const split = args.split(" ");
+    if (split.length < 1 || !split[0]) {
+      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Uso: !wb <steamId> [nombre]`);
+      return;
+    }
+    const targetSteamId = split[0];
+    const name = split.slice(1).join(" ") || "Sospechoso";
+    
+    addToBanWatchlist(targetSteamId, name);
+    rustPlusManager.sendTeamMessage(steamId, ip, `:shield: Objetivo '${name}' (${targetSteamId}) añadido a la vigilancia global.`);
+  }
+
+  private static async cmdUnwatchBan(steamId: string, ip: string, args: string) {
+    if (!args) {
+      rustPlusManager.sendTeamMessage(steamId, ip, `:exclamation: Uso: !uwb <steamId>`);
+      return;
+    }
+    removeFromBanWatchlist(args);
+    rustPlusManager.sendTeamMessage(steamId, ip, `:shield: SteamID ${args} eliminado de la vigilancia.`);
+>>>>>>> 007ebe57120a44698d75955bc65a39fbfbec9e5c
   }
 }

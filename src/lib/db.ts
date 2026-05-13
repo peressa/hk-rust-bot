@@ -119,6 +119,7 @@ db.exec(`
     lastUpdate INTEGER
   );
 
+<<<<<<< HEAD
   CREATE TABLE IF NOT EXISTS tracked_players (
     id TEXT PRIMARY KEY, -- BattleMetrics Player ID
     name TEXT,
@@ -127,6 +128,24 @@ db.exec(`
     status TEXT, -- 'online' | 'offline'
     lastServerId TEXT,
     lastServerName TEXT,
+=======
+  CREATE TABLE IF NOT EXISTS tracking_targets (
+    id TEXT PRIMARY KEY,
+    serverId TEXT,
+    steamId TEXT,
+    name TEXT,
+    isOnline INTEGER DEFAULT 0,
+    lastSeen INTEGER,
+    UNIQUE(serverId, steamId)
+  );
+
+  CREATE TABLE IF NOT EXISTS ban_watchlist (
+    steamId TEXT PRIMARY KEY,
+    name TEXT,
+    lastCheck INTEGER,
+    isBanned INTEGER DEFAULT 0,
+    banType TEXT, -- 'EAC', 'Server', 'Manual'
+>>>>>>> 007ebe57120a44698d75955bc65a39fbfbec9e5c
     createdAt TEXT
   );
 `);
@@ -155,6 +174,9 @@ addColumnIfNotExists("entities", "value", "INTEGER DEFAULT 0");
 addColumnIfNotExists("entities", "capacity", "REAL DEFAULT 0");
 addColumnIfNotExists("entities", "hasCapacity", "INTEGER DEFAULT 0");
 addColumnIfNotExists("whitelist", "discordId", "TEXT");
+addColumnIfNotExists("tracking_targets", "bmPlayerId", "TEXT");
+addColumnIfNotExists("tracking_targets", "lastStatus", "TEXT");
+addColumnIfNotExists("tracking_targets", "isBanned", "INTEGER DEFAULT 0");
 
 // MIGRACIÓN: Purgar caché para aplicar lógica PROFESIONAL de Píxeles vs Metros (como RustPlusBot)
 try {
@@ -439,6 +461,7 @@ export function getTeamChat(serverId: string, limit = 50) {
   return rows.reverse();
 }
 
+<<<<<<< HEAD
 // === Tracked Players ===
 export function addTrackedPlayer(player: { id: string, name: string, steamId?: string }) {
   const stmt = db.prepare(`
@@ -463,6 +486,63 @@ export function updatePlayerStatus(id: string, status: string, serverId?: string
 
 export function removeTrackedPlayer(id: string) {
   db.prepare("DELETE FROM tracked_players WHERE id = ?").run(id);
+=======
+// === Tracking Targets ===
+export function addTrackingTarget(serverId: string, steamId: string, name: string) {
+  const id = `${serverId}-${steamId}`;
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO tracking_targets (id, serverId, steamId, name, isOnline, lastSeen)
+    VALUES (?, ?, ?, ?, 0, ?)
+  `);
+  stmt.run(id, serverId, steamId, name, Date.now());
+}
+
+export function getTrackingTargets(serverId: string) {
+  const stmt = db.prepare("SELECT * FROM tracking_targets WHERE serverId = ?");
+  return stmt.all(serverId) as any[];
+}
+
+export function removeTrackingTarget(serverId: string, steamId: string) {
+  const stmt = db.prepare("DELETE FROM tracking_targets WHERE serverId = ? AND steamId = ?");
+  stmt.run(serverId, steamId);
+}
+
+export function updateTrackingStatus(serverId: string, steamId: string, isOnline: boolean, bmPlayerId?: string) {
+  if (bmPlayerId) {
+    const stmt = db.prepare("UPDATE tracking_targets SET isOnline = ?, lastSeen = ?, bmPlayerId = ? WHERE serverId = ? AND steamId = ?");
+    stmt.run(isOnline ? 1 : 0, Date.now(), bmPlayerId, serverId, steamId);
+  } else {
+    const stmt = db.prepare("UPDATE tracking_targets SET isOnline = ?, lastSeen = ? WHERE serverId = ? AND steamId = ?");
+    stmt.run(isOnline ? 1 : 0, Date.now(), serverId, steamId);
+  }
+}
+
+export function updateTrackingBan(serverId: string, steamId: string, isBanned: boolean) {
+  const stmt = db.prepare("UPDATE tracking_targets SET isBanned = ? WHERE serverId = ? AND steamId = ?");
+  stmt.run(isBanned ? 1 : 0, serverId, steamId);
+}
+
+// === Ban Watchlist ===
+export function addToBanWatchlist(steamId: string, name: string) {
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO ban_watchlist (steamId, name, lastCheck, isBanned, createdAt)
+    VALUES (?, ?, ?, 0, ?)
+  `);
+  stmt.run(steamId, name, Date.now(), new Date().toISOString());
+}
+
+export function getBanWatchlist() {
+  return db.prepare("SELECT * FROM ban_watchlist").all() as any[];
+}
+
+export function removeFromBanWatchlist(steamId: string) {
+  db.prepare("DELETE FROM ban_watchlist WHERE steamId = ?").run(steamId);
+}
+
+export function updateBanStatus(steamId: string, isBanned: boolean, banType: string) {
+  const stmt = db.prepare("UPDATE ban_watchlist SET isBanned = ?, banType = ?, lastCheck = ? WHERE steamId = ?");
+  stmt.run(isBanned ? 1 : 0, banType, Date.now(), steamId);
+>>>>>>> 007ebe57120a44698d75955bc65a39fbfbec9e5c
 }
 
 export default db;

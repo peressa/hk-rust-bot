@@ -1,88 +1,129 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layout/DashboardLayout";
-import { Terminal, RefreshCw, AlertTriangle, Database } from "lucide-react";
+import { Beaker, ShieldAlert, MessageSquare, Bell, RefreshCw } from "lucide-react";
 
 export default function DebugPage() {
-  const [logs, setLogs] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [servers, setServers] = useState<any[]>([]);
+  const [selectedServer, setSelectedServer] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<any>(null);
 
-  const fetchLogs = async () => {
+  useEffect(() => {
+    fetch("/api/servers")
+      .then(res => res.json())
+      .then(data => {
+        setServers(data);
+        if (data.length > 0) setSelectedServer(data[0].id);
+      });
+  }, []);
+
+  const runTest = async (type: string) => {
+    if (!selectedServer) return;
+    setLoading(true);
+    setResult(null);
     try {
-      const res = await fetch("/api/debug/fcm");
+      const res = await fetch(`/api/debug/test?serverId=${selectedServer}&type=${type}`);
       const data = await res.json();
-      setLogs(data);
-    } catch (err) {
-      console.error(err);
+      setResult(data);
+    } catch (err: any) {
+      setResult({ error: err.message });
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchLogs();
-    const interval = setInterval(fetchLogs, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
   return (
     <DashboardLayout>
-      <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        <header style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <h1 style={{ fontSize: '2rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <Terminal color="var(--primary)" /> Consola de Diagnóstico
-            </h1>
-            <p style={{ color: 'var(--text-muted)' }}>Monitorea las señales FCM crudas recibidas desde Facepunch.</p>
-          </div>
-          <button onClick={fetchLogs} className="btn-secondary" style={{ padding: '0.5rem 1rem' }}>
-            <RefreshCw size={18} className={loading ? "animate-spin" : ""} /> Refrescar
-          </button>
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem' }}>
+        <header style={{ marginBottom: '2rem' }}>
+          <h1 style={{ fontFamily: 'var(--font-barlow)', fontSize: '2.5rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Beaker size={40} color="var(--primary)" /> LABORATORIO DE PRUEBAS
+          </h1>
+          <p style={{ color: 'var(--text-muted)', fontWeight: 600 }}>Prueba las integraciones tácticas y notificaciones del sistema.</p>
         </header>
 
-        <section className="premium-card" style={{ background: '#0a0a0b', border: '1px solid var(--border)', padding: '0' }}>
-          <div style={{ padding: '1rem', borderBottom: '1px solid var(--border)', background: 'rgba(255,255,255,0.02)', display: 'flex', gap: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: '#22c55e' }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#22c55e' }}></div> Escuchando señales...
-            </div>
-          </div>
-          
-          <div style={{ height: '500px', overflowY: 'auto', padding: '1.5rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-            {logs.length === 0 ? (
-              <div style={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', opacity: 0.3 }}>
-                <Database size={48} style={{ marginBottom: '1rem' }} />
-                <p>No se han recibido paquetes todavía.</p>
-                <p style={{ fontSize: '0.75rem' }}>Intenta pulsar "Pair" en Rust ahora.</p>
-              </div>
-            ) : (
-              logs.map((log, i) => (
-                <div key={i} style={{ marginBottom: '1.5rem', padding: '1rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', borderLeft: '3px solid var(--primary)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', opacity: 0.6, fontSize: '0.75rem' }}>
-                    <span>PAQUETE #{logs.length - i}</span>
-                    <span>{new Date(log.timestamp).toLocaleTimeString()}</span>
-                  </div>
-                  <pre style={{ margin: 0, whiteSpace: 'pre-wrap', color: '#e2e8f0', lineHeight: 1.5 }}>
-                    {JSON.stringify(log.data, null, 2)}
-                  </pre>
-                </div>
-              ))
-            )}
-          </div>
-        </section>
+        <div className="premium-card" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+          <section>
+            <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+              Seleccionar Servidor para el Test
+            </label>
+            <select 
+              value={selectedServer} 
+              onChange={(e) => setSelectedServer(e.target.value)}
+              style={{ width: '100%', padding: '1rem', background: '#0a0a0a', border: '1px solid var(--border)', color: 'white', fontWeight: 700 }}
+            >
+              <option value="">Selecciona un servidor...</option>
+              {servers.map(s => <option key={s.id} value={s.id}>{s.name} ({s.ip})</option>)}
+            </select>
+          </section>
 
-        <div style={{ marginTop: '2rem', padding: '1.5rem', borderRadius: '12px', background: 'rgba(234, 179, 8, 0.05)', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
-          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-            <AlertTriangle color="#eab308" size={24} />
-            <div>
-              <h4 style={{ color: '#eab308', margin: '0 0 0.5rem 0' }}>¿Cómo usar esta consola?</h4>
-              <p style={{ fontSize: '0.85rem', margin: 0, opacity: 0.8 }}>
-                Deja esta página abierta y pulsa <strong>"Pair with Server"</strong> en Rust. Si el bot recibe la señal, aparecerá aquí instantáneamente. Si no aparece nada, el problema está en la conexión entre Facepunch y el servidor (FCM Keys).
-              </p>
-            </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <TestButton 
+              title="Test Discord" 
+              desc="Envía una alerta de prueba al Webhook/Canal." 
+              icon={<Bell />} 
+              onClick={() => runTest('discord')} 
+              loading={loading}
+            />
+            <TestButton 
+              title="Test Rust+" 
+              desc="Envía un mensaje al Team Chat del juego." 
+              icon={<MessageSquare />} 
+              onClick={() => runTest('rust')} 
+              loading={loading}
+            />
+            <TestButton 
+              title="Simular Ban" 
+              desc="Simula un reporte de baneo EAC/Global." 
+              icon={<ShieldAlert />} 
+              onClick={() => runTest('ban')} 
+              loading={loading}
+            />
           </div>
+
+          {result && (
+            <div style={{ 
+              padding: '1.5rem', 
+              background: result.error ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)', 
+              border: `1px solid ${result.error ? '#ef4444' : '#22c55e'}`,
+              borderRadius: '4px',
+              fontFamily: 'monospace',
+              fontSize: '0.8rem'
+            }}>
+              <pre>{JSON.stringify(result, null, 2)}</pre>
+            </div>
+          )}
         </div>
       </div>
     </DashboardLayout>
+  );
+}
+
+function TestButton({ title, desc, icon, onClick, loading }: any) {
+  return (
+    <button 
+      onClick={onClick}
+      disabled={loading}
+      style={{ 
+        background: 'rgba(255,255,255,0.02)', 
+        border: '1px solid var(--border)', 
+        padding: '1.5rem', 
+        textAlign: 'left',
+        cursor: 'pointer',
+        transition: 'var(--transition)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem'
+      }}
+      onMouseEnter={(e) => e.currentTarget.style.borderColor = 'var(--primary)'}
+      onMouseLeave={(e) => e.currentTarget.style.borderColor = 'var(--border)'}
+    >
+      <div style={{ color: 'var(--primary)', marginBottom: '0.5rem' }}>{icon}</div>
+      <div style={{ fontWeight: 800, fontSize: '1rem' }}>{title}</div>
+      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{desc}</div>
+      {loading && <RefreshCw size={14} className="animate-spin" />}
+    </button>
   );
 }

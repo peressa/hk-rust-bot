@@ -19,6 +19,7 @@ import IntelFeed from "@/components/dashboard/IntelFeed";
 import RustMap from "@/components/map/RustMap";
 import ServerHero from "@/components/dashboard/ServerHero";
 import BotConfigModal from "@/components/dashboard/BotConfigModal";
+import TrackingList from "@/components/dashboard/TrackingList";
 
 export default function WarRoomPage({ params }: { params: Promise<{ serverId: string }> }) {
   const { serverId } = use(params);
@@ -157,18 +158,9 @@ export default function WarRoomPage({ params }: { params: Promise<{ serverId: st
           <aside style={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
              <TeamRoster members={intel.team} />
              
-             {/* Fase 3.3: Sistema de Logs en Tiempo Real */}
-             <div className="premium-card" style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', padding: '1rem' }}>
-                <h4 style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <Radio size={14} className="animate-pulse" color="var(--primary)" /> TERMINAL TÁCTICO
-                </h4>
-                <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.7rem', fontFamily: 'monospace', color: '#22c55e', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-                   {intel.intelLog.map((l: any) => (
-                     <div key={l.id} style={{ opacity: 0.8 }}>
-                        <span style={{ color: '#444' }}>[{new Date(l.timestamp).toLocaleTimeString([], { hour12: false })}]</span> {l.message}
-                     </div>
-                   ))}
-                </div>
+             {/* Sistema de Trackeo de Objetivos (Enemigos/Aliados externos) */}
+             <div style={{ flex: 1, minHeight: 0 }}>
+                <TrackingList serverId={serverId} />
              </div>
           </aside>
 
