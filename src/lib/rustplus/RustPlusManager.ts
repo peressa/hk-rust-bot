@@ -1150,6 +1150,10 @@ export async function bootstrap() {
     const { discordBotManager } = await import("../discord/DiscordBotManager");
     discordBotManager.init().catch(e => console.error("[Discord] Fallo al iniciar el bot:", e));
     
+    // Inicializar el Manager de Trackeo (BattleMetrics)
+    const { TrackingManager } = await import("../intel/TrackingManager");
+    TrackingManager.init().catch(e => console.error("[Tracking] Fallo al iniciar el manager de trackeo:", e));
+
     console.log("[RustPlus] Bootstrapping completado con éxito.");
   } catch (err) {
     console.error("[RustPlus] Error durante el arranque táctico:", err);

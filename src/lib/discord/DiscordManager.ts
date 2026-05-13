@@ -129,5 +129,15 @@ export class DiscordManager {
       serverName
     });
   }
+
+  static async sendGenericAlert(config: DiscordConfig, title: string, message: string) {
+    await this.sendBaseEmbed(config, {
+      title,
+      description: message,
+      color: 0x3b82f6, // Azul neutral
+      authorName: "RUST OPS TACTICAL",
+      serverName: "Notificación de Sistema"
+    });
+  }
 }
 

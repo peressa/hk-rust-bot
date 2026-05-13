@@ -118,6 +118,16 @@ db.exec(`
     orders TEXT,
     lastUpdate INTEGER
   );
+
+  CREATE TABLE IF NOT EXISTS tracking_targets (
+    id TEXT PRIMARY KEY,
+    serverId TEXT,
+    steamId TEXT,
+    name TEXT,
+    isOnline INTEGER DEFAULT 0,
+    lastSeen INTEGER,
+    UNIQUE(serverId, steamId)
+  );
 `);
 
 // Helper para migraciones seguras
@@ -426,6 +436,31 @@ export function getTeamChat(serverId: string, limit = 50) {
   const stmt = db.prepare("SELECT * FROM team_chat WHERE serverId = ? ORDER BY timestamp DESC LIMIT ?");
   const rows = stmt.all(serverId, limit);
   return rows.reverse();
+}
+
+// === Tracking Targets ===
+export function addTrackingTarget(serverId: string, steamId: string, name: string) {
+  const id = `${serverId}-${steamId}`;
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO tracking_targets (id, serverId, steamId, name, isOnline, lastSeen)
+    VALUES (?, ?, ?, ?, 0, ?)
+  `);
+  stmt.run(id, serverId, steamId, name, Date.now());
+}
+
+export function getTrackingTargets(serverId: string) {
+  const stmt = db.prepare("SELECT * FROM tracking_targets WHERE serverId = ?");
+  return stmt.all(serverId) as any[];
+}
+
+export function removeTrackingTarget(serverId: string, steamId: string) {
+  const stmt = db.prepare("DELETE FROM tracking_targets WHERE serverId = ? AND steamId = ?");
+  stmt.run(serverId, steamId);
+}
+
+export function updateTrackingStatus(serverId: string, steamId: string, isOnline: boolean) {
+  const stmt = db.prepare("UPDATE tracking_targets SET isOnline = ?, lastSeen = ? WHERE serverId = ? AND steamId = ?");
+  stmt.run(isOnline ? 1 : 0, Date.now(), serverId, steamId);
 }
 
 export default db;
