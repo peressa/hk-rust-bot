@@ -9,6 +9,7 @@ import {
   getBanWatchlist 
 } from "../db";
 import { SteamQueryManager } from "../intel/SteamQueryManager";
+import { BattleMetricsManager } from "../intel/BattleMetricsManager";
 
 export class CommandRouter {
   static async handle(steamId: string, ip: string, cmd: string) {
