@@ -119,33 +119,15 @@ db.exec(`
     lastUpdate INTEGER
   );
 
-<<<<<<< HEAD
   CREATE TABLE IF NOT EXISTS tracked_players (
-    id TEXT PRIMARY KEY, -- BattleMetrics Player ID
+    id TEXT PRIMARY KEY, -- BattleMetrics Player ID or Custom ID
     name TEXT,
     steamId TEXT,
     lastSeen TEXT,
     status TEXT, -- 'online' | 'offline'
     lastServerId TEXT,
     lastServerName TEXT,
-=======
-  CREATE TABLE IF NOT EXISTS tracking_targets (
-    id TEXT PRIMARY KEY,
-    serverId TEXT,
-    steamId TEXT,
-    name TEXT,
-    isOnline INTEGER DEFAULT 0,
-    lastSeen INTEGER,
-    UNIQUE(serverId, steamId)
-  );
-
-  CREATE TABLE IF NOT EXISTS ban_watchlist (
-    steamId TEXT PRIMARY KEY,
-    name TEXT,
-    lastCheck INTEGER,
-    isBanned INTEGER DEFAULT 0,
-    banType TEXT, -- 'EAC', 'Server', 'Manual'
->>>>>>> 007ebe57120a44698d75955bc65a39fbfbec9e5c
+    targetServerIp TEXT,
     createdAt TEXT
   );
 `);
@@ -174,9 +156,7 @@ addColumnIfNotExists("entities", "value", "INTEGER DEFAULT 0");
 addColumnIfNotExists("entities", "capacity", "REAL DEFAULT 0");
 addColumnIfNotExists("entities", "hasCapacity", "INTEGER DEFAULT 0");
 addColumnIfNotExists("whitelist", "discordId", "TEXT");
-addColumnIfNotExists("tracking_targets", "bmPlayerId", "TEXT");
-addColumnIfNotExists("tracking_targets", "lastStatus", "TEXT");
-addColumnIfNotExists("tracking_targets", "isBanned", "INTEGER DEFAULT 0");
+addColumnIfNotExists("tracked_players", "targetServerIp", "TEXT");
 
 // MIGRACIÓN: Purgar caché para aplicar lógica PROFESIONAL de Píxeles vs Metros (como RustPlusBot)
 try {
@@ -196,7 +176,7 @@ export function ensureAdminExists() {
     
     // Usamos INSERT OR REPLACE para asegurar que si el ID cambia en el ENV, se actualice el rol a admin
     const stmt = db.prepare("INSERT OR REPLACE INTO whitelist (steamId, name, role, expiresAt, createdAt) VALUES (?, ?, ?, ?, ?)");
-    stmt.run(envAdminId, "Admin Principal", "admin", null, new Date().toISOString());
+    stmt.run(adminId, "Admin Principal", "admin", null, new Date().toISOString());
   } catch(e) {
     console.error("[DB] Error asegurando admin:", e);
   }
@@ -207,7 +187,6 @@ ensureAdminExists();
 
 
 export function saveServer(server: Partial<DbServer> & { ip: string, port: string, playerId: string, playerToken: string }) {
-  // Validación crítica: No guardar si faltan tokens
   if (!server.playerId || !server.playerToken || String(server.playerId) === "undefined") {
     console.warn(`[DB] Ignorando grabación de servidor incompleto para ${server.ip}`);
     return;
@@ -282,17 +261,16 @@ export function saveEntity(entity: DbEntity) {
 
 export function getEntities(steamId: string, serverId: string): DbEntity[] {
   const stmt = db.prepare("SELECT * FROM entities WHERE steamId = ? AND serverId = ?");
-  return stmt.all(steamId, serverId) as DbEntity[];
+  return stmt.all(steamId, serverId);
 }
 
 // === Death Markers ===
 export function saveDeathMarker(steamId: string, serverId: string, name: string, x: number, y: number): boolean {
-  // Check rate limit para no hacer spam (5 minutos)
   const recentCutoff = new Date(Date.now() - 300000).toISOString();
   const existing = db.prepare("SELECT * FROM death_markers WHERE steamId = ? AND serverId = ? AND timestamp > ?").get(steamId, serverId, recentCutoff);
   
   if (existing) {
-    return false; // Ya notificamos esta muerte recientemente
+    return false;
   }
 
   const stmt = db.prepare(`
@@ -300,11 +278,10 @@ export function saveDeathMarker(steamId: string, serverId: string, name: string,
     VALUES (?, ?, ?, ?, ?, ?)
   `);
   stmt.run(steamId, serverId, name, x, y, new Date().toISOString());
-  return true; // Es nueva muerte
+  return true;
 }
 
 export function getDeathMarkers(serverId: string) {
-  // Limpiar muertes más antiguas a 4 horas (14400000 ms)
   const cutoff = new Date(Date.now() - 14400000).toISOString();
   db.prepare("DELETE FROM death_markers WHERE serverId = ? AND timestamp < ?").run(serverId, cutoff);
 
@@ -340,11 +317,9 @@ export function isWhitelisted(steamId: string): DbWhitelist | null {
   
   if (!row) return null;
 
-  // Verificar si ha expirado
   if (row.expiresAt) {
     const expires = new Date(row.expiresAt);
     if (expires < new Date()) {
-      console.warn(`[Whitelist] Licencia de ${steamId} expirada el ${row.expiresAt}`);
       return null;
     }
   }
@@ -375,26 +350,9 @@ export function addToWhitelist(steamId: string, name: string = "User", role: str
 export function linkDiscordId(steamId: string, discordId: string) {
   const cleanSteamId = String(steamId).trim();
   const cleanDiscordId = String(discordId).trim();
-  
   const stmt = db.prepare("UPDATE whitelist SET discordId = ? WHERE steamId = ?");
   const result = stmt.run(cleanDiscordId, cleanSteamId);
-  
-  if (result.changes > 0) {
-    console.log(`[DB] Vínculo exitoso: Steam ${cleanSteamId} -> Discord ${cleanDiscordId}`);
-    return true;
-  } else {
-    // Si falla el update, puede que el usuario no esté en la tabla (común en primer inicio)
-    console.warn(`[DB] Fallo al vincular: No se encontró SteamID ${cleanSteamId}. Intentando inserción de emergencia...`);
-    
-    // Si es el admin de las variables de entorno, lo creamos
-    if (cleanSteamId === process.env.ADMIN_STEAM_ID?.trim()) {
-      db.prepare("INSERT OR REPLACE INTO whitelist (steamId, name, role, discordId, createdAt) VALUES (?, ?, ?, ?, ?)")
-        .run(cleanSteamId, "Admin Principal", "admin", cleanDiscordId, new Date().toISOString());
-      console.log(`[DB] Admin vinculado y creado con éxito.`);
-      return true;
-    }
-  }
-  return false;
+  return result.changes > 0;
 }
 
 export function getWhitelistByDiscordId(discordId: string): DbWhitelist | null {
@@ -402,47 +360,42 @@ export function getWhitelistByDiscordId(discordId: string): DbWhitelist | null {
   return stmt.get(discordId) as DbWhitelist | undefined || null;
 }
 
-export function saveVending(serverId: string, vending: { id: string, name: string, x: number, y: number, grid: string, orders: string }) {
+// === Tracked Players ===
+export function addTrackedPlayer(player: { id: string | null, name: string, steamId?: string, targetServerIp?: string }) {
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO vending_machines (id, serverId, name, x, y, grid, orders, lastUpdate)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT OR REPLACE INTO tracked_players (id, name, steamId, targetServerIp, createdAt)
+    VALUES (?, ?, ?, ?, ?)
   `);
-  stmt.run(vending.id, serverId, vending.name, vending.x, vending.y, vending.grid, vending.orders, Date.now());
+  const finalId = player.id || `direct-${player.name}-${player.targetServerIp}`;
+  stmt.run(finalId, player.name, player.steamId || null, player.targetServerIp || null, new Date().toISOString());
 }
 
-export function getVendings(serverId: string) {
-  return db.prepare("SELECT * FROM vending_machines WHERE serverId = ? ORDER BY lastUpdate DESC").all(serverId) as any[];
+export function getTrackedPlayers() {
+  return db.prepare("SELECT * FROM tracked_players").all() as any[];
 }
 
-export function removeFromWhitelist(steamId: string) {
-  const stmt = db.prepare("DELETE FROM whitelist WHERE steamId = ? AND role != 'admin'");
-  stmt.run(steamId);
+export function updatePlayerStatus(id: string, status: string, serverId?: string, serverName?: string) {
+  const stmt = db.prepare(`
+    UPDATE tracked_players 
+    SET status = ?, lastSeen = ?, lastServerId = ?, lastServerName = ?
+    WHERE id = ?
+  `);
+  stmt.run(status, new Date().toISOString(), serverId || null, serverName || null, id);
+}
+
+export function removeTrackedPlayer(id: string) {
+  db.prepare("DELETE FROM tracked_players WHERE id = ?").run(id);
 }
 
 // === War Room Invites ===
 export function createInvite(serverId: string, name: string, code: string, targetWipeTime: number, expiresAt: string | null, canDraw: boolean) {
-    const id = Math.random().toString(36).substring(2, 11);
-    const stmt = db.prepare(`
-        INSERT INTO war_room_invites (id, serverId, name, code, targetWipeTime, expiresAt, canDraw, createdAt)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-    stmt.run(id, serverId, name, code, targetWipeTime, expiresAt, canDraw ? 1 : 0, new Date().toISOString());
-    return id;
-}
-
-export function getInvite(id: string) {
-    const stmt = db.prepare("SELECT * FROM war_room_invites WHERE id = ?");
-    return stmt.get(id);
-}
-
-export function deleteInvite(id: string) {
-    const stmt = db.prepare("DELETE FROM war_room_invites WHERE id = ?");
-    stmt.run(id);
-}
-
-export function getInvitesByServer(serverId: string) {
-    const stmt = db.prepare("SELECT * FROM war_room_invites WHERE serverId = ?");
-    return stmt.all(serverId);
+  const id = Math.random().toString(36).substring(2, 11);
+  const stmt = db.prepare(`
+      INSERT INTO war_room_invites (id, serverId, name, code, targetWipeTime, expiresAt, canDraw, createdAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  stmt.run(id, serverId, name, code, targetWipeTime, expiresAt, canDraw ? 1 : 0, new Date().toISOString());
+  return id;
 }
 
 // === Team Chat ===
@@ -461,89 +414,12 @@ export function getTeamChat(serverId: string, limit = 50) {
   return rows.reverse();
 }
 
-<<<<<<< HEAD
-// === Tracked Players ===
-export function addTrackedPlayer(player: { id: string, name: string, steamId?: string }) {
+export function saveVending(serverId: string, vending: any) {
   const stmt = db.prepare(`
-    INSERT OR REPLACE INTO tracked_players (id, name, steamId, createdAt)
-    VALUES (?, ?, ?, ?)
+    INSERT OR REPLACE INTO vending_machines (id, serverId, name, x, y, grid, orders, lastUpdate)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  stmt.run(player.id, player.name, player.steamId || null, new Date().toISOString());
-}
-
-export function getTrackedPlayers() {
-  return db.prepare("SELECT * FROM tracked_players").all() as any[];
-}
-
-export function updatePlayerStatus(id: string, status: string, serverId?: string, serverName?: string) {
-  const stmt = db.prepare(`
-    UPDATE tracked_players 
-    SET status = ?, lastSeen = ?, lastServerId = ?, lastServerName = ?
-    WHERE id = ?
-  `);
-  stmt.run(status, new Date().toISOString(), serverId || null, serverName || null, id);
-}
-
-export function removeTrackedPlayer(id: string) {
-  db.prepare("DELETE FROM tracked_players WHERE id = ?").run(id);
-=======
-// === Tracking Targets ===
-export function addTrackingTarget(serverId: string, steamId: string, name: string) {
-  const id = `${serverId}-${steamId}`;
-  const stmt = db.prepare(`
-    INSERT OR REPLACE INTO tracking_targets (id, serverId, steamId, name, isOnline, lastSeen)
-    VALUES (?, ?, ?, ?, 0, ?)
-  `);
-  stmt.run(id, serverId, steamId, name, Date.now());
-}
-
-export function getTrackingTargets(serverId: string) {
-  const stmt = db.prepare("SELECT * FROM tracking_targets WHERE serverId = ?");
-  return stmt.all(serverId) as any[];
-}
-
-export function removeTrackingTarget(serverId: string, steamId: string) {
-  const stmt = db.prepare("DELETE FROM tracking_targets WHERE serverId = ? AND steamId = ?");
-  stmt.run(serverId, steamId);
-}
-
-export function updateTrackingStatus(serverId: string, steamId: string, isOnline: boolean, bmPlayerId?: string) {
-  if (bmPlayerId) {
-    const stmt = db.prepare("UPDATE tracking_targets SET isOnline = ?, lastSeen = ?, bmPlayerId = ? WHERE serverId = ? AND steamId = ?");
-    stmt.run(isOnline ? 1 : 0, Date.now(), bmPlayerId, serverId, steamId);
-  } else {
-    const stmt = db.prepare("UPDATE tracking_targets SET isOnline = ?, lastSeen = ? WHERE serverId = ? AND steamId = ?");
-    stmt.run(isOnline ? 1 : 0, Date.now(), serverId, steamId);
-  }
-}
-
-export function updateTrackingBan(serverId: string, steamId: string, isBanned: boolean) {
-  const stmt = db.prepare("UPDATE tracking_targets SET isBanned = ? WHERE serverId = ? AND steamId = ?");
-  stmt.run(isBanned ? 1 : 0, serverId, steamId);
-}
-
-// === Ban Watchlist ===
-export function addToBanWatchlist(steamId: string, name: string) {
-  const stmt = db.prepare(`
-    INSERT OR REPLACE INTO ban_watchlist (steamId, name, lastCheck, isBanned, createdAt)
-    VALUES (?, ?, ?, 0, ?)
-  `);
-  stmt.run(steamId, name, Date.now(), new Date().toISOString());
-}
-
-export function getBanWatchlist() {
-  return db.prepare("SELECT * FROM ban_watchlist").all() as any[];
-}
-
-export function removeFromBanWatchlist(steamId: string) {
-  db.prepare("DELETE FROM ban_watchlist WHERE steamId = ?").run(steamId);
-}
-
-export function updateBanStatus(steamId: string, isBanned: boolean, banType: string) {
-  const stmt = db.prepare("UPDATE ban_watchlist SET isBanned = ?, banType = ?, lastCheck = ? WHERE steamId = ?");
-  stmt.run(isBanned ? 1 : 0, banType, Date.now(), steamId);
->>>>>>> 007ebe57120a44698d75955bc65a39fbfbec9e5c
+  stmt.run(vending.id, serverId, vending.name, vending.x, vending.y, vending.grid, vending.orders, Date.now());
 }
 
 export default db;
-

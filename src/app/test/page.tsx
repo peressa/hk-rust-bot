@@ -21,7 +21,7 @@ import {
 
 export default function TestTrackingPage() {
   const [query, setQuery] = useState("");
-  const [searchType, setSearchType] = useState<"player" | "server">("player");
+  const [searchType, setSearchType] = useState<"player" | "server" | "direct">("direct");
   const [results, setResults] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,14 @@ export default function TestTrackingPage() {
     setResults(null);
 
     try {
-      const res = await fetch(`/api/test/battlemetrics?q=${encodeURIComponent(query)}&type=${searchType}`);
+      let url = "";
+      if (searchType === "direct") {
+        url = `/api/test/query?server=${encodeURIComponent(query)}`;
+      } else {
+        url = `/api/test/battlemetrics?q=${encodeURIComponent(query)}&type=${searchType}`;
+      }
+      
+      const res = await fetch(url);
       const data = await res.json();
 
       if (!res.ok) throw new Error(data.error || "Error en la búsqueda");
@@ -78,7 +85,7 @@ export default function TestTrackingPage() {
                 className={searchType === "player" ? "tab-active" : "tab-inactive"}
                 style={tabStyle(searchType === "player")}
               >
-                <User size={14} /> JUGADOR
+                <User size={14} /> BATTLEMETRICS: JUGADOR
               </button>
               <button 
                 type="button"
@@ -86,7 +93,15 @@ export default function TestTrackingPage() {
                 className={searchType === "server" ? "tab-active" : "tab-inactive"}
                 style={tabStyle(searchType === "server")}
               >
-                <Server size={14} /> SERVIDOR (IP)
+                <Server size={14} /> BATTLEMETRICS: SERVIDOR
+              </button>
+              <button 
+                type="button"
+                onClick={() => setSearchType("direct")}
+                className={searchType === "direct" ? "tab-active" : "tab-inactive"}
+                style={{...tabStyle(searchType === "direct"), borderColor: searchType === "direct" ? 'var(--accent)' : 'transparent', color: searchType === 'direct' ? 'var(--accent)' : '#666'}}
+              >
+                <Activity size={14} /> CONSULTA DIRECTA (MODO HORUS)
               </button>
             </div>
 
@@ -97,7 +112,11 @@ export default function TestTrackingPage() {
                   type="text" 
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder={searchType === "player" ? "Nombre de usuario (ej: Sniper)" : "IP del servidor (ej: 127.0.0.1)"}
+                  placeholder={
+                    searchType === "player" ? "Nombre de usuario (BattleMetrics)" : 
+                    searchType === "server" ? "IP del servidor para BM" :
+                    "IP:Puerto del servidor (ej: 135.125.189.158:28015)"
+                  }
                   style={{
                     width: '100%',
                     background: 'rgba(0,0,0,0.3)',
@@ -147,8 +166,10 @@ export default function TestTrackingPage() {
 
                 {searchType === "player" ? (
                   <PlayerResults data={results} onUpdate={fetchTracked} />
-                ) : (
+                ) : searchType === "server" ? (
                   <ServerResults data={results} />
+                ) : (
+                  <DirectQueryResults data={results} onUpdate={fetchTracked} />
                 )}
               </div>
             )}
@@ -355,6 +376,88 @@ function StatBox({ icon, label, value }: any) {
       <div style={{ fontSize: '1.1rem', fontWeight: 800 }}>{value}</div>
     </div>
   );
+}
+
+function DirectQueryResults({ data, onUpdate }: { data: any, onUpdate?: () => void }) {
+    const [trackingName, setTrackingName] = useState<string | null>(null);
+
+    if (!data.players) return <div className="premium-card">No se recibieron datos del servidor.</div>;
+
+    const handleTrackDirect = async (playerName: string) => {
+        setTrackingName(playerName);
+        try {
+            const res = await fetch("/api/test/track/add", {
+                method: "POST",
+                body: JSON.stringify({
+                    name: playerName,
+                    targetServerIp: `${data.server.ip}:${data.server.gamePort}`
+                })
+            });
+            if (res.ok && onUpdate) onUpdate();
+        } catch (e) {}
+        finally { setTrackingName(null); }
+    };
+
+    return (
+        <div className="premium-card" style={{ padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', borderBottom: '1px solid var(--border)', paddingBottom: '1.5rem' }}>
+                <div>
+                    <div className="text-tech" style={{ color: 'var(--accent)', marginBottom: '0.5rem' }}>MODO HORUS // DIRECT QUERY</div>
+                    <h2 style={{ fontSize: '1.8rem' }}>{data.server.ip}</h2>
+                    <div style={{ display: 'flex', gap: '1rem', opacity: 0.6, fontSize: '0.8rem' }}>
+                        <span>PORT: {data.server.gamePort}</span>
+                        <span>QUERY: {data.server.queryPort}</span>
+                    </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--accent)' }}>{data.playerCount}</div>
+                    <div className="text-tech">JUGADORES DETECTADOS</div>
+                </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {data.players.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', opacity: 0.4 }}>Servidor vacío o lista de jugadores privada.</div>
+                ) : (
+                    data.players.map((p: any, idx: number) => (
+                        <div key={idx} style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center',
+                            padding: '0.75rem 1rem', 
+                            background: 'rgba(255,255,255,0.02)', 
+                            borderRadius: '4px',
+                            borderLeft: '2px solid var(--accent)'
+                        }}>
+                            <div>
+                                <div style={{ fontWeight: 700 }}>{p.name}</div>
+                                <div style={{ display: 'flex', gap: '2rem', fontSize: '0.7rem', fontFamily: 'var(--font-mono)', marginTop: '0.25rem' }}>
+                                    <span style={{ opacity: 0.5 }}>SCORE: {p.score}</span>
+                                    <span style={{ color: 'var(--accent)' }}>{Math.floor(p.duration / 60)}m conectado</span>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => handleTrackDirect(p.name)}
+                                disabled={trackingName === p.name}
+                                style={{
+                                    background: 'rgba(34, 197, 94, 0.1)',
+                                    border: '1px solid rgba(34, 197, 94, 0.2)',
+                                    color: 'var(--accent)',
+                                    padding: '0.4rem 0.8rem',
+                                    borderRadius: '4px',
+                                    fontSize: '0.65rem',
+                                    fontWeight: 900,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {trackingName === p.name ? '...' : 'RASTREAR'}
+                            </button>
+                        </div>
+                    ))
+                )}
+            </div>
+        </div>
+    );
 }
 
 const tabStyle = (active: boolean) => ({
