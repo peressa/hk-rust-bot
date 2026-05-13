@@ -80,16 +80,13 @@ export class CommandRouter {
     const server = getServers(steamId).find(s => s.ip === ip);
     if (!server) return;
 
-    this.sendResponse(steamId, ip, `Escaneando servidor local (Modo Horus)...`);
+    this.sendResponse(steamId, ip, `Escaneando servidor (Modo Híbrido Horus + Intel)...`);
 
     try {
+        // 1. INTENTO HORUS (UDP Directo)
         const gamePort = parseInt(server.port);
-        // Puertos comunes en Rust: +1 (Standard), +215 (Nitrado/GPortal), +0 (Compartido)
         const portsToTry = [gamePort + 1, gamePort + 215, gamePort, 28016, 28015, 27015];
         
-        console.log(`[Horus] Iniciando escaneo de ráfaga en: ${portsToTry.join(", ")}`);
-        
-        // Intentar todos los puertos en paralelo para máxima velocidad
         const results = await Promise.all(portsToTry.map(async (port) => {
             try {
                 const pList = await Promise.race([
@@ -103,12 +100,10 @@ export class CommandRouter {
         }));
 
         const validResult = results.find(r => r.players.length > 0);
-
         if (validResult) {
             const search = args.toLowerCase();
             const match = validResult.players.find(p => p.name.toLowerCase() === search) ||
-                          validResult.players.find(p => p.name.toLowerCase().startsWith(search)) ||
-                          validResult.players.find(p => p.name.toLowerCase().includes(search));
+                          validResult.players.find(p => p.name.toLowerCase().startsWith(search));
 
             if (match) {
                 addTrackedPlayer({ 
@@ -116,21 +111,42 @@ export class CommandRouter {
                     name: match.name, 
                     targetServerIp: `${server.ip}:${server.port}` 
                 });
-                this.sendResponse(steamId, ip, `¡OBJETIVO FIJADO! '${match.name}' detectado mediante Horus (Puerto: ${validResult.port}).`);
+                this.sendResponse(steamId, ip, `¡OBJETIVO FIJADO! '${match.name}' detectado mediante Horus (Directo).`);
                 return;
             }
         }
 
-        // Si no se encuentra online ahora mismo
+        // 2. RESPALDO INTEL (BattleMetrics filtrado por servidor)
+        console.log(`[Track] Horus no encontró a '${args}'. Consultando Intel API para este nodo...`);
+        const bmServer = await BattleMetricsManager.getServerByIP(server.ip, server.port);
+        
+        if (bmServer) {
+            const bmMatch = await BattleMetricsManager.searchPlayerInServer(args, bmServer.id);
+            if (bmMatch?.data?.length > 0) {
+                const p = bmMatch.data.find((item: any) => item.attributes.name.toLowerCase().startsWith(args.toLowerCase())) || 
+                          bmMatch.data[0];
+                
+                addTrackedPlayer({ 
+                    id: p.id, 
+                    name: p.attributes.name,
+                    targetServerIp: `${server.ip}:${server.port}`
+                });
+                this.sendResponse(steamId, ip, `¡OBJETIVO FIJADO! '${p.attributes.name}' localizado mediante Intel API en este servidor.`);
+                return;
+            }
+        }
+
+        // 3. VIGILANCIA REACTIVA (Si no está online)
         addTrackedPlayer({ 
             id: `horus-${server.ip}-${args}`, 
             name: args, 
             targetServerIp: `${server.ip}:${server.port}` 
         });
-        this.sendResponse(steamId, ip, `Objetivo '${args}' no detectado online. Vigilancia reactiva activada en este servidor.`);
+        this.sendResponse(steamId, ip, `Sujeto '${args}' no detectado online. Vigilancia reactiva activada para este servidor.`);
 
     } catch (err) {
-        this.sendResponse(steamId, ip, "Fallo en el sensor Horus. Verifica si el servidor permite consultas UDP.");
+        console.error("[Track Error]", err);
+        this.sendResponse(steamId, ip, "Fallo en los sistemas de búsqueda. Vigilancia reactiva activada por seguridad.");
     }
   }
 
