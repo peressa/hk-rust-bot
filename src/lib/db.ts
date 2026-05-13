@@ -118,6 +118,17 @@ db.exec(`
     orders TEXT,
     lastUpdate INTEGER
   );
+
+  CREATE TABLE IF NOT EXISTS tracked_players (
+    id TEXT PRIMARY KEY, -- BattleMetrics Player ID
+    name TEXT,
+    steamId TEXT,
+    lastSeen TEXT,
+    status TEXT, -- 'online' | 'offline'
+    lastServerId TEXT,
+    lastServerName TEXT,
+    createdAt TEXT
+  );
 `);
 
 // Helper para migraciones seguras
@@ -426,6 +437,32 @@ export function getTeamChat(serverId: string, limit = 50) {
   const stmt = db.prepare("SELECT * FROM team_chat WHERE serverId = ? ORDER BY timestamp DESC LIMIT ?");
   const rows = stmt.all(serverId, limit);
   return rows.reverse();
+}
+
+// === Tracked Players ===
+export function addTrackedPlayer(player: { id: string, name: string, steamId?: string }) {
+  const stmt = db.prepare(`
+    INSERT OR REPLACE INTO tracked_players (id, name, steamId, createdAt)
+    VALUES (?, ?, ?, ?)
+  `);
+  stmt.run(player.id, player.name, player.steamId || null, new Date().toISOString());
+}
+
+export function getTrackedPlayers() {
+  return db.prepare("SELECT * FROM tracked_players").all() as any[];
+}
+
+export function updatePlayerStatus(id: string, status: string, serverId?: string, serverName?: string) {
+  const stmt = db.prepare(`
+    UPDATE tracked_players 
+    SET status = ?, lastSeen = ?, lastServerId = ?, lastServerName = ?
+    WHERE id = ?
+  `);
+  stmt.run(status, new Date().toISOString(), serverId || null, serverName || null, id);
+}
+
+export function removeTrackedPlayer(id: string) {
+  db.prepare("DELETE FROM tracked_players WHERE id = ?").run(id);
 }
 
 export default db;
