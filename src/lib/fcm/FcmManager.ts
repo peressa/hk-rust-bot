@@ -25,20 +25,20 @@ export class FcmManager {
 
   static async register(steamId: string, authToken: string) {
     console.log(`[FCM] Verificando registro persistente para ${steamId}...`);
-    
+
     // 1. Recuperar datos de la base de datos
     const existingRow = db.prepare("SELECT keys, deviceId FROM fcm_keys WHERE steamId = ?").get(steamId) as any;
-    
+
     if (existingRow?.keys) {
       try {
         const savedData = JSON.parse(existingRow.keys);
         // Si el token de Rust+ coincide y tenemos credenciales de FCM, REUTILIZAR
         if (savedData.rustplus_auth_token === authToken && savedData.fcm_credentials) {
-           console.log(`[FCM] Reutilizando credenciales militares persistentes para ${steamId}. Device: ${existingRow.deviceId}`);
-           return { 
-             fcmCredentials: savedData.fcm_credentials, 
-             deviceId: existingRow.deviceId 
-           };
+          console.log(`[FCM] Reutilizando credenciales militares persistentes para ${steamId}. Device: ${existingRow.deviceId}`);
+          return {
+            fcmCredentials: savedData.fcm_credentials,
+            deviceId: existingRow.deviceId
+          };
         }
       } catch (e) {
         console.warn("[FCM] Error al parsear credenciales guardadas, procediendo a nuevo registro.");
@@ -47,7 +47,7 @@ export class FcmManager {
 
     const deviceId = existingRow?.deviceId || require('crypto').randomBytes(8).toString('hex');
     console.log(`[FCM] Iniciando nuevo registro táctico. DeviceId: ${deviceId}`);
-    
+
     let fcmCredentials;
     try {
       fcmCredentials = await AndroidFCM.register(
@@ -71,7 +71,7 @@ export class FcmManager {
       await axios.post("https://companion-rust.facepunch.com/api/push/register", {
         AuthToken: authToken,
         DeviceId: deviceId,
-        PushKind: 1, 
+        PushKind: 1,
         PushToken: fcmCredentials.fcm.token,
       }, {
         headers: {
@@ -106,12 +106,6 @@ export class FcmManager {
   static isListening(steamId: string): boolean {
     return listenerRegistry.isListening(steamId);
   }
-
-  /**
-   * Carga y activa todos los listeners de FCM guardados en la base de datos.
-   * Esto permite que la inteligencia se reanude automáticamente tras un despliegue
-   * sin intervención del usuario.
-   */
   static async initAllListeners() {
     console.log("[FCM] Iniciando recuperación masiva de listeners tácticos...");
     try {
@@ -170,7 +164,7 @@ export class FcmManager {
 
     client.on("ON_DATA_RECEIVED", async (data: any) => {
       console.log(`[FCM RAW] Received raw data for ${steamId}:`, JSON.stringify(data));
-      
+
       // Blackbox for Live Debugging
       FcmManager.debugLogs.unshift({ timestamp: Date.now(), data });
       if (FcmManager.debugLogs.length > 20) FcmManager.debugLogs.pop();
@@ -204,16 +198,16 @@ export class FcmManager {
       });
 
       console.log(`[FCM] Normalized Payload:`, JSON.stringify(normalizedPayload));
-      
+
       const ip = normalizedPayload.ip || normalizedPayload.serverip;
       const port = normalizedPayload.port || normalizedPayload.serverport;
-      
+
       // Solo es pairing si tiene PLAYERTOKEN. Si no, es una notificación normal (muerte, evento, etc)
-      const isServerPairing = 
-        (normalizedPayload.type === "server" || (ip && port)) && 
-        normalizedPayload.playertoken && 
+      const isServerPairing =
+        (normalizedPayload.type === "server" || (ip && port)) &&
+        normalizedPayload.playertoken &&
         normalizedPayload.playertoken !== "undefined";
-      
+
       const isEntityPairing = normalizedPayload.type === "entity" || normalizedPayload.entityid;
       const isDeathNotify = normalizedPayload.type === "death" || normalizedPayload.gcm_notification_title?.toLowerCase().includes("killed");
 
@@ -228,9 +222,9 @@ export class FcmManager {
           steamId: steamId,
           id: `${steamId}-${ip}`
         };
-        
+
         console.log(`[FCM] Detected Server Pairing! Info:`, server);
-        
+
         try {
           saveServer(server);
           console.log(`[FCM] SUCCESS: Server saved correctly: ${server.name}`);
@@ -248,18 +242,18 @@ export class FcmManager {
           // Enviar Webhook
           const dbModule = require('@/lib/db');
           const servers = dbModule.getServers(steamId);
-          const existing = servers.find((s:any) => s.ip === ip);
+          const existing = servers.find((s: any) => s.ip === ip);
           if (existing && (existing.discordWebhook || existing.discordChannelId)) {
             const { DiscordManager } = require('@/lib/discord/DiscordManager');
-            DiscordManager.sendPairing({ 
-              webhookUrl: existing.discordWebhook, 
-              channelId: existing.discordChannelId 
+            DiscordManager.sendPairing({
+              webhookUrl: existing.discordWebhook,
+              channelId: existing.discordChannelId
             }, existing.name, ip, server.port);
           }
         } catch (err) {
           console.error(`[FCM] DATABASE ERROR: Failed to save server:`, err);
         }
-      } 
+      }
       // Priority 2: Death Notification
       else if (isDeathNotify) {
         console.log(`[FCM] Detected Death Notification!`);
@@ -268,43 +262,43 @@ export class FcmManager {
           const x = parseFloat(normalizedPayload.x) || 0;
           const y = parseFloat(normalizedPayload.y) || 0;
           const killer = normalizedPayload.targetname || "Unknown";
-          
+
           if (ip) {
             const isNew = dbModule.saveDeathMarker(steamId, ip, killer, x, y);
             if (isNew) {
-               console.log(`[FCM] Muerte registrada en ${ip} por ${killer}`);
-               
-               // Alerta en el Chat de Equipo
-               const servers = dbModule.getServers(steamId);
-               const server = servers.find((s: any) => s.ip === ip);
-               const mapSize = server?.mapSize || 4000;
-               const grid = worldToGrid(x, y, mapSize);
-               
-               const { rustPlusManager } = await import("../rustplus/RustPlusManager");
-               rustPlusManager.botSendTeamMessage(steamId, ip, 
-                 `MUERTE: HAS MUERTO! ${killer} te ha eliminado en ${grid}`
-               ).catch(e => console.warn("[FCM] No se pudo enviar el chat de muerte", e));
+              console.log(`[FCM] Muerte registrada en ${ip} por ${killer}`);
 
-               // Alerta en Discord
-               if (server && (server.discordWebhook || server.discordChannelId)) {
-                 const { DiscordManager } = require('@/lib/discord/DiscordManager');
-                 DiscordManager.sendDeath({
-                   webhookUrl: server.discordWebhook,
-                   channelId: server.discordChannelId
-                 }, killer === "Unknown" ? "Un enemigo" : killer, x, y, server.name, "Ti mismo");
-               }
+              // Alerta en el Chat de Equipo
+              const servers = dbModule.getServers(steamId);
+              const server = servers.find((s: any) => s.ip === ip);
+              const mapSize = server?.mapSize || 4000;
+              const grid = worldToGrid(x, y, mapSize);
+
+              const { rustPlusManager } = await import("../rustplus/RustPlusManager");
+              rustPlusManager.botSendTeamMessage(steamId, ip,
+                `MUERTE: HAS MUERTO! ${killer} te ha eliminado en ${grid}`
+              ).catch(e => console.warn("[FCM] No se pudo enviar el chat de muerte", e));
+
+              // Alerta en Discord
+              if (server && (server.discordWebhook || server.discordChannelId)) {
+                const { DiscordManager } = require('@/lib/discord/DiscordManager');
+                DiscordManager.sendDeath({
+                  webhookUrl: server.discordWebhook,
+                  channelId: server.discordChannelId
+                }, killer === "Unknown" ? "Un enemigo" : killer, x, y, server.name, "Ti mismo");
+              }
             }
           }
-        } catch(err) {
+        } catch (err) {
           console.warn("[FCM] Error procesando notificación de muerte", err);
         }
-      } 
+      }
       // Priority 3: Entity Update
       else if (isEntityPairing) {
         const entity: DbEntity = {
           id: `${steamId}-${ip}-${normalizedPayload.entityid}`,
           steamId: steamId,
-          serverId: ip || "unknown", 
+          serverId: ip || "unknown",
           entityId: normalizedPayload.entityid,
           entityType: parseInt(normalizedPayload.entitytype) || 0,
           name: normalizedPayload.entityname || normalizedPayload.name || "Dispositivo Rust+",
@@ -312,22 +306,22 @@ export class FcmManager {
           capacity: parseFloat(normalizedPayload.capacity) || 0,
           hasCapacity: (parseFloat(normalizedPayload.capacity) || 0) > 0 ? 1 : 0
         };
-        
+
         console.log(`[FCM] Detected Entity Update/Pairing! Info:`, entity);
 
         try {
           saveEntity(entity);
-          
+
           // Alerta de Batería Baja
           if (entity.capacity > 0 && entity.capacity < 10) {
             const dbModule = require('@/lib/db');
             const server = dbModule.default.prepare("SELECT * FROM servers WHERE id = ?").get(entity.serverId) as any;
             if (server && (server.discordWebhook || server.discordChannelId)) {
-                const { DiscordManager } = require('@/lib/discord/DiscordManager');
-                DiscordManager.sendAlarm({
-                  webhookUrl: server.discordWebhook,
-                  channelId: server.discordChannelId
-                }, "⚠️ BATERÍA CRÍTICA", `La batería "${entity.name}" está al ${Math.round(entity.capacity)}%. ¡Recarga pronto!`, server.name);
+              const { DiscordManager } = require('@/lib/discord/DiscordManager');
+              DiscordManager.sendAlarm({
+                webhookUrl: server.discordWebhook,
+                channelId: server.discordChannelId
+              }, "⚠️ BATERÍA CRÍTICA", `La batería "${entity.name}" está al ${Math.round(entity.capacity)}%. ¡Recarga pronto!`, server.name);
             }
           }
 
@@ -335,7 +329,7 @@ export class FcmManager {
         } catch (err) {
           console.error(`[FCM] DATABASE ERROR: Failed to save entity:`, err);
         }
-      } 
+      }
       // Priority 4: Presence (Login/Logout)
       else if (normalizedPayload.type === "login" || normalizedPayload.type === "logout") {
         console.log(`[FCM] Detected Presence Notification: ${normalizedPayload.type}`);
@@ -343,7 +337,7 @@ export class FcmManager {
           const dbModule = require('@/lib/db');
           const servers = dbModule.getServers(steamId);
           const server = servers.find((s: any) => s.ip === ip) || servers[0];
-          
+
           if (server && (server.discordWebhook || server.discordChannelId)) {
             const { DiscordManager } = require('@/lib/discord/DiscordManager');
             await DiscordManager.sendPresence({
@@ -351,7 +345,7 @@ export class FcmManager {
               channelId: server.discordChannelId
             }, normalizedPayload.targetname || "Jugador", normalizedPayload.targetid || "N/A", normalizedPayload.type === "login", server.name);
           }
-        } catch(err) {
+        } catch (err) {
           console.warn("[FCM] Error procesando notificación de presencia", err);
         }
       }
@@ -362,8 +356,8 @@ export class FcmManager {
           const dbModule = require('@/lib/db');
           const servers = dbModule.getServers(steamId);
           const serverName = normalizedPayload.servername || "Servidor Desconocido";
-          const matchingServer = servers.find((s:any) => s.name === serverName) || servers[0];
-          
+          const matchingServer = servers.find((s: any) => s.name === serverName) || servers[0];
+
           if (matchingServer && (matchingServer.discordWebhook || matchingServer.discordChannelId)) {
             const { DiscordManager } = require('@/lib/discord/DiscordManager');
             const alarmTitle = payload.title || "Alarma Inteligente Activada";
@@ -373,7 +367,7 @@ export class FcmManager {
               channelId: matchingServer.discordChannelId
             }, alarmTitle, alarmMsg, matchingServer.name);
           }
-        } catch(err) {
+        } catch (err) {
           console.warn("[FCM] Error enviando alarma a Discord", err);
         }
       } else {
@@ -392,10 +386,10 @@ export class FcmManager {
     });
 
     await client.connect();
-    
+
     // Register in global registry
     listenerRegistry.setListener(steamId, client);
-    
+
     return client;
   }
 }

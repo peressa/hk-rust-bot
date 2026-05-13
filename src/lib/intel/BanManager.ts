@@ -9,10 +9,10 @@ export class BanManager {
   static async init() {
     if (this.isRunning) return;
     this.isRunning = true;
-    console.log("[Ban Manager] Vigilancia global de baneos activada (Ciclo: 24h).");
+    console.log("[Ban Manager] Vigilancia global de baneos activada (Ciclo: 6h).");
 
-    // Revisión global una vez al día (86,400,000 ms)
-    this.interval = setInterval(() => this.checkWatchlist(), 86400000);
+    // Revisión global 4 veces al día (6 horas = 21,600,000 ms)
+    this.interval = setInterval(() => this.checkWatchlist(), 21600000);
     
     // Ejecutar una vez al inicio para estar al día
     setImmediate(() => this.checkWatchlist());
@@ -97,7 +97,7 @@ export class BanManager {
         // 2. Notificar Team Chat de Rust (si está conectado)
         if (rustPlusManager.isConnected(server.steamId, server.ip)) {
            // Usamos el mismo prefijo que siempre (rustPlusManager.formatMsg lo maneja)
-           const formatted = rustPlusManager.formatMsg(server.steamId, server.ip, 'ban_alert', `🚨 ¡BAN GLOBAL! {name} ({steamId}) ha sido baneado. Tipo: {type}`, { 
+           const formatted = rustPlusManager.formatMsg(server.steamId, server.ip, 'ban_alert', `🚨 BAN: {name} ({steamId}) ha sido baneado. Tipo: {type}`, { 
              name: currentName, 
              steamId: steamId,
              type: banInfo.type 

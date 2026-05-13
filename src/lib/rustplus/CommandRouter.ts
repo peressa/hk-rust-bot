@@ -52,10 +52,6 @@ export class CommandRouter {
           return await this.cmdTrack(steamId, ip, args);
         case "!untrack":
           return await this.cmdUntrack(steamId, ip, args);
-        case "!track":
-          return await this.cmdTrack(steamId, ip, args);
-        case "!untrack":
-          return await this.cmdUntrack(steamId, ip, args);
         case "!targets":
         case "!objetivos":
           return await this.cmdTargets(steamId, ip);
