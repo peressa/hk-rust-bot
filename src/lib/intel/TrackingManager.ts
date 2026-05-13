@@ -1,4 +1,3 @@
-import { BattleMetricsManager } from "./BattleMetricsManager";
 import { SteamQueryManager } from "./SteamQueryManager";
 import db, { getTrackedPlayers, updatePlayerStatus, getServers } from "../db";
 import { DiscordManager } from "../discord/DiscordManager";
@@ -45,27 +44,18 @@ export class TrackingManager {
         let serverName = player.lastServerName || "Servidor Desconocido";
         let serverId = player.lastServerId;
 
-        // MODO HORUS: Si tiene IP de servidor objetivo, consultamos directamente
+        // MODO HORUS UNIFICADO: Consultamos directamente al servidor
         if (player.targetServerIp) {
             const [ip, portStr] = player.targetServerIp.split(":");
-            const queryPort = parseInt(portStr || "28015") + 1;
+            const gamePort = parseInt(portStr || "28015");
             
-            console.log(`[TrackingManager] Query Directo: Buscando a ${player.name} en ${ip}:${queryPort}`);
-            isOnline = await SteamQueryManager.isPlayerOnline(ip, queryPort, player.name);
+            // Intentamos los puertos más probables en paralelo para no perder tiempo
+            const ports = [gamePort + 1, gamePort + 215, gamePort];
+            const results = await Promise.all(ports.map(p => SteamQueryManager.isPlayerOnline(ip, p, player.name).catch(() => false)));
+            
+            isOnline = results.some(r => r === true);
             serverName = player.targetServerIp;
         } 
-        // MODO BATTLEMETRICS: Si no hay IP, usamos la API (si el ID es de BM)
-        else if (player.id && !player.id.startsWith('direct-')) {
-            const sessions = await BattleMetricsManager.getPlayerSessions(player.id);
-            const activeSession = sessions.find((s: any) => s.attributes.stop === null);
-            isOnline = !!activeSession;
-            
-            if (activeSession) {
-                serverId = activeSession.relationships?.server?.data?.id;
-                const sInfo = await BattleMetricsManager.getServerInfo(serverId);
-                serverName = sInfo?.data?.attributes?.name || "Servidor Desconocido";
-            }
-        }
 
         const newStatus = isOnline ? 'online' : 'offline';
 
