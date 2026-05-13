@@ -81,12 +81,15 @@ export class CommandRouter {
     const server = getServers(steamId).find(s => s.ip === ip);
     if (!server) return;
 
-    // 1. Intento de localización local (Modo Horus)
-    const queryPort = parseInt(server.port) + 1;
-    console.log(`[Track] Escaneando servidor local en puerto ${queryPort}...`);
-    
+    // Notificación inicial de actividad
+    this.sendResponse(steamId, ip, `Iniciando escaneo táctico para '${args}'...`);
+
     try {
-        const players = await SteamQueryManager.getPlayers(server.ip, queryPort);
+        // 1. Intento de localización local (Modo Horus)
+        const queryPort = parseInt(server.port) + 1;
+        console.log(`[Track] Escaneando puerto local ${queryPort}...`);
+        
+        const players = await SteamQueryManager.getPlayers(server.ip, queryPort).catch(() => []);
         const match = players.find(p => p.name.toLowerCase().includes(args.toLowerCase()));
 
         if (match) {
@@ -95,29 +98,29 @@ export class CommandRouter {
                 name: match.name, 
                 targetServerIp: `${server.ip}:${server.port}` 
             });
-            this.sendResponse(steamId, ip, `Objetivo '${match.name}' detectado mediante HORUS en puerto ${queryPort}. Vigilancia local activada.`);
+            this.sendResponse(steamId, ip, `¡OBJETIVO LOCALIZADO! '${match.name}' detectado en este servidor. Vigilancia Horus activada.`);
             return;
         }
-    } catch (e) {
-        console.warn(`[Track] Horus falló en puerto ${queryPort}:`, e);
-    }
 
-    // 2. Intento de localización global (BattleMetrics)
-    this.sendResponse(steamId, ip, `No detectado en servidor local. Consultando red de inteligencia global...`);
-    
-    try {
-        const bmMatch = await BattleMetricsManager.searchPlayer(args);
-        const p = bmMatch.data?.[0];
+        // 2. Intento de localización global (BattleMetrics)
+        console.log(`[Track] Saltando a red global para '${args}'...`);
+        const bmMatch = await BattleMetricsManager.searchPlayer(args).catch(() => null);
+        const p = bmMatch?.data?.[0];
+
         if (p) {
             addTrackedPlayer({ id: p.id, name: p.attributes.name });
-            this.sendResponse(steamId, ip, `Objetivo '${p.attributes.name}' localizado en red global. Vigilancia 24/7 iniciada.`);
+            this.sendResponse(steamId, ip, `Objetivo '${p.attributes.name}' localizado en red global. Iniciando vigilancia 24/7.`);
             return;
         }
-    } catch (e) {}
 
-    // 3. Fallback
-    addTrackedPlayer({ id: null, name: args, targetServerIp: `${server.ip}:${server.port}` });
-    this.sendResponse(steamId, ip, `Sujeto '${args}' no localizado online. Vigilancia reactiva activada para este nodo.`);
+        // 3. Fallback final
+        addTrackedPlayer({ id: null, name: args, targetServerIp: `${server.ip}:${server.port}` });
+        this.sendResponse(steamId, ip, `Sujeto '${args}' no detectado online. Vigilancia reactiva iniciada para este nodo.`);
+
+    } catch (err) {
+        console.error("[Track Command] Fallo crítico:", err);
+        this.sendResponse(steamId, ip, "Error interno en el sistema de búsqueda. Vigilancia reactiva activada por seguridad.");
+    }
   }
 
   private static async cmdUntrack(steamId: string, ip: string, args: string) {
