@@ -127,13 +127,30 @@ export class CommandRouter {
             }
         }
 
-        // 2. MODO GLOBAL: BattleMetrics
-        console.log(`[Track] No detectado localmente. Consultando red global para '${args}'...`);
-        const bmMatch = await BattleMetricsManager.searchPlayer(args).catch(() => null);
+        // 2. MODO HÍBRIDO: Si Horus falla, buscamos en este servidor vía BattleMetrics API
+        console.log(`[Track] Localizando servidor en BattleMetrics para búsqueda filtrada...`);
+        const bmServer = await BattleMetricsManager.getServerByIP(server.ip, server.port);
         
-        if (bmMatch?.data?.length > 0) {
-            // También aplicamos fuzzy match a los resultados de BM
-            const bmPlayers = bmMatch.data;
+        if (bmServer) {
+            console.log(`[Track] Servidor localizado (BM ID: ${bmServer.id}). Buscando '${args}' internamente...`);
+            const bmLocalMatch = await BattleMetricsManager.searchPlayerInServer(args, bmServer.id);
+            
+            if (bmLocalMatch?.data?.length > 0) {
+                const p = bmLocalMatch.data.find((item: any) => item.attributes.name.toLowerCase().startsWith(args.toLowerCase())) || 
+                          bmLocalMatch.data[0];
+                
+                addTrackedPlayer({ id: p.id, name: p.attributes.name });
+                this.sendResponse(steamId, ip, `¡OBJETIVO LOCALIZADO! '${p.attributes.name}' detectado en este servidor vía Intel API. Vigilancia iniciada.`);
+                return;
+            }
+        }
+
+        // 3. MODO GLOBAL: Solo si no se encuentra en el servidor actual
+        console.log(`[Track] No detectado en el nodo. Consultando red de inteligencia global...`);
+        const bmGlobalMatch = await BattleMetricsManager.searchPlayer(args).catch(() => null);
+        
+        if (bmGlobalMatch?.data?.length > 0) {
+            const bmPlayers = bmGlobalMatch.data;
             const search = args.toLowerCase();
             const p = bmPlayers.find((item: any) => item.attributes.name.toLowerCase() === search) ||
                       bmPlayers.find((item: any) => item.attributes.name.toLowerCase().startsWith(search)) ||
@@ -144,9 +161,9 @@ export class CommandRouter {
             return;
         }
 
-        // 3. Fallback: Vigilancia ciega (por si entra más tarde)
+        // 4. Fallback final: Vigilancia ciega
         addTrackedPlayer({ id: null, name: args, targetServerIp: `${server.ip}:${server.port}` });
-        this.sendResponse(steamId, ip, `Sujeto '${args}' no localizado online. Se ha activado la vigilancia reactiva (avisaré si asoma por el servidor).`);
+        this.sendResponse(steamId, ip, `Sujeto '${args}' no localizado online. Vigilancia reactiva activada para este nodo.`);
 
     } catch (err) {
         console.error("[Track Command] Fallo:", err);
