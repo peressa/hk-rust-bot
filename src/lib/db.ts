@@ -13,6 +13,15 @@ const db = new Database(dbPath);
 
 // Initialize tables
 db.exec(`
+  CREATE TABLE IF NOT EXISTS ban_watchlist (
+    steamId TEXT PRIMARY KEY,
+    name TEXT,
+    lastCheck INTEGER,
+    isBanned INTEGER DEFAULT 0,
+    banType TEXT,
+    createdAt TEXT
+  );
+
   CREATE TABLE IF NOT EXISTS servers (
     id TEXT PRIMARY KEY,
     steamId TEXT,
