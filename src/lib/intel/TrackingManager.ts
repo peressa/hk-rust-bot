@@ -1,7 +1,8 @@
 import { BattleMetricsManager } from "./BattleMetricsManager";
 import { SteamQueryManager } from "./SteamQueryManager";
-import db, { getTrackedPlayers, updatePlayerStatus } from "../db";
+import db, { getTrackedPlayers, updatePlayerStatus, getServers } from "../db";
 import { DiscordManager } from "../discord/DiscordManager";
+import { rustPlusManager } from "../rustplus/RustPlusManager";
 
 export class TrackingManager {
   private static interval: NodeJS.Timeout | null = null;
