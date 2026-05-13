@@ -82,36 +82,42 @@ export class CommandRouter {
     if (!server) return;
 
     // 1. Intento de localización local (Modo Horus)
+    const queryPort = parseInt(server.port) + 1;
+    console.log(`[Track] Escaneando servidor local en puerto ${queryPort}...`);
+    
     try {
-        const queryPort = parseInt(server.port) + 1;
         const players = await SteamQueryManager.getPlayers(server.ip, queryPort);
         const match = players.find(p => p.name.toLowerCase().includes(args.toLowerCase()));
 
         if (match) {
             addTrackedPlayer({ 
-                id: null, // Generará un ID 'direct-...'
+                id: null,
                 name: match.name, 
                 targetServerIp: `${server.ip}:${server.port}` 
             });
-            this.sendResponse(steamId, ip, `Objetivo '${match.name}' detectado y fijado en este servidor. Se te notificará ante cualquier movimiento.`);
+            this.sendResponse(steamId, ip, `Objetivo '${match.name}' detectado mediante HORUS en puerto ${queryPort}. Vigilancia local activada.`);
             return;
         }
-    } catch (e) {}
+    } catch (e) {
+        console.warn(`[Track] Horus falló en puerto ${queryPort}:`, e);
+    }
 
     // 2. Intento de localización global (BattleMetrics)
+    this.sendResponse(steamId, ip, `No detectado en servidor local. Consultando red de inteligencia global...`);
+    
     try {
         const bmMatch = await BattleMetricsManager.searchPlayer(args);
         const p = bmMatch.data?.[0];
         if (p) {
             addTrackedPlayer({ id: p.id, name: p.attributes.name });
-            this.sendResponse(steamId, ip, `Objetivo '${p.attributes.name}' localizado en la red global. Iniciando vigilancia 24/7.`);
+            this.sendResponse(steamId, ip, `Objetivo '${p.attributes.name}' localizado en red global. Vigilancia 24/7 iniciada.`);
             return;
         }
     } catch (e) {}
 
-    // 3. Fallback: Vigilancia ciega
+    // 3. Fallback
     addTrackedPlayer({ id: null, name: args, targetServerIp: `${server.ip}:${server.port}` });
-    this.sendResponse(steamId, ip, `No se detectó a '${args}' online, pero se ha activado la vigilancia reactiva en este servidor.`);
+    this.sendResponse(steamId, ip, `Sujeto '${args}' no localizado online. Vigilancia reactiva activada para este nodo.`);
   }
 
   private static async cmdUntrack(steamId: string, ip: string, args: string) {
