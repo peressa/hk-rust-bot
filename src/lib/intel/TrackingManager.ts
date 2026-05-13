@@ -9,11 +9,12 @@ export class TrackingManager {
   /**
    * Inicia el ciclo de monitoreo de jugadores seguidos.
    */
-  static start(intervalMs: number = 300000) { // Cada 5 minutos por defecto
+  static async init(intervalMs: number = 60000) { // Reducido a 1 minuto para mayor precisión
     if (this.interval) return;
 
-    console.log("[TrackingManager] Iniciando servicio de vigilancia (Modo Híbrido)...");
+    console.log("[TrackingManager] Iniciando motor de vigilancia táctica (1m)...");
     
+    // Ejecución inmediata inicial
     this.checkTrackedPlayers();
     
     this.interval = setInterval(() => {
@@ -77,6 +78,25 @@ export class TrackingManager {
                 : `🌫️ **OBJETIVO PERDIDO**: **${player.name}** se ha desconectado de **${serverName}**.`;
 
             this.notifyDiscord(msg);
+            
+            // Notificar también en Team Chat si el objetivo es del servidor actual
+            try {
+                const teamMsg = newStatus === 'online'
+                    ? `🎯 OBJETIVO DETECTADO: ${player.name} ha entrado.`
+                    : `🌫️ OBJETIVO PERDIDO: ${player.name} se ha desconectado.`;
+                
+                const servers = getServers();
+                for (const s of servers) {
+                    if (s.ip && rustPlusManager.isConnected(s.steamId, s.ip)) {
+                        // Solo enviar si el objetivo está en ESTE servidor o es rastreo global
+                        if (!player.targetServerIp || player.targetServerIp.includes(s.ip)) {
+                            rustPlusManager.botSendTeamMessage(s.steamId, s.ip, rustPlusManager.formatMsg(s.steamId, s.ip, '', teamMsg));
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error("[TrackingManager] Error notificando al equipo:", e);
+            }
         }
       } catch (err) {
         console.error(`[TrackingManager] Error en ${player.name}:`, err);
