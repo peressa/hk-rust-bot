@@ -28,25 +28,38 @@ export class FcmManager {
 
     // 1. Recuperar datos de la base de datos
     const existingRow = db.prepare("SELECT keys, deviceId FROM fcm_keys WHERE steamId = ?").get(steamId) as any;
+    let savedData: any = null;
 
     if (existingRow?.keys) {
       try {
-        const savedData = JSON.parse(existingRow.keys);
-        // Si el token de Rust+ coincide y tenemos credenciales de FCM, REUTILIZAR
-        if (savedData.rustplus_auth_token === authToken && savedData.fcm_credentials) {
-          console.log(`[FCM] Reutilizando credenciales militares persistentes para ${steamId}. Device: ${existingRow.deviceId}`);
+        savedData = JSON.parse(existingRow.keys);
+        
+        // REUTILIZACIÓN DE IDENTIDAD: Si tenemos credenciales de Google, las usamos pase lo que pase.
+        if (savedData.fcm_credentials) {
+          console.log(`[FCM] Reutilizando identidad de dispositivo Google para ${steamId}.`);
+
+          // Si el token de Rust+ es nuevo, solo actualizamos en Facepunch.
+          if (savedData.rustplus_auth_token !== authToken) {
+            console.log("[FCM] Token de Rust+ actualizado. Sincronizando con Facepunch...");
+            await this.registerWithFacepunch(authToken, existingRow.deviceId, savedData.fcm_credentials.fcm.token);
+            
+            // Actualizar solo el token en la DB
+            savedData.rustplus_auth_token = authToken;
+            db.prepare("UPDATE fcm_keys SET keys = ? WHERE steamId = ?").run(JSON.stringify(savedData), steamId);
+          }
+
           return {
             fcmCredentials: savedData.fcm_credentials,
             deviceId: existingRow.deviceId
           };
         }
       } catch (e) {
-        console.warn("[FCM] Error al parsear credenciales guardadas, procediendo a nuevo registro.");
+        console.warn("[FCM] Error recuperando caché, procediendo a registro maestro.");
       }
     }
 
     const deviceId = existingRow?.deviceId || require('crypto').randomBytes(8).toString('hex');
-    console.log(`[FCM] Iniciando nuevo registro táctico. DeviceId: ${deviceId}`);
+    console.log(`[FCM] Solicitando nueva identidad a Google. DeviceId: ${deviceId}`);
 
     let fcmCredentials;
     try {
@@ -59,20 +72,38 @@ export class FcmManager {
         FCM_CONFIG.androidPackageCert
       );
     } catch (err: any) {
-      console.error(`[FCM] FATAL: Error registrando dispositivo con Google: ${err.message}`);
+      console.error(`[FCM] FATAL: Google rechazó el registro: ${err.message}`);
       if (err.message?.includes("PHONE_REGISTRATION_ERROR")) {
-        throw new Error("ERROR DE REGISTRO (Google/Facepunch): El servicio de notificaciones ha bloqueado temporalmente el registro. Por favor, ESPERA 15 MINUTOS.");
+        throw new Error("BLOQUEO DE GOOGLE: Has intentado registrar demasiados dispositivos. ESPERA 20 MINUTOS sin tocar nada.");
       }
-      throw new Error(`No se pudo registrar el bot con Google: ${err.message}`);
+      throw new Error(`Fallo de comunicación con Google: ${err.message}`);
     }
 
     // Registro con Facepunch
+    await this.registerWithFacepunch(authToken, deviceId, fcmCredentials.fcm.token);
+
+    console.log(`[FCM] Registro completo para ${steamId}.`);
+
+    // Guardar TODO para nunca más volver a registrar en Google
+    db.prepare("INSERT OR REPLACE INTO fcm_keys (steamId, keys, deviceId) VALUES (?, ?, ?)")
+      .run(steamId, JSON.stringify({
+        fcm_credentials: fcmCredentials,
+        rustplus_auth_token: authToken,
+      }), deviceId);
+
+    return { fcmCredentials, deviceId };
+  }
+
+  /**
+   * Registra el dispositivo y el token de Rust+ con los servidores de Facepunch.
+   */
+  private static async registerWithFacepunch(authToken: string, deviceId: string, fcmToken: string) {
     try {
       await axios.post("https://companion-rust.facepunch.com/api/push/register", {
         AuthToken: authToken,
         DeviceId: deviceId,
         PushKind: 1,
-        PushToken: fcmCredentials.fcm.token,
+        PushToken: fcmToken,
       }, {
         headers: {
           "User-Agent": "Rust-Companion-App/2.2.0 (Android; 13)",
@@ -84,23 +115,13 @@ export class FcmManager {
           "Referer": "https://companion-rust.facepunch.com/",
         }
       });
+      console.log("[FCM] Sincronización con Facepunch exitosa.");
     } catch (err: any) {
       if (err.response?.status === 403) {
-        throw new Error("Error 403: Facepunch rechazó el token. Genera uno nuevo.");
+        throw new Error("Token de Rust+ inválido o expirado. Genera uno nuevo en la App.");
       }
-      throw err;
+      throw new Error(`Error sincronizando con Facepunch: ${err.message}`);
     }
-
-    console.log(`[FCM] Registro exitoso con Facepunch para ${steamId}. Device: ${deviceId}`);
-
-    // Guardar credenciales en DB para REUTILIZACIÓN FUTURA
-    const stmt = db.prepare("INSERT OR REPLACE INTO fcm_keys (steamId, keys, deviceId) VALUES (?, ?, ?)");
-    stmt.run(steamId, JSON.stringify({
-      fcm_credentials: fcmCredentials,
-      rustplus_auth_token: authToken,
-    }), deviceId);
-
-    return { fcmCredentials, deviceId };
   }
 
   static isListening(steamId: string): boolean {
